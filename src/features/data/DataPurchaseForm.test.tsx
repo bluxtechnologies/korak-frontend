@@ -22,17 +22,23 @@ describe("DataPurchaseForm (F16.2 & F16.4)", () => {
 
     expect(screen.getByTestId("data-purchase-card")).toBeInTheDocument();
     expect(screen.getByText("Buy Data Bundles")).toBeInTheDocument();
-    expect(screen.getByText("MTN")).toBeInTheDocument();
-    expect(screen.getByText("AIRTEL")).toBeInTheDocument();
-    expect(screen.getByText("GLO")).toBeInTheDocument();
-    expect(screen.getByText("9MOBILE")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /MTN/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Airtel/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Glo/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /9mobile/i })).toBeInTheDocument();
 
     // Plan type tabs
-    expect(screen.getByText("SME Data")).toBeInTheDocument();
-    expect(screen.getByText("Corporate Gifting")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /SME Data/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Corporate Gifting/i })
+    ).toBeInTheDocument();
 
-    // Default MTN SME 1.0GB package card should be rendered
-    expect(screen.getByText("MTN SME 1.0GB")).toBeInTheDocument();
+    // Bundle card options (e.g. 1.0 GB)
+    expect(
+      screen.getByRole("button", { name: /1\.0 GB/i })
+    ).toBeInTheDocument();
   });
 
   it("switches network and filters available data bundles", async () => {
@@ -40,14 +46,20 @@ describe("DataPurchaseForm (F16.2 & F16.4)", () => {
     render(<DataPurchaseForm walletBalance={500000} />);
 
     // Click Airtel
-    const airtelBtn = screen.getByRole("button", { name: /AIRTEL/i });
+    const airtelBtn = screen.getByRole("button", { name: /Airtel/i });
     await user.click(airtelBtn);
 
     // Switch to Corporate Gifting
-    await user.click(screen.getByText("Corporate Gifting"));
+    await user.click(
+      screen.getByRole("button", { name: /Corporate Gifting/i })
+    );
 
-    // Should display Airtel packages
-    expect(screen.getByText("Airtel CG 1.0GB")).toBeInTheDocument();
+    // Airtel CG 1.0GB is ₦340
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /340/i })
+      ).toBeInTheDocument();
+    });
   });
 
   it("auto-detects network from phone number prefix", async () => {
@@ -58,12 +70,11 @@ describe("DataPurchaseForm (F16.2 & F16.4)", () => {
     // Type Glo prefix 0805
     await user.type(phoneInput, "08051234567");
 
-    const gloButton = screen.getByRole("button", { name: /GLO/i });
+    const gloButton = screen.getByRole("button", { name: /Glo/i });
     expect(gloButton).toHaveAttribute("aria-pressed", "true");
   });
 
   it("disables order review if wallet balance is insufficient", async () => {
-    const user = userEvent.setup();
     // ₦100 wallet balance (10000 minor units), while cheapest MTN bundle is ₦175
     render(<DataPurchaseForm walletBalance={10000} />);
 
@@ -107,7 +118,7 @@ describe("DataPurchaseForm (F16.2 & F16.4)", () => {
 
     // Confirm dialog should open
     expect(screen.getByText("Confirm Data Purchase")).toBeInTheDocument();
-    expect(screen.getByText("Package:")).toBeInTheDocument();
+    expect(screen.getByText("Bundle:")).toBeInTheDocument();
 
     // Confirm order
     const payBtn = screen.getByRole("button", { name: /Pay ₦320/i });

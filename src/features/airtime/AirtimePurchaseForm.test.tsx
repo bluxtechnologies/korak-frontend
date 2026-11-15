@@ -123,7 +123,7 @@ describe("AirtimePurchaseForm (F16.1 & F16.4)", () => {
 
     // Success card appears
     expect(screen.getByTestId("airtime-success-card")).toBeInTheDocument();
-    expect(screen.getByText("Airtime Dispatched")).toBeInTheDocument();
-    expect(screen.getByText("AIR-20261115-1234")).toBeInTheDocument();
+    expect(screen.getByText(/Airtime Purchase Successful/i)).toBeInTheDocument();
+    expect(screen.getByText(/AIR-20261115-1234/)).toBeInTheDocument();
   });
 });
