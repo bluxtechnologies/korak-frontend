@@ -53,7 +53,7 @@ Transitions: short and functional (hover, focus, open/close) only; honor `prefer
 Build once, reuse everywhere, keep simple:
 Button · Card · Badge · Alert · Modal · Dropdown · Table · Search bar · Filter panel · Form controls · Pagination · Breadcrumb · Toast · Empty state · Loading state · Error state · Confirm dialog.
 
-- **Badge:** text only, 5px radius, no icon, no dot.
+- **Badge:** text only, 8px radius, no icon, no dot.
 - **Alert levels:** Information, Success, Warning, Error. Icon allowed in alerts (it aids recognition), always with text.
 - **Toasts:** a React toast library, used for transient feedback only; persistent problems use an inline Alert.
 - **Buttons:** one primary per view. While processing: disabled with a spinner icon (Lucide `Loader2`) and text.

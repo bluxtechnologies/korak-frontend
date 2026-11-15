@@ -55,7 +55,7 @@ import {
 // ---------------------------------------------------------------------------
 export const airtimeFormSchema = z.object({
   network: z.enum(["mtn", "airtel", "glo", "9mobile"], {
-    required_error: "Please select a network provider.",
+    message: "Please select a network provider.",
   }),
   phone: z
     .string()
@@ -65,7 +65,7 @@ export const airtimeFormSchema = z.object({
       "Please enter a valid 11-digit Nigerian phone number (e.g. 08031234567)."
     ),
   amount: z.coerce
-    .number({ invalid_type_error: "Please enter a valid amount." })
+    .number({ message: "Please enter a valid amount." })
     .min(50, "Minimum airtime amount is ₦50.")
     .max(50000, "Maximum airtime amount is ₦50,000."),
 });

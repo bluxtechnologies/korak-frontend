@@ -20,7 +20,7 @@ Admin UI is not scheduled: its scope and hosting are OPEN (Docs 04 and 13). It w
 ## F2 — Design tokens and theming
 - F2.1 Burgundy and neutral semantic tokens in `globals.css`
 - F2.2 Status colors (info, success, warning, error) distinct from burgundy
-- F2.3 5px global radius token; borders and near-zero shadow rules
+- F2.3 8px global radius token; borders and near-zero shadow rules
 - F2.4 Dark mode tokens and theme switching; contrast check in both modes
 
 **Done when:** no component needs a raw palette class. *Needs:* none.
