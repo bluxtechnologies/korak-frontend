@@ -54,9 +54,7 @@ import {
 // Schema — Doc 09 §6: client validation is a usability aid, server re-validates
 // ---------------------------------------------------------------------------
 export const airtimeFormSchema = z.object({
-  network: z.enum(["mtn", "airtel", "glo", "9mobile"], {
-    message: "Please select a network provider.",
-  }),
+  network: z.enum(["mtn", "airtel", "glo", "9mobile"]),
   phone: z
     .string()
     .min(1, "Please enter a phone number.")
@@ -64,8 +62,8 @@ export const airtimeFormSchema = z.object({
       /^0[789][01]\d{8}$/,
       "Please enter a valid 11-digit Nigerian phone number (e.g. 08031234567)."
     ),
-  amount: z.coerce
-    .number({ message: "Please enter a valid amount." })
+  amount: z
+    .number()
     .min(50, "Minimum airtime amount is ₦50.")
     .max(50000, "Maximum airtime amount is ₦50,000."),
 });
@@ -173,35 +171,35 @@ export function AirtimePurchaseForm({
   if (completedOrder) {
     return (
       <Card className={className} data-testid="airtime-success-card">
-        <CardHeader className="space-y-2 border-b border-border pb-4 text-center">
+        <CardHeader className="border-border space-y-2 border-b pb-4 text-center">
           <div className="mx-auto flex size-12 items-center justify-center rounded-md border border-emerald-500/20 bg-emerald-500/10 text-emerald-600">
             <CheckCircle2 className="size-6" />
           </div>
-          <CardTitle className="text-xl font-bold text-foreground">
+          <CardTitle className="text-foreground text-xl font-bold">
             Airtime Purchase Successful
           </CardTitle>
-          <CardDescription className="text-xs text-muted-foreground">
+          <CardDescription className="text-muted-foreground text-xs">
             Reference: {completedOrder.reference}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-4 pt-6 text-sm">
-          <div className="rounded-md border border-border bg-surface p-4 space-y-2.5">
+          <div className="border-border bg-surface space-y-2.5 rounded-md border p-4">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Network</span>
-              <span className="font-semibold uppercase text-foreground">
+              <span className="text-foreground font-semibold uppercase">
                 {completedOrder.network}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Recipient Phone</span>
-              <span className="font-mono font-medium text-foreground">
+              <span className="text-foreground font-mono font-medium">
                 {completedOrder.phone}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Airtime Value</span>
-              <span className="font-medium text-foreground">
+              <span className="text-foreground font-medium">
                 ₦{completedOrder.amount.toLocaleString()}
               </span>
             </div>
@@ -211,7 +209,7 @@ export function AirtimePurchaseForm({
                 -₦{completedOrder.discount.toLocaleString()}
               </span>
             </div>
-            <div className="border-t border-border pt-2 flex justify-between font-semibold">
+            <div className="border-border flex justify-between border-t pt-2 font-semibold">
               <span className="text-foreground">Total Debited</span>
               <span className="text-primary font-bold">
                 ₦{completedOrder.final_amount.toLocaleString()}
@@ -219,26 +217,26 @@ export function AirtimePurchaseForm({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <ShieldCheck className="size-4 text-emerald-500 shrink-0" />
+          <div className="text-muted-foreground flex items-center gap-2 text-xs">
+            <ShieldCheck className="size-4 shrink-0 text-emerald-500" />
             <span>
               Direct automated telecom dispatch verified by network gateway.
             </span>
           </div>
         </CardContent>
 
-        <CardFooter className="flex flex-col sm:flex-row gap-2 border-t border-border pt-4">
+        <CardFooter className="border-border flex flex-col gap-2 border-t pt-4 sm:flex-row">
           <Button
             type="button"
             onClick={handleResetForNewOrder}
-            className="w-full sm:w-auto flex-1 text-xs"
+            className="w-full flex-1 text-xs sm:w-auto"
           >
             Buy Another Airtime
           </Button>
           <Button
             asChild
             variant="outline"
-            className="w-full sm:w-auto flex-1 text-xs"
+            className="w-full flex-1 text-xs sm:w-auto"
           >
             <Link href={ROUTES.TRANSACTIONS}>View Transactions</Link>
           </Button>
@@ -249,17 +247,17 @@ export function AirtimePurchaseForm({
 
   return (
     <Card className={className} data-testid="airtime-purchase-card">
-      <CardHeader className="border-b border-border pb-4 space-y-1">
+      <CardHeader className="border-border space-y-1 border-b pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-md border border-border bg-surface text-primary">
+            <div className="border-border bg-surface text-primary flex size-8 items-center justify-center rounded-md border">
               <Smartphone className="size-4" />
             </div>
             <div>
-              <CardTitle className="text-base font-semibold text-foreground">
+              <CardTitle className="text-foreground text-base font-semibold">
                 Buy Airtime
               </CardTitle>
-              <CardDescription className="text-xs text-muted-foreground">
+              <CardDescription className="text-muted-foreground text-xs">
                 Instant automated top-up with up to 3% cashback
               </CardDescription>
             </div>
@@ -267,10 +265,10 @@ export function AirtimePurchaseForm({
 
           {/* Available Wallet Balance */}
           <div className="text-right">
-            <span className="text-[11px] text-muted-foreground block">
+            <span className="text-muted-foreground block text-[11px]">
               Wallet Balance
             </span>
-            <span className="font-mono text-xs font-semibold text-foreground">
+            <span className="text-foreground font-mono text-xs font-semibold">
               {formatCurrency(walletBalance, "NGN")}
             </span>
           </div>
@@ -293,7 +291,7 @@ export function AirtimePurchaseForm({
 
             {/* 1. Network Provider Selection */}
             <div className="space-y-2.5">
-              <FormLabel className="text-xs font-medium text-foreground">
+              <FormLabel className="text-foreground text-xs font-medium">
                 Select Network Provider
               </FormLabel>
               <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
@@ -318,7 +316,7 @@ export function AirtimePurchaseForm({
                       <span className="text-sm font-bold uppercase">
                         {net.name}
                       </span>
-                      <span className="text-[10px] text-muted-foreground mt-0.5">
+                      <span className="text-muted-foreground mt-0.5 text-[10px]">
                         {Math.round(net.discountRate * 100)}% Cashback
                       </span>
                     </button>
@@ -347,7 +345,7 @@ export function AirtimePurchaseForm({
                         className="font-mono text-sm"
                       />
                       {activeNetworkInfo && field.value.length >= 4 && (
-                        <div className="absolute right-2.5 top-2.5">
+                        <div className="absolute top-2.5 right-2.5">
                           <Badge variant="secondary" className="text-[10px]">
                             {activeNetworkInfo.name}
                           </Badge>
@@ -370,7 +368,7 @@ export function AirtimePurchaseForm({
                     <FormLabel className="text-xs font-medium">
                       Airtime Amount (₦)
                     </FormLabel>
-                    <span className="text-[11px] text-muted-foreground">
+                    <span className="text-muted-foreground text-[11px]">
                       Min: ₦50 · Max: ₦50,000
                     </span>
                   </div>
@@ -400,7 +398,7 @@ export function AirtimePurchaseForm({
                               shouldValidate: true,
                             })
                           }
-                          className={`rounded-md border px-2.5 py-1 text-xs font-mono transition-colors ${
+                          className={`rounded-md border px-2.5 py-1 font-mono text-xs transition-colors ${
                             isSelected
                               ? "border-primary bg-primary text-primary-foreground font-semibold"
                               : "border-border bg-surface text-muted-foreground hover:text-foreground"
@@ -417,24 +415,25 @@ export function AirtimePurchaseForm({
             />
 
             {/* Price Breakdown Banner */}
-            <div className="rounded-md border border-border bg-surface p-3.5 space-y-1.5 text-xs">
-              <div className="flex justify-between text-muted-foreground">
+            <div className="border-border bg-surface space-y-1.5 rounded-md border p-3.5 text-xs">
+              <div className="text-muted-foreground flex justify-between">
                 <span>Selected Amount:</span>
-                <span className="font-mono font-medium text-foreground">
+                <span className="text-foreground font-mono font-medium">
                   ₦{enteredAmount.toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
                 <span>
-                  Cashback Discount ({Math.round(activeNetworkInfo.discountRate * 100)}%):
+                  Cashback Discount (
+                  {Math.round(activeNetworkInfo.discountRate * 100)}%):
                 </span>
                 <span className="font-mono font-medium">
                   -₦{discountAmount.toLocaleString()}
                 </span>
               </div>
-              <div className="border-t border-border pt-1.5 flex justify-between font-semibold">
+              <div className="border-border flex justify-between border-t pt-1.5 font-semibold">
                 <span className="text-foreground">Amount to Pay:</span>
-                <span className="font-mono text-primary text-sm font-bold">
+                <span className="text-primary font-mono text-sm font-bold">
                   ₦{finalChargeAmount.toLocaleString()}
                 </span>
               </div>
@@ -452,7 +451,7 @@ export function AirtimePurchaseForm({
 
             <SubmitButton
               disabled={!isBalanceSufficient}
-              className="w-full text-xs font-medium h-10"
+              className="h-10 w-full text-xs font-medium"
               loadingText="Processing order..."
             >
               <span>Review Order</span>
@@ -477,26 +476,26 @@ export function AirtimePurchaseForm({
         onConfirm={handleConfirmPurchase}
         description={
           <div className="space-y-3 pt-2 text-left">
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Please verify your recipient details. Airtime top-ups are
               dispatched immediately and cannot be reversed once processed.
             </p>
-            <div className="rounded-md border border-border bg-surface p-3 text-xs space-y-2">
+            <div className="border-border bg-surface space-y-2 rounded-md border p-3 text-xs">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Network:</span>
-                <span className="font-semibold uppercase text-foreground">
+                <span className="text-foreground font-semibold uppercase">
                   {selectedNetwork}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Recipient:</span>
-                <span className="font-mono font-medium text-foreground">
+                <span className="text-foreground font-mono font-medium">
                   {enteredPhone}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Airtime Value:</span>
-                <span className="font-mono font-medium text-foreground">
+                <span className="text-foreground font-mono font-medium">
                   ₦{enteredAmount.toLocaleString()}
                 </span>
               </div>
@@ -506,9 +505,9 @@ export function AirtimePurchaseForm({
                   -₦{discountAmount.toLocaleString()}
                 </span>
               </div>
-              <div className="border-t border-border pt-1.5 flex justify-between font-bold">
+              <div className="border-border flex justify-between border-t pt-1.5 font-bold">
                 <span className="text-foreground">Net Wallet Debit:</span>
-                <span className="font-mono text-primary text-sm">
+                <span className="text-primary font-mono text-sm">
                   ₦{finalChargeAmount.toLocaleString()}
                 </span>
               </div>

@@ -32,7 +32,7 @@ describe("Card and Badge Components", () => {
       const card = screen.getByTestId("test-card");
       expect(card).toBeInTheDocument();
       expect(card).toHaveClass(
-        "rounded-md border border-border bg-card shadow-none"
+        "rounded-lg border bg-card text-card-foreground"
       );
       expect(screen.getByText("Wallet Balance")).toBeInTheDocument();
       expect(

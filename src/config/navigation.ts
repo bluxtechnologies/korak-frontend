@@ -1,15 +1,22 @@
 import {
   Bell,
-  LayoutDashboard,
-  type LucideIcon,
-  Receipt,
+  Clock,
+  Globe,
+  Hash,
+  Headphones,
+  Home,
+  LayoutGrid,
+  Phone,
+  ReceiptText,
   Settings,
   Share2,
   Shield,
-  ShoppingBag,
-  Smartphone,
+  TrendingUp,
   User,
+  Users,
+  Wallet,
   Wifi,
+  type LucideIcon,
 } from "lucide-react";
 
 /**
@@ -23,6 +30,7 @@ export const ROUTES = {
   TERMS: "/terms",
   // Customer dashboard routes
   OVERVIEW: "/overview",
+  SERVICES: "/services",
   AIRTIME: "/airtime",
   DATA: "/data",
   VPN: "/vpn",
@@ -31,6 +39,8 @@ export const ROUTES = {
   SOCIAL_MEDIA_BOOST: "/social-media/boost",
   ORDERS: "/orders",
   TRANSACTIONS: "/transactions",
+  WALLET: "/wallet",
+  SUPPORT: "/support",
   NOTIFICATIONS: "/notifications",
   SETTINGS: "/settings",
   PROFILE: "/profile",
@@ -68,18 +78,26 @@ export interface BreadcrumbItem {
 
 /**
  * Customer dashboard navigation sections.
- * Serves as the single source for both Sidebar (F5.2) and Breadcrumbs (F6.6 / F5.4).
+ * Structured into OVERVIEW, SERVICES, and ACCOUNT groups
+ * matching the production dashboard layout design reference.
  */
 export const SIDEBAR_NAV_SECTIONS: NavSection[] = [
   {
-    id: "general",
+    id: "overview",
+    label: "Overview",
     items: [
       {
         id: "overview",
-        label: "Account Overview",
+        label: "Home",
         href: ROUTES.OVERVIEW,
-        icon: LayoutDashboard,
+        icon: Home,
         exact: true,
+      },
+      {
+        id: "services-index",
+        label: "Services",
+        href: ROUTES.AIRTIME,
+        icon: LayoutGrid,
       },
     ],
   },
@@ -88,16 +106,40 @@ export const SIDEBAR_NAV_SECTIONS: NavSection[] = [
     label: "Services",
     items: [
       {
-        id: "airtime",
-        label: "Airtime",
+        id: "numbers-otp",
+        label: "Numbers (OTP)",
         href: ROUTES.AIRTIME,
-        icon: Smartphone,
+        icon: Hash,
+      },
+      {
+        id: "rent-numbers",
+        label: "Rent Numbers",
+        href: ROUTES.AIRTIME,
+        icon: Clock,
       },
       {
         id: "data",
-        label: "Data",
+        label: "Mobile Data",
         href: ROUTES.DATA,
         icon: Wifi,
+      },
+      {
+        id: "airtime",
+        label: "Airtime",
+        href: ROUTES.AIRTIME,
+        icon: Phone,
+      },
+      {
+        id: "social-growth",
+        label: "Social Growth",
+        href: ROUTES.SOCIAL_MEDIA_BOOST,
+        icon: TrendingUp,
+      },
+      {
+        id: "social-accounts",
+        label: "Social Accounts",
+        href: ROUTES.SOCIAL_MEDIA_BUY,
+        icon: Users,
       },
       {
         id: "vpn",
@@ -118,41 +160,10 @@ export const SIDEBAR_NAV_SECTIONS: NavSection[] = [
         ],
       },
       {
-        id: "social-media",
-        label: "Social Media",
-        icon: Share2,
-        children: [
-          {
-            id: "social-media-buy",
-            label: "Buy Account",
-            href: ROUTES.SOCIAL_MEDIA_BUY,
-          },
-          {
-            id: "social-media-boost",
-            label: "Boost Account",
-            href: ROUTES.SOCIAL_MEDIA_BOOST,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "activity",
-    label: "Activity",
-    items: [
-      {
-        id: "orders",
-        label: "Orders",
-        href: ROUTES.ORDERS,
-        icon: ShoppingBag,
-        detailLabel: "Order Details",
-      },
-      {
-        id: "transactions",
-        label: "Transactions",
-        href: ROUTES.TRANSACTIONS,
-        icon: Receipt,
-        detailLabel: "Transaction Details",
+        id: "esim",
+        label: "eSIM",
+        href: ROUTES.AIRTIME,
+        icon: Globe,
       },
     ],
   },
@@ -161,22 +172,29 @@ export const SIDEBAR_NAV_SECTIONS: NavSection[] = [
     label: "Account",
     items: [
       {
-        id: "notifications",
-        label: "Notifications",
-        href: ROUTES.NOTIFICATIONS,
-        icon: Bell,
+        id: "transactions",
+        label: "Transactions",
+        href: ROUTES.TRANSACTIONS,
+        icon: ReceiptText,
+        detailLabel: "Transaction Details",
+      },
+      {
+        id: "wallet",
+        label: "Wallet",
+        href: ROUTES.OVERVIEW,
+        icon: Wallet,
+      },
+      {
+        id: "support",
+        label: "Support",
+        href: ROUTES.SETTINGS,
+        icon: Headphones,
       },
       {
         id: "settings",
         label: "Settings",
         href: ROUTES.SETTINGS,
         icon: Settings,
-      },
-      {
-        id: "profile",
-        label: "Profile",
-        href: ROUTES.PROFILE,
-        icon: User,
       },
     ],
   },

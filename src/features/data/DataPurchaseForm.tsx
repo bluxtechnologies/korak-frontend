@@ -57,12 +57,8 @@ import {
 // Schema — Doc 09 §6
 // ---------------------------------------------------------------------------
 export const dataFormSchema = z.object({
-  network: z.enum(["mtn", "airtel", "glo", "9mobile"], {
-    message: "Please select a network provider.",
-  }),
-  plan_type: z.enum(["sme", "corporate", "gifting"], {
-    message: "Please select a data plan type.",
-  }),
+  network: z.enum(["mtn", "airtel", "glo", "9mobile"]),
+  plan_type: z.enum(["sme", "corporate", "gifting"]),
   plan_id: z.string().min(1, "Please choose a data bundle package."),
   phone: z
     .string()
@@ -195,39 +191,39 @@ export function DataPurchaseForm({
   if (completedOrder) {
     return (
       <Card className={className} data-testid="data-success-card">
-        <CardHeader className="space-y-2 border-b border-border pb-4 text-center">
+        <CardHeader className="border-border space-y-2 border-b pb-4 text-center">
           <div className="mx-auto flex size-12 items-center justify-center rounded-md border border-emerald-500/20 bg-emerald-500/10 text-emerald-600">
             <CheckCircle2 className="size-6" />
           </div>
-          <CardTitle className="text-xl font-bold text-foreground">
+          <CardTitle className="text-foreground text-xl font-bold">
             Data Bundle Credited
           </CardTitle>
-          <CardDescription className="text-xs text-muted-foreground">
+          <CardDescription className="text-muted-foreground text-xs">
             Reference: {completedOrder.reference}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-4 pt-6 text-sm">
-          <div className="rounded-md border border-border bg-surface p-4 space-y-2.5">
+          <div className="border-border bg-surface space-y-2.5 rounded-md border p-4">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Network</span>
-              <span className="font-semibold uppercase text-foreground">
+              <span className="text-foreground font-semibold uppercase">
                 {completedOrder.network}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Package</span>
-              <span className="font-medium text-foreground">
+              <span className="text-foreground font-medium">
                 {completedOrder.plan_name} ({completedOrder.size})
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Recipient Phone</span>
-              <span className="font-mono font-medium text-foreground">
+              <span className="text-foreground font-mono font-medium">
                 {completedOrder.phone}
               </span>
             </div>
-            <div className="border-t border-border pt-2 flex justify-between font-semibold">
+            <div className="border-border flex justify-between border-t pt-2 font-semibold">
               <span className="text-foreground">Total Debited</span>
               <span className="text-primary font-bold">
                 ₦{completedOrder.amount.toLocaleString()}
@@ -235,26 +231,26 @@ export function DataPurchaseForm({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <ShieldCheck className="size-4 text-emerald-500 shrink-0" />
+          <div className="text-muted-foreground flex items-center gap-2 text-xs">
+            <ShieldCheck className="size-4 shrink-0 text-emerald-500" />
             <span>
               Direct automated telecom delivery completed via SIM cluster.
             </span>
           </div>
         </CardContent>
 
-        <CardFooter className="flex flex-col sm:flex-row gap-2 border-t border-border pt-4">
+        <CardFooter className="border-border flex flex-col gap-2 border-t pt-4 sm:flex-row">
           <Button
             type="button"
             onClick={handleResetForNewOrder}
-            className="w-full sm:w-auto flex-1 text-xs"
+            className="w-full flex-1 text-xs sm:w-auto"
           >
             Buy Another Data Bundle
           </Button>
           <Button
             asChild
             variant="outline"
-            className="w-full sm:w-auto flex-1 text-xs"
+            className="w-full flex-1 text-xs sm:w-auto"
           >
             <Link href={ROUTES.TRANSACTIONS}>View Transactions</Link>
           </Button>
@@ -265,17 +261,17 @@ export function DataPurchaseForm({
 
   return (
     <Card className={className} data-testid="data-purchase-card">
-      <CardHeader className="border-b border-border pb-4 space-y-1">
+      <CardHeader className="border-border space-y-1 border-b pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-md border border-border bg-surface text-primary">
+            <div className="border-border bg-surface text-primary flex size-8 items-center justify-center rounded-md border">
               <Wifi className="size-4" />
             </div>
             <div>
-              <CardTitle className="text-base font-semibold text-foreground">
+              <CardTitle className="text-foreground text-base font-semibold">
                 Buy Data Bundles
               </CardTitle>
-              <CardDescription className="text-xs text-muted-foreground">
+              <CardDescription className="text-muted-foreground text-xs">
                 Instant delivery for SME, Corporate, and Direct Gifting plans
               </CardDescription>
             </div>
@@ -283,10 +279,10 @@ export function DataPurchaseForm({
 
           {/* Available Wallet Balance */}
           <div className="text-right">
-            <span className="text-[11px] text-muted-foreground block">
+            <span className="text-muted-foreground block text-[11px]">
               Wallet Balance
             </span>
-            <span className="font-mono text-xs font-semibold text-foreground">
+            <span className="text-foreground font-mono text-xs font-semibold">
               {formatCurrency(walletBalance, "NGN")}
             </span>
           </div>
@@ -309,7 +305,7 @@ export function DataPurchaseForm({
 
             {/* 1. Network Provider Selection */}
             <div className="space-y-2.5">
-              <FormLabel className="text-xs font-medium text-foreground">
+              <FormLabel className="text-foreground text-xs font-medium">
                 1. Select Network
               </FormLabel>
               <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
@@ -334,7 +330,7 @@ export function DataPurchaseForm({
                       <span className="text-sm font-bold uppercase">
                         {net.name}
                       </span>
-                      <span className="text-[10px] text-muted-foreground mt-0.5">
+                      <span className="text-muted-foreground mt-0.5 text-[10px]">
                         4G / 5G Data
                       </span>
                     </button>
@@ -345,7 +341,7 @@ export function DataPurchaseForm({
 
             {/* 2. Plan Type Selector Tabs */}
             <div className="space-y-2">
-              <FormLabel className="text-xs font-medium text-foreground">
+              <FormLabel className="text-foreground text-xs font-medium">
                 2. Data Plan Category
               </FormLabel>
               <div className="grid grid-cols-3 gap-2">
@@ -376,7 +372,7 @@ export function DataPurchaseForm({
 
             {/* 3. Data Bundle Package Selection Grid */}
             <div className="space-y-2">
-              <FormLabel className="text-xs font-medium text-foreground">
+              <FormLabel className="text-foreground text-xs font-medium">
                 3. Choose Data Package
               </FormLabel>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -399,17 +395,17 @@ export function DataPurchaseForm({
                       aria-pressed={isSelected}
                     >
                       <div className="flex w-full items-center justify-between">
-                        <span className="font-bold text-sm text-foreground">
+                        <span className="text-foreground text-sm font-bold">
                           {plan.size}
                         </span>
                         {isSelected && (
-                          <Check className="size-3.5 text-primary" />
+                          <Check className="text-primary size-3.5" />
                         )}
                       </div>
-                      <span className="text-[11px] text-muted-foreground mt-0.5">
+                      <span className="text-muted-foreground mt-0.5 text-[11px]">
                         {plan.validity}
                       </span>
-                      <span className="font-mono text-xs font-semibold text-primary mt-2">
+                      <span className="text-primary mt-2 font-mono text-xs font-semibold">
                         ₦{plan.price.toLocaleString()}
                       </span>
                     </button>
@@ -445,22 +441,22 @@ export function DataPurchaseForm({
 
             {/* Plan Summary Banner */}
             {activePlan && (
-              <div className="rounded-md border border-border bg-surface p-3.5 space-y-1.5 text-xs">
-                <div className="flex justify-between text-muted-foreground">
+              <div className="border-border bg-surface space-y-1.5 rounded-md border p-3.5 text-xs">
+                <div className="text-muted-foreground flex justify-between">
                   <span>Selected Bundle:</span>
-                  <span className="font-medium text-foreground">
+                  <span className="text-foreground font-medium">
                     {activePlan.name} ({activePlan.size})
                   </span>
                 </div>
-                <div className="flex justify-between text-muted-foreground">
+                <div className="text-muted-foreground flex justify-between">
                   <span>Validity Duration:</span>
-                  <span className="font-medium text-foreground">
+                  <span className="text-foreground font-medium">
                     {activePlan.validity}
                   </span>
                 </div>
-                <div className="border-t border-border pt-1.5 flex justify-between font-semibold">
+                <div className="border-border flex justify-between border-t pt-1.5 font-semibold">
                   <span className="text-foreground">Price:</span>
-                  <span className="font-mono text-primary text-sm font-bold">
+                  <span className="text-primary font-mono text-sm font-bold">
                     ₦{activePlan.price.toLocaleString()}
                   </span>
                 </div>
@@ -479,7 +475,7 @@ export function DataPurchaseForm({
 
             <SubmitButton
               disabled={!isBalanceSufficient}
-              className="w-full text-xs font-medium h-10"
+              className="h-10 w-full text-xs font-medium"
               loadingText="Purchasing data..."
             >
               <span>Review Data Order</span>
@@ -496,47 +492,45 @@ export function DataPurchaseForm({
         title="Confirm Data Purchase"
         variant="default"
         confirmText={
-          isSubmitting
-            ? "Purchasing..."
-            : `Pay ₦${planPrice.toLocaleString()}`
+          isSubmitting ? "Purchasing..." : `Pay ₦${planPrice.toLocaleString()}`
         }
         isLoading={isSubmitting}
         onConfirm={handleConfirmPurchase}
         description={
           <div className="space-y-3 pt-2 text-left">
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Please verify recipient phone number and package carefully before
               confirming. Data deliveries are automated and non-refundable once
               processed by the telecom operator.
             </p>
-            <div className="rounded-md border border-border bg-surface p-3 text-xs space-y-2">
+            <div className="border-border bg-surface space-y-2 rounded-md border p-3 text-xs">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Network:</span>
-                <span className="font-semibold uppercase text-foreground">
+                <span className="text-foreground font-semibold uppercase">
                   {selectedNetwork}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Bundle:</span>
-                <span className="font-medium text-foreground">
+                <span className="text-foreground font-medium">
                   {activePlan?.name} ({activePlan?.size})
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Validity:</span>
-                <span className="font-medium text-foreground">
+                <span className="text-foreground font-medium">
                   {activePlan?.validity}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Recipient:</span>
-                <span className="font-mono font-medium text-foreground">
+                <span className="text-foreground font-mono font-medium">
                   {enteredPhone}
                 </span>
               </div>
-              <div className="border-t border-border pt-1.5 flex justify-between font-bold">
+              <div className="border-border flex justify-between border-t pt-1.5 font-bold">
                 <span className="text-foreground">Total Debited:</span>
-                <span className="font-mono text-primary text-sm">
+                <span className="text-primary font-mono text-sm">
                   ₦{planPrice.toLocaleString()}
                 </span>
               </div>
