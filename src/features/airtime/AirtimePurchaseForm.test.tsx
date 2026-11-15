@@ -22,10 +22,10 @@ describe("AirtimePurchaseForm (F16.1 & F16.4)", () => {
 
     expect(screen.getByTestId("airtime-purchase-card")).toBeInTheDocument();
     expect(screen.getByText("Buy Airtime")).toBeInTheDocument();
-    expect(screen.getByText("MTN")).toBeInTheDocument();
-    expect(screen.getByText("AIRTEL")).toBeInTheDocument();
-    expect(screen.getByText("GLO")).toBeInTheDocument();
-    expect(screen.getByText("9MOBILE")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /MTN/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Airtel/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Glo/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /9mobile/i })).toBeInTheDocument();
 
     // Quick amounts
     expect(screen.getByRole("button", { name: "₦100" })).toBeInTheDocument();
@@ -53,9 +53,9 @@ describe("AirtimePurchaseForm (F16.1 & F16.4)", () => {
     // Select ₦1,000 quick button
     await user.click(screen.getByRole("button", { name: "₦1,000" }));
 
-    // MTN has 3% discount: 3% of 1000 = 30, net = 970
-    expect(screen.getByText("-₦30")).toBeInTheDocument();
-    expect(screen.getByText("₦970")).toBeInTheDocument();
+    // MTN has 2% discount: 2% of 1000 = 20, net = 980
+    expect(screen.getByText("-₦20")).toBeInTheDocument();
+    expect(screen.getByText("₦980")).toBeInTheDocument();
   });
 
   it("disables submission and warns if wallet balance is insufficient", async () => {
@@ -84,8 +84,8 @@ describe("AirtimePurchaseForm (F16.1 & F16.4)", () => {
       network: "mtn",
       phone: "08031234567",
       amount: 500,
-      discount: 15,
-      final_amount: 485,
+      discount: 10,
+      final_amount: 490,
       status: "completed",
       message: "Airtime of ₦500 sent successfully to 08031234567.",
       created_at: new Date().toISOString(),
@@ -108,8 +108,8 @@ describe("AirtimePurchaseForm (F16.1 & F16.4)", () => {
     expect(screen.getByText("Confirm Airtime Purchase")).toBeInTheDocument();
     expect(screen.getByText("Net Wallet Debit:")).toBeInTheDocument();
 
-    // Click pay in dialog
-    const payButton = screen.getByRole("button", { name: /Pay ₦485/i });
+    // Click pay in dialog (500 - 2% (10) = 490)
+    const payButton = screen.getByRole("button", { name: /Pay ₦490/i });
     await user.click(payButton);
 
     await waitFor(() => {

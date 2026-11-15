@@ -474,47 +474,41 @@ export function AirtimePurchaseForm({
         }
         isLoading={isSubmitting}
         onConfirm={handleConfirmPurchase}
-        description={
-          <div className="space-y-3 pt-2 text-left">
-            <p className="text-muted-foreground text-xs">
-              Please verify your recipient details. Airtime top-ups are
-              dispatched immediately and cannot be reversed once processed.
-            </p>
-            <div className="border-border bg-surface space-y-2 rounded-md border p-3 text-xs">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Network:</span>
-                <span className="text-foreground font-semibold uppercase">
-                  {selectedNetwork}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Recipient:</span>
-                <span className="text-foreground font-mono font-medium">
-                  {enteredPhone}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Airtime Value:</span>
-                <span className="text-foreground font-mono font-medium">
-                  ₦{enteredAmount.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-                <span>Discount:</span>
-                <span className="font-mono font-medium">
-                  -₦{discountAmount.toLocaleString()}
-                </span>
-              </div>
-              <div className="border-border flex justify-between border-t pt-1.5 font-bold">
-                <span className="text-foreground">Net Wallet Debit:</span>
-                <span className="text-primary font-mono text-sm">
-                  ₦{finalChargeAmount.toLocaleString()}
-                </span>
-              </div>
-            </div>
+        description="Please verify your recipient details. Airtime top-ups are dispatched immediately and cannot be reversed once processed."
+      >
+        <div className="border-border bg-surface space-y-2 rounded-md border p-3 text-xs">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Network:</span>
+            <span className="text-foreground font-semibold uppercase">
+              {selectedNetwork}
+            </span>
           </div>
-        }
-      />
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Recipient:</span>
+            <span className="text-foreground font-mono font-medium">
+              {enteredPhone}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Airtime Value:</span>
+            <span className="text-foreground font-mono font-medium">
+              ₦{enteredAmount.toLocaleString()}
+            </span>
+          </div>
+          <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+            <span>Discount:</span>
+            <span className="font-mono font-medium">
+              -₦{discountAmount.toLocaleString()}
+            </span>
+          </div>
+          <div className="border-border flex justify-between border-t pt-1.5 font-bold">
+            <span className="text-foreground">Net Wallet Debit:</span>
+            <span className="text-primary font-mono text-sm">
+              ₦{finalChargeAmount.toLocaleString()}
+            </span>
+          </div>
+        </div>
+      </ConfirmDialog>
     </Card>
   );
 }

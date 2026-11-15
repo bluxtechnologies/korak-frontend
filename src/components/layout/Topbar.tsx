@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Bell, ChevronDown, Loader2, LogOut, Search, User } from "lucide-react";
+import { Bell, ChevronDown, Loader2, LogOut, Search, User, Wallet } from "lucide-react";
 import { type NavItem, ROUTES, USER_MENU_ITEMS } from "@/config/navigation";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
@@ -29,6 +29,10 @@ export interface TopbarProps {
   leftSlot?: React.ReactNode;
   /** Optional custom notifications widget (used by F14 NotificationBell) */
   notificationsSlot?: React.ReactNode;
+  /** Optional custom wallet widget/pill */
+  walletSlot?: React.ReactNode;
+  /** Wallet balance string displayed in the wallet pill (defaults to ₦0.00) */
+  walletBalance?: string;
   /** Unread notification count shown in the default notifications button */
   unreadCount?: number;
   /** Links rendered inside the user menu (defaults to USER_MENU_ITEMS) */
@@ -53,6 +57,8 @@ export function Topbar({
   user,
   leftSlot,
   notificationsSlot,
+  walletSlot,
+  walletBalance = "₦0.00",
   unreadCount = 0,
   menuItems = USER_MENU_ITEMS,
   onLogout,
@@ -76,19 +82,32 @@ export function Topbar({
       <div className="flex min-w-0 items-center gap-3">
         {leftSlot}
 
-        {/* Global Search / Command Menu Shortcut */}
-        <div className="hidden md:flex items-center gap-2 rounded-lg border border-border/70 bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground hover:border-border transition-colors w-56 lg:w-72">
-          <Search className="size-3.5 text-muted-foreground" aria-hidden="true" />
-          <span className="truncate">Search services, orders, vpn...</span>
-          <kbd className="ml-auto pointer-events-none inline-flex h-4 select-none items-center rounded border border-border/70 bg-card px-1.5 font-mono text-[9px] font-medium text-muted-foreground">
-            ⌘K
-          </kbd>
+        {/* Global Search Input matching design reference */}
+        <div className="hidden sm:flex items-center gap-2 rounded-full border border-border/70 bg-muted/40 px-3.5 py-1.5 text-xs text-muted-foreground hover:border-border transition-colors w-60 md:w-72 lg:w-80">
+          <Search className="size-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
+          <input
+            type="text"
+            placeholder="Search for services..."
+            aria-label="Search for services"
+            className="bg-transparent text-xs text-foreground placeholder:text-muted-foreground focus:outline-none w-full"
+          />
         </div>
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Theme toggle */}
-        <ThemeToggle />
+        {/* Live Wallet Balance Pill */}
+        {walletSlot !== undefined ? (
+          walletSlot
+        ) : (
+          <Link
+            href={ROUTES.OVERVIEW}
+            aria-label={`Wallet balance: ${walletBalance}`}
+            className="flex items-center gap-1.5 rounded-full border border-border/70 bg-card/80 hover:bg-muted/70 px-3 py-1 text-xs font-semibold text-foreground transition-colors shadow-xs"
+          >
+            <Wallet className="size-3.5 text-muted-foreground" aria-hidden="true" />
+            <span>{walletBalance}</span>
+          </Link>
+        )}
 
         {/* Notifications slot */}
         {notificationsSlot !== undefined ? (
@@ -128,18 +147,18 @@ export function Topbar({
               type="button"
               variant="ghost"
               aria-label="User menu"
-              className="text-foreground hover:bg-muted/70 h-9 gap-2.5 rounded-lg px-2 text-sm font-medium transition-colors"
+              className="text-foreground hover:bg-muted/70 h-9 gap-2 rounded-full px-2 text-sm font-medium transition-colors"
             >
               <span
                 aria-hidden="true"
-                className="relative flex size-7 shrink-0 items-center justify-center rounded-full border border-border/80 bg-primary/10 text-primary text-xs font-semibold shadow-xs"
+                className="relative flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold shadow-xs"
               >
                 {initials || (
-                  <User className="text-primary size-3.5" />
+                  <User className="size-3.5 text-primary-foreground" />
                 )}
                 <span className="absolute -bottom-0.5 -right-0.5 size-2 rounded-full border-2 border-card bg-emerald-500" />
               </span>
-              <span className="hidden max-w-[140px] truncate sm:inline">
+              <span className="hidden max-w-[140px] truncate sm:inline font-medium">
                 {displayName}
               </span>
               <ChevronDown

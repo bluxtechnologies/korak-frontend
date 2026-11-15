@@ -478,7 +478,7 @@ export function DataPurchaseForm({
               className="h-10 w-full text-xs font-medium"
               loadingText="Purchasing data..."
             >
-              <span>Review Data Order</span>
+              <span>Review Order</span>
               <ArrowRight className="ml-2 size-4" />
             </SubmitButton>
           </form>
@@ -496,48 +496,41 @@ export function DataPurchaseForm({
         }
         isLoading={isSubmitting}
         onConfirm={handleConfirmPurchase}
-        description={
-          <div className="space-y-3 pt-2 text-left">
-            <p className="text-muted-foreground text-xs">
-              Please verify recipient phone number and package carefully before
-              confirming. Data deliveries are automated and non-refundable once
-              processed by the telecom operator.
-            </p>
-            <div className="border-border bg-surface space-y-2 rounded-md border p-3 text-xs">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Network:</span>
-                <span className="text-foreground font-semibold uppercase">
-                  {selectedNetwork}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Bundle:</span>
-                <span className="text-foreground font-medium">
-                  {activePlan?.name} ({activePlan?.size})
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Validity:</span>
-                <span className="text-foreground font-medium">
-                  {activePlan?.validity}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Recipient:</span>
-                <span className="text-foreground font-mono font-medium">
-                  {enteredPhone}
-                </span>
-              </div>
-              <div className="border-border flex justify-between border-t pt-1.5 font-bold">
-                <span className="text-foreground">Total Debited:</span>
-                <span className="text-primary font-mono text-sm">
-                  ₦{planPrice.toLocaleString()}
-                </span>
-              </div>
-            </div>
+        description="Please verify recipient phone number and package carefully before confirming. Data deliveries are automated and non-refundable once processed by the telecom operator."
+      >
+        <div className="border-border bg-surface space-y-2 rounded-md border p-3 text-xs">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Network:</span>
+            <span className="text-foreground font-semibold uppercase">
+              {selectedNetwork}
+            </span>
           </div>
-        }
-      />
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Bundle:</span>
+            <span className="text-foreground font-medium">
+              {activePlan?.name} ({activePlan?.size})
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Validity:</span>
+            <span className="text-foreground font-medium">
+              {activePlan?.validity}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Recipient:</span>
+            <span className="text-foreground font-mono font-medium">
+              {enteredPhone}
+            </span>
+          </div>
+          <div className="border-border flex justify-between border-t pt-1.5 font-bold">
+            <span className="text-foreground">Total Debited:</span>
+            <span className="text-primary font-mono text-sm">
+              ₦{planPrice.toLocaleString()}
+            </span>
+          </div>
+        </div>
+      </ConfirmDialog>
     </Card>
   );
 }
