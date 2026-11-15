@@ -6,8 +6,12 @@ import { usePathname } from "next/navigation";
 import {
   ChevronDown,
   ChevronRight,
+  Monitor,
+  Moon,
   PanelLeftClose,
   PanelLeftOpen,
+  Shield,
+  Sun,
 } from "lucide-react";
 import {
   filterNavigationByAbilities,
@@ -20,7 +24,100 @@ import {
 } from "@/config/navigation";
 import { Button } from "@/components/ui/button";
 import { BrandLogoIcon } from "@/components/shared/BrandLogo";
+import { useTheme } from "@/components/shared/theme-provider";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+
+const emptySubscribe = () => () => {};
+
+function SidebarThemeSelector({ isCollapsed }: { isCollapsed: boolean }) {
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const mounted = React.useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+
+  const activeTheme = mounted ? (theme ?? "system") : "system";
+  const themeLabel =
+    activeTheme === "system"
+      ? "System"
+      : activeTheme === "dark"
+        ? "Dark"
+        : "Light";
+
+  const isDark =
+    mounted && (resolvedTheme === "dark" || activeTheme === "dark");
+  const ThemeIcon = !mounted ? Monitor : isDark ? Moon : Sun;
+
+  if (isCollapsed) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            aria-label={`Theme: ${themeLabel}`}
+          >
+            <ThemeIcon className="size-4" aria-hidden="true" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-36">
+          <DropdownMenuItem onClick={() => setTheme("system")}>
+            <Monitor className="mr-2 size-3.5" />
+            <span>System</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setTheme("light")}>
+            <Sun className="mr-2 size-3.5" />
+            <span>Light</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setTheme("dark")}>
+            <Moon className="mr-2 size-3.5" />
+            <span>Dark</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="flex w-full items-center justify-between rounded-lg border border-border/70 bg-muted/30 px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          aria-label={`Theme: ${themeLabel}`}
+        >
+          <span className="flex items-center gap-2">
+            <ThemeIcon className="size-3.5 shrink-0" aria-hidden="true" />
+            <span>Theme: {themeLabel}</span>
+          </span>
+          <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuItem onClick={() => setTheme("system")}>
+          <Monitor className="mr-2 size-3.5" />
+          <span>System</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme("light")}>
+          <Sun className="mr-2 size-3.5" />
+          <span>Light</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme("dark")}>
+          <Moon className="mr-2 size-3.5" />
+          <span>Dark</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export interface SidebarProps {
   /** Controlled collapsed state for desktop icon rail mode */
@@ -150,7 +247,7 @@ export function Sidebar({
               ? "py-2 pr-3 pl-9 text-xs"
               : "px-3 py-2",
           active
-            ? "bg-primary text-primary-foreground font-medium shadow-xs shadow-primary/20"
+            ? "bg-primary/10 text-primary font-medium hover:bg-primary/15"
             : "text-muted-foreground hover:bg-muted/70 hover:text-foreground font-normal"
         )}
       >
@@ -158,7 +255,7 @@ export function Sidebar({
           <Icon
             className={cn(
               "h-4 w-4 shrink-0 transition-transform",
-              active ? "text-primary-foreground" : "text-muted-foreground"
+              active ? "text-primary" : "text-muted-foreground"
             )}
             aria-hidden="true"
           />
@@ -326,35 +423,30 @@ export function Sidebar({
         ))}
       </nav>
 
-      {/* System Status / Quick Info Footer */}
+      {/* Sidebar Footer with Trust Badge & Theme Selector */}
       {!isCollapsed ? (
-        <div className="mt-auto border-t border-border/70 p-3">
-          <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="relative flex size-2">
-                <span className="size-2 animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
-              </span>
-              <div className="flex flex-col">
-                <span className="text-[11px] font-medium text-foreground">
-                  System Status
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  99.98% Operational
-                </span>
+        <div className="mt-auto space-y-2.5 border-t border-border/70 p-3">
+          {/* Secure & Reliable Card */}
+          <div className="rounded-xl border border-border/70 bg-primary/[0.04] p-3 text-xs dark:bg-primary/[0.08]">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex size-6 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Shield className="size-3.5" aria-hidden="true" />
               </div>
+              <span className="font-semibold text-foreground text-xs">
+                Secure & Reliable
+              </span>
             </div>
-            <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400">
-              Active
-            </span>
+            <p className="text-[11px] text-muted-foreground leading-snug">
+              Your transactions are always protected with Korak.
+            </p>
           </div>
+
+          {/* Theme Selector */}
+          <SidebarThemeSelector isCollapsed={false} />
         </div>
       ) : (
-        <div className="mt-auto flex justify-center border-t border-border/70 py-3">
-          <span
-            className="size-2 rounded-full bg-emerald-500"
-            title="System Operational (99.98%)"
-          />
+        <div className="mt-auto flex flex-col items-center gap-2 border-t border-border/70 py-3">
+          <SidebarThemeSelector isCollapsed={true} />
         </div>
       )}
     </aside>
