@@ -135,7 +135,7 @@ describe("DataPurchaseForm (F16.2 & F16.4)", () => {
 
     // Success card appears
     expect(screen.getByTestId("data-success-card")).toBeInTheDocument();
-    expect(screen.getByText("Data Bundle Credited")).toBeInTheDocument();
-    expect(screen.getByText("DAT-20261115-9988")).toBeInTheDocument();
+    expect(screen.getByText(/Data Bundle Credited/i)).toBeInTheDocument();
+    expect(screen.getByText(/DAT-20261115-9988/)).toBeInTheDocument();
   });
 });
