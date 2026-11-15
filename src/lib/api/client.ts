@@ -1,0 +1,384 @@
+import { emitPermissionDenied, emitSessionExpired } from "./events";
+import { ApiErrorResponse, ApiRequestOptions } from "./types";
+
+export class ApiClientError extends Error {
+  public status: number;
+  public code: string;
+  public errors?: Record<string, string[]>;
+  public requestId?: string;
+  public reference_id?: string;
+  public retryAfter?: number;
+  public response?: Response;
+
+  constructor(
+    message: string,
+    status: number,
+    code: string = "api_error",
+    errors?: Record<string, string[]>,
+    requestId?: string,
+    response?: Response,
+    retryAfter?: number,
+    referenceId?: string
+  ) {
+    super(message);
+    this.name = "ApiClientError";
+    this.status = status;
+    this.code = code;
+    this.errors = errors;
+    this.requestId = requestId;
+    this.reference_id = referenceId || requestId;
+    this.response = response;
+    this.retryAfter = retryAfter;
+  }
+}
+
+const DEFAULT_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ||
+  "http://localhost:8070";
+
+export function getBaseApiUrl(): string {
+  return DEFAULT_BASE_URL;
+}
+
+export function buildApiUrl(
+  endpoint: string,
+  params?: Record<string, string | number | boolean | undefined | null>
+): string {
+  const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const url = new URL(`${DEFAULT_BASE_URL}${cleanEndpoint}`);
+
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        url.searchParams.append(key, String(value));
+      }
+    });
+  }
+
+  return url.toString();
+}
+
+/**
+ * Generates a unique correlation ID for the request.
+ */
+export function generateRequestId(): string {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    try {
+      return crypto.randomUUID();
+    } catch {
+      // In case Next.js intercepts during prerender
+    }
+  }
+  try {
+    return "req_" + Math.random().toString(36).substring(2, 15);
+  } catch {
+    return "req_prerender_static";
+  }
+}
+
+/**
+ * Extracts and decodes the XSRF-TOKEN cookie from document.cookie in browser environments.
+ */
+export function getXsrfCookie(): string | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+  const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+}
+
+let csrfPromise: Promise<void> | null = null;
+
+/**
+ * Fetches CSRF cookie from Laravel Sanctum (/sanctum/csrf-cookie).
+ * Coalesces concurrent calls so only one request is in-flight.
+ */
+export async function fetchCsrfCookie(): Promise<void> {
+  if (csrfPromise) {
+    return csrfPromise;
+  }
+
+  csrfPromise = (async () => {
+    try {
+      const url = buildApiUrl("/sanctum/csrf-cookie");
+      await fetch(url, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+        },
+      });
+    } finally {
+      csrfPromise = null;
+    }
+  })();
+
+  return csrfPromise;
+}
+
+/**
+ * Helper to initialize CSRF cookie before authentication calls per Backend Handoff.
+ */
+export async function initCsrf(): Promise<void> {
+  return fetchCsrfCookie();
+}
+
+const STATE_CHANGING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+const AUTH_CREDENTIAL_ENDPOINTS = [
+  "/api/v1/auth/login",
+  "/api/v1/auth/register",
+  "/api/v1/auth/verify-device",
+];
+
+function isCredentialSubmissionEndpoint(endpoint: string): boolean {
+  const clean = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  return AUTH_CREDENTIAL_ENDPOINTS.some((path) => clean.startsWith(path));
+}
+
+function dispatchSessionStateEvent(
+  endpoint: string,
+  status: number,
+  code: string,
+  skipSessionEvent: boolean
+): void {
+  if (skipSessionEvent || typeof window === "undefined") {
+    return;
+  }
+
+  if (
+    status === 401 &&
+    code !== "invalid_credentials" &&
+    !isCredentialSubmissionEndpoint(endpoint)
+  ) {
+    emitSessionExpired({ endpoint, status: 401, code });
+  } else if (status === 403) {
+    emitPermissionDenied({ endpoint, status: 403, code });
+  }
+}
+
+async function baseApiClient<T>(
+  endpoint: string,
+  options: ApiRequestOptions = {}
+): Promise<T> {
+  const {
+    params,
+    body,
+    headers: customHeaders,
+    skipCsrf = false,
+    skipSessionEvent = false,
+    _isRetry = false,
+    ...customOptions
+  } = options;
+
+  const method = (customOptions.method || "GET").toUpperCase();
+  const url = buildApiUrl(endpoint, params);
+  const headers = new Headers(customHeaders);
+
+  if (!headers.has("Accept")) {
+    headers.set("Accept", "application/json");
+  }
+
+  // Ensure an X-Request-ID correlation header is always present
+  const requestId = headers.get("X-Request-ID") || generateRequestId();
+  if (!headers.has("X-Request-ID")) {
+    headers.set("X-Request-ID", requestId);
+  }
+
+  // Inject CSRF header for state-changing methods in browser environments
+  if (
+    !skipCsrf &&
+    STATE_CHANGING_METHODS.has(method) &&
+    typeof document !== "undefined"
+  ) {
+    let token = getXsrfCookie();
+    if (!token && !_isRetry) {
+      await fetchCsrfCookie();
+      token = getXsrfCookie();
+    }
+    if (token && !headers.has("X-XSRF-TOKEN")) {
+      headers.set("X-XSRF-TOKEN", token);
+    }
+  }
+
+  let processedBody: BodyInit | null | undefined = undefined;
+
+  if (body !== undefined && body !== null) {
+    if (body instanceof FormData) {
+      processedBody = body;
+    } else if (typeof body === "string") {
+      processedBody = body;
+      if (!headers.has("Content-Type")) {
+        headers.set("Content-Type", "application/json");
+      }
+    } else {
+      processedBody = JSON.stringify(body);
+      if (!headers.has("Content-Type")) {
+        headers.set("Content-Type", "application/json");
+      }
+    }
+  }
+
+  const response = await fetch(url, {
+    ...customOptions,
+    headers,
+    credentials: customOptions.credentials || "include",
+    body: processedBody,
+  });
+
+  const responseRequestId =
+    response.headers.get("x-request-id") ||
+    response.headers.get("X-Request-ID") ||
+    requestId;
+
+  // Handle 419 CSRF token mismatch: refetch CSRF cookie and retry once (Doc 04 §4)
+  if (response.status === 419) {
+    if (!_isRetry) {
+      await fetchCsrfCookie();
+      const updatedHeaders = new Headers(customHeaders);
+      const newToken = getXsrfCookie();
+      if (newToken) {
+        updatedHeaders.set("X-XSRF-TOKEN", newToken);
+      }
+      return baseApiClient<T>(endpoint, {
+        ...options,
+        headers: updatedHeaders,
+        _isRetry: true,
+      });
+    }
+
+    // Retried once and still 419: treat as 401 per Doc 04 §4
+    dispatchSessionStateEvent(
+      endpoint,
+      401,
+      "session_expired",
+      skipSessionEvent
+    );
+
+    throw new ApiClientError(
+      "Your session has expired. Please log in again.",
+      401,
+      "session_expired",
+      undefined,
+      responseRequestId,
+      response
+    );
+  }
+
+  if (response.status === 204) {
+    return {} as T;
+  }
+
+  const contentType = response.headers.get("content-type");
+  const isJson = contentType && contentType.includes("application/json");
+
+  let responseData: unknown = null;
+  if (isJson) {
+    try {
+      responseData = await response.json();
+    } catch {
+      responseData = null;
+    }
+  } else {
+    responseData = await response.text();
+  }
+
+  if (!response.ok) {
+    const errorData = responseData as ApiErrorResponse | null;
+    const message =
+      errorData?.message || `Request failed with status ${response.status}`;
+    const code = errorData?.code || `http_${response.status}`;
+    const fieldErrors = errorData?.errors;
+    const retryAfterHeader = response.headers.get("retry-after");
+    const retryAfter = retryAfterHeader ? parseInt(retryAfterHeader, 10) : undefined;
+    const referenceId = errorData?.reference_id || responseRequestId;
+
+    dispatchSessionStateEvent(
+      endpoint,
+      response.status,
+      code,
+      skipSessionEvent
+    );
+
+    throw new ApiClientError(
+      message,
+      response.status,
+      code,
+      fieldErrors,
+      responseRequestId,
+      response,
+      retryAfter,
+      referenceId
+    );
+  }
+
+  return responseData as T;
+}
+
+export interface ApiClientResponse<T> {
+  data: T;
+  status: number;
+  headers: Headers;
+}
+
+export interface ApiClientInstance {
+  <T>(endpoint: string, options?: ApiRequestOptions): Promise<T>;
+  get<T = unknown>(endpoint: string, options?: ApiRequestOptions): Promise<ApiClientResponse<T>>;
+  post<T = unknown>(endpoint: string, body?: unknown, options?: ApiRequestOptions): Promise<ApiClientResponse<T>>;
+  put<T = unknown>(endpoint: string, body?: unknown, options?: ApiRequestOptions): Promise<ApiClientResponse<T>>;
+  patch<T = unknown>(endpoint: string, body?: unknown, options?: ApiRequestOptions): Promise<ApiClientResponse<T>>;
+  delete<T = unknown>(endpoint: string, options?: ApiRequestOptions): Promise<ApiClientResponse<T>>;
+}
+
+export const apiClient: ApiClientInstance = Object.assign(
+  async <T>(endpoint: string, options?: ApiRequestOptions): Promise<T> => {
+    return baseApiClient<T>(endpoint, options);
+  },
+  {
+    get: async <T = unknown>(endpoint: string, options?: ApiRequestOptions): Promise<ApiClientResponse<T>> => {
+      const data = await baseApiClient<T>(endpoint, { ...options, method: "GET" });
+      return { data, status: 200, headers: new Headers() };
+    },
+    post: async <T = unknown>(endpoint: string, body?: unknown, options?: ApiRequestOptions): Promise<ApiClientResponse<T>> => {
+      const data = await baseApiClient<T>(endpoint, { ...options, method: "POST", body });
+      return { data, status: 200, headers: new Headers() };
+    },
+    put: async <T = unknown>(endpoint: string, body?: unknown, options?: ApiRequestOptions): Promise<ApiClientResponse<T>> => {
+      const data = await baseApiClient<T>(endpoint, { ...options, method: "PUT", body });
+      return { data, status: 200, headers: new Headers() };
+    },
+    patch: async <T = unknown>(endpoint: string, body?: unknown, options?: ApiRequestOptions): Promise<ApiClientResponse<T>> => {
+      const data = await baseApiClient<T>(endpoint, { ...options, method: "PATCH", body });
+      return { data, status: 200, headers: new Headers() };
+    },
+    delete: async <T = unknown>(endpoint: string, options?: ApiRequestOptions): Promise<ApiClientResponse<T>> => {
+      const data = await baseApiClient<T>(endpoint, { ...options, method: "DELETE" });
+      return { data, status: 200, headers: new Headers() };
+    },
+  }
+);
+
+export const api = {
+  get: <T>(endpoint: string, options?: ApiRequestOptions) =>
+    baseApiClient<T>(endpoint, { ...options, method: "GET" }),
+
+  post: <T>(endpoint: string, body?: unknown, options?: ApiRequestOptions) =>
+    baseApiClient<T>(endpoint, { ...options, method: "POST", body }),
+
+  put: <T>(endpoint: string, body?: unknown, options?: ApiRequestOptions) =>
+    baseApiClient<T>(endpoint, { ...options, method: "PUT", body }),
+
+  patch: <T>(endpoint: string, body?: unknown, options?: ApiRequestOptions) =>
+    baseApiClient<T>(endpoint, { ...options, method: "PATCH", body }),
+
+  delete: <T>(endpoint: string, options?: ApiRequestOptions) =>
+    baseApiClient<T>(endpoint, { ...options, method: "DELETE" }),
+};

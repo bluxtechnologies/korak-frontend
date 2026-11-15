@@ -1,0 +1,190 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-sans:
+    "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --background: #ffffff;
+  --foreground: #09090b;
+
+  --surface: #fafafa;
+  --card: #ffffff;
+  --card-foreground: #09090b;
+
+  --popover: #ffffff;
+  --popover-foreground: #09090b;
+
+  --primary: #7a1f3d;
+  --primary-foreground: #ffffff;
+
+  --secondary: #f4f4f5;
+  --secondary-foreground: #09090b;
+
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #7a1f3d;
+
+  /* Global Radius — 8px */
+  --radius: 8px;
+
+  /* Status Colors — clearly distinct from brand burgundy (#7A1F3D) */
+  --info: #2563eb;
+  --info-foreground: #ffffff;
+  --info-surface: #eff6ff;
+  --info-border: #bfdbfe;
+
+  --success: #16a34a;
+  --success-foreground: #ffffff;
+  --success-surface: #f0fdf4;
+  --success-border: #bbf7d0;
+
+  --warning: #d97706;
+  --warning-foreground: #ffffff;
+  --warning-surface: #fffbeb;
+  --warning-border: #fde68a;
+
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --destructive-surface: #fef2f2;
+  --destructive-border: #fecaca;
+
+  /* Subtle shadow for floating layers only (dropdowns, modals, popovers) */
+  --shadow-floating:
+    0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+}
+
+.dark {
+  --background: #09090b;
+  --foreground: #f4f4f5;
+
+  --surface: #111113;
+  --card: #111113;
+  --card-foreground: #f4f4f5;
+
+  --popover: #111113;
+  --popover-foreground: #f4f4f5;
+
+  /* Calibrated lighter burgundy for AA contrast against dark background */
+  --primary: #b83a62;
+  --primary-foreground: #ffffff;
+
+  --secondary: #18181b;
+  --secondary-foreground: #f4f4f5;
+
+  --muted: #18181b;
+  --muted-foreground: #a1a1aa;
+
+  --border: #27272a;
+  --input: #27272a;
+  --ring: #b83a62;
+
+  /* Status Colors in Dark Mode */
+  --info: #3b82f6;
+  --info-foreground: #ffffff;
+  --info-surface: #172554;
+  --info-border: #1e40af;
+
+  --success: #22c55e;
+  --success-foreground: #ffffff;
+  --success-surface: #052e16;
+  --success-border: #166534;
+
+  --warning: #f59e0b;
+  --warning-foreground: #09090b;
+  --warning-surface: #451a03;
+  --warning-border: #78350f;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --destructive-surface: #450a0a;
+  --destructive-border: #991b1b;
+
+  --shadow-floating:
+    0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-surface: var(--info-surface);
+  --color-info-border: var(--info-border);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-surface: var(--success-surface);
+  --color-success-border: var(--success-border);
+
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-surface: var(--warning-surface);
+  --color-warning-border: var(--warning-border);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-surface: var(--destructive-surface);
+  --color-destructive-border: var(--destructive-border);
+
+  /* Radius — Enforcing uniform 8px radius across all variants */
+  --radius-xs: var(--radius);
+  --radius-sm: var(--radius);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius);
+  --radius-2xl: var(--radius);
+  --radius-3xl: var(--radius);
+  --radius: var(--radius);
+
+  /* Near-zero shadows: default layers have no shadow; subtle shadow on floating layers only */
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow: none;
+  --shadow-lg: var(--shadow-floating);
+  --shadow-xl: var(--shadow-floating);
+  --shadow-2xl: none;
+
+  --font-sans: var(--font-sans);
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
