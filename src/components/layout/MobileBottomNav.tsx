@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { NAV_ICON_STROKE_WIDTH, ROUTES } from "@/config/navigation";
 import { cn } from "@/lib/utils";
+import { motion } from "motion/react";
 
 export interface MobileBottomNavProps {
   currentPath: string;
@@ -87,24 +88,36 @@ export function MobileBottomNav({
       {navItems.map((item) => {
         const Icon = item.icon;
         return (
-          <Link
+          <motion.div
             key={item.label}
-            href={item.href}
-            aria-current={item.isActive ? "page" : undefined}
-            className={cn(
-              "focus-visible:ring-ring flex flex-1 flex-col items-center justify-center gap-1 py-1 text-[11px] font-medium transition-colors focus-visible:ring-1 focus-visible:outline-none",
-              item.isActive
-                ? "text-primary font-semibold"
-                : "text-muted-foreground hover:text-foreground"
-            )}
+            className="flex-1"
+            whileTap={{ scale: 0.94 }}
           >
-            <Icon
-              className="size-5 shrink-0"
-              strokeWidth={item.isActive ? 2 : NAV_ICON_STROKE_WIDTH}
-              aria-hidden="true"
-            />
-            <span className="truncate">{item.label}</span>
-          </Link>
+            <Link
+              href={item.href}
+              aria-current={item.isActive ? "page" : undefined}
+              className={cn(
+                "relative focus-visible:ring-ring flex flex-col items-center justify-center gap-1 py-1 text-[11px] font-medium transition-colors focus-visible:ring-1 focus-visible:outline-none",
+                item.isActive
+                  ? "text-primary font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {item.isActive && (
+                <motion.span
+                  layoutId="mobileNavActivePill"
+                  className="absolute inset-0 -top-0.5 rounded-lg bg-primary/10 -z-10"
+                  transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                />
+              )}
+              <Icon
+                className="size-5 shrink-0"
+                strokeWidth={item.isActive ? 2 : NAV_ICON_STROKE_WIDTH}
+                aria-hidden="true"
+              />
+              <span className="truncate">{item.label}</span>
+            </Link>
+          </motion.div>
         );
       })}
     </nav>

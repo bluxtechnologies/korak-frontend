@@ -18,6 +18,7 @@ import {
   getActiveVpnSubscription,
   getVpnSessionLogs,
 } from "./api";
+import { motion } from "motion/react";
 import { VpnActiveConsole } from "./VpnActiveConsole";
 import { VpnNodeSelectorCard } from "./VpnNodeSelectorCard";
 import { VpnLogsView } from "./VpnLogsView";
@@ -85,31 +86,45 @@ export function VpnView({
           </p>
         </div>
 
-        {/* Tab Switcher */}
+        {/* Tab Switcher with Spring Sliding Pill Indicator */}
         <div className="inline-flex items-center p-1 bg-slate-100 dark:bg-slate-800/80 rounded-md border border-border-subtle shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab("manager")}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-sm text-xs font-semibold transition-all ${
+            className={`relative flex items-center gap-1.5 px-3.5 py-1.5 rounded-sm text-xs font-semibold transition-colors ${
               activeTab === "manager"
-                ? "bg-bg-surface text-brand shadow-xs"
+                ? "text-brand"
                 : "text-text-secondary hover:text-text-primary"
             }`}
           >
-            <Server className="size-3.5" />
-            <span>VPN Console</span>
+            {activeTab === "manager" && (
+              <motion.span
+                layoutId="vpnActiveTabPill"
+                className="absolute inset-0 rounded-sm bg-bg-surface shadow-xs"
+                transition={{ type: "spring", stiffness: 450, damping: 35 }}
+              />
+            )}
+            <Server className="size-3.5 relative z-10" />
+            <span className="relative z-10">VPN Console</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("logs")}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-sm text-xs font-semibold transition-all ${
+            className={`relative flex items-center gap-1.5 px-3.5 py-1.5 rounded-sm text-xs font-semibold transition-colors ${
               activeTab === "logs"
-                ? "bg-bg-surface text-brand shadow-xs"
+                ? "text-brand"
                 : "text-text-secondary hover:text-text-primary"
             }`}
           >
-            <Activity className="size-3.5" />
-            <span>Session Logs</span>
+            {activeTab === "logs" && (
+              <motion.span
+                layoutId="vpnActiveTabPill"
+                className="absolute inset-0 rounded-sm bg-bg-surface shadow-xs"
+                transition={{ type: "spring", stiffness: 450, damping: 35 }}
+              />
+            )}
+            <Activity className="size-3.5 relative z-10" />
+            <span className="relative z-10">Session Logs</span>
           </button>
         </div>
       </div>

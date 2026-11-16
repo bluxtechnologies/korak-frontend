@@ -12,7 +12,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { ROUTES } from "@/config/navigation";
+import { NAV_ICON_STROKE_WIDTH, ROUTES } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
 import { MOTION_VARIANTS } from "@/lib/motion";
@@ -29,7 +29,7 @@ const DEFAULT_POPULAR_SERVICES: PopularServiceItem[] = [
   {
     id: "airtime",
     title: "Airtime",
-    description: "Instant recharge across all networks",
+    description: "Recharge across all major networks",
     href: ROUTES.AIRTIME,
     icon: Phone,
   },
@@ -66,6 +66,12 @@ export interface QuickServiceShortcutsProps {
  * Clean 4-card horizontal grid (2-column on mobile, 4-column on desktop).
  * Displays Airtime, Data, Activation, and More with compact icons,
  * descriptions, and subtle navigation indicators.
+ *
+ * Design system rules (Doc 05):
+ * - 10px radius (rounded-md), no pill shapes.
+ * - Semantic tokens only.
+ * - Lucide icons with locked 1.75 stroke width.
+ * - Near-zero shadows.
  */
 export function QuickServiceShortcuts({
   services = DEFAULT_POPULAR_SERVICES,
@@ -79,7 +85,7 @@ export function QuickServiceShortcuts({
       {/* Section Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-foreground text-base font-bold sm:text-lg">
+          <h2 className="text-foreground text-base font-semibold sm:text-lg">
             What do you need today?
           </h2>
           <p className="text-muted-foreground text-xs sm:text-sm">
@@ -92,7 +98,7 @@ export function QuickServiceShortcuts({
           className="text-primary flex shrink-0 items-center gap-1 text-xs font-semibold hover:underline"
         >
           <span>See all</span>
-          <ArrowRight className="size-3.5" aria-hidden="true" />
+          <ArrowRight className="size-3.5" strokeWidth={NAV_ICON_STROKE_WIDTH} aria-hidden="true" />
         </Link>
       </div>
 
@@ -114,24 +120,26 @@ export function QuickServiceShortcuts({
             >
               <Link
                 href={item.href}
-                className="group focus-visible:ring-ring rounded-2xl focus-visible:ring-1 focus-visible:outline-none block h-full"
+                className="group focus-visible:ring-ring rounded-md focus-visible:ring-1 focus-visible:outline-none block h-full"
               >
-                <Card className="border-border/80 hover:border-primary/40 hover:bg-muted/30 flex h-full flex-col justify-between rounded-2xl border p-4 transition-all hover:shadow-xs sm:p-5">
+                <Card className="border-border hover:border-primary/40 hover:bg-muted/30 flex h-full flex-col justify-between rounded-md border p-4 transition-all sm:p-5">
                   <div>
                     <div className="flex items-center justify-between">
-                      <div className="flex size-9 items-center justify-center rounded-xl bg-[#7A1F3D]/10 text-[#7A1F3D] transition-transform group-hover:scale-105 sm:size-10 dark:bg-[#7A1F3D]/25 dark:text-[#E892A8]">
+                      <div className="bg-primary/10 text-primary flex size-9 items-center justify-center rounded-md sm:size-10">
                         <Icon
                           className="size-4.5 shrink-0 sm:size-5"
+                          strokeWidth={NAV_ICON_STROKE_WIDTH}
                           aria-hidden="true"
                         />
                       </div>
                       <ChevronRight
                         className="text-muted-foreground/50 group-hover:text-primary size-4 transition-all group-hover:translate-x-0.5"
+                        strokeWidth={NAV_ICON_STROKE_WIDTH}
                         aria-hidden="true"
                       />
                     </div>
 
-                    <h3 className="text-foreground mt-3 text-sm leading-tight font-bold">
+                    <h3 className="text-foreground mt-3 text-sm leading-tight font-semibold">
                       {item.title}
                     </h3>
                     <p className="text-muted-foreground mt-1 line-clamp-1 text-xs leading-snug">

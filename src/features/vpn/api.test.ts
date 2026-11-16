@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
   VPN_SERVER_NODES,
   MOCK_ACTIVE_VPN_SUBSCRIPTION,
@@ -10,8 +10,19 @@ import {
   regenerateVpnKeys,
   buildWireguardConfig,
 } from "./api";
+import { api } from "@/lib/api";
+
+vi.mock("@/lib/api", () => ({
+  api: {
+    get: vi.fn(),
+    post: vi.fn(),
+  },
+}));
 
 describe("VPN API & Configuration Utilities (Phase 4)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
   it("provides 6 high-speed global server nodes", async () => {
     const nodes = await getVpnNodes();
     expect(nodes.length).toBe(6);

@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { ArrowRight, Headphones } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ROUTES } from "@/config/navigation";
+import { NAV_ICON_STROKE_WIDTH, ROUTES } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 
 export interface NeedHelpCardProps {
@@ -13,14 +13,20 @@ export interface NeedHelpCardProps {
 
 /**
  * NeedHelpCard (Support Column).
- * Minimal, classy support card with white background, subtle border,
+ * Minimal, classy support card with card surface, subtle border,
  * support icon, 'Need help?' heading, description, Contact Support button, and Help Center link.
+ *
+ * Design system rules (Doc 05):
+ * - 10px radius (rounded-md), no pill shapes.
+ * - Semantic tokens only.
+ * - Lucide icons with locked 1.75 stroke width.
+ * - Near-zero shadows.
  */
 export function NeedHelpCard({ className }: NeedHelpCardProps) {
   return (
     <div
       className={cn(
-        "border-border/80 bg-card flex min-h-[120px] flex-col justify-between rounded-2xl border p-5 shadow-xs sm:p-6 lg:min-h-[220px]",
+        "border-border bg-card flex min-h-[120px] flex-col justify-between rounded-md border p-5 sm:p-6 lg:min-h-[220px]",
         className
       )}
       data-testid="need-help-card"
@@ -28,11 +34,11 @@ export function NeedHelpCard({ className }: NeedHelpCardProps) {
       {/* Top Header / Content */}
       <div className="flex items-center justify-between gap-3 lg:block">
         <div className="flex items-center gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#7A1F3D]/10 text-[#7A1F3D] dark:bg-[#7A1F3D]/25 dark:text-[#E892A8]">
-            <Headphones className="size-5 shrink-0" aria-hidden="true" />
+          <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-md">
+            <Headphones className="size-5 shrink-0" strokeWidth={NAV_ICON_STROKE_WIDTH} aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-foreground text-sm font-bold sm:text-base">
+            <h3 className="text-foreground text-sm font-semibold sm:text-base">
               Need help?
             </h3>
             <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
@@ -41,16 +47,16 @@ export function NeedHelpCard({ className }: NeedHelpCardProps) {
           </div>
         </div>
 
-        {/* Mobile / Tablet Contact Support Pill Button (inline) */}
+        {/* Mobile / Tablet Contact Support Button (inline) */}
         <div className="shrink-0 lg:hidden">
           <Button
             asChild
             size="sm"
-            className="h-8 rounded-full bg-[#7A1F3D] px-3.5 text-xs font-semibold text-white shadow-xs transition-transform hover:bg-[#60142D] active:scale-[0.98]"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 h-8 rounded-md px-3 text-xs font-semibold"
           >
             <Link href={ROUTES.SUPPORT} className="flex items-center gap-1">
               <span>Contact Support</span>
-              <ArrowRight className="size-3" aria-hidden="true" />
+              <ArrowRight className="size-3" strokeWidth={NAV_ICON_STROKE_WIDTH} aria-hidden="true" />
             </Link>
           </Button>
         </div>
@@ -60,14 +66,14 @@ export function NeedHelpCard({ className }: NeedHelpCardProps) {
       <div className="mt-4 hidden flex-col gap-2.5 lg:flex">
         <Button
           asChild
-          className="h-9 w-full rounded-full bg-[#7A1F3D] text-xs font-semibold text-white shadow-xs transition-transform hover:bg-[#60142D] active:scale-[0.98] sm:text-sm"
+          className="bg-primary text-primary-foreground hover:bg-primary/90 h-9 w-full rounded-md text-xs font-semibold sm:text-sm"
         >
           <Link
             href={ROUTES.SUPPORT}
             className="flex items-center justify-center gap-1.5"
           >
             <span>Contact Support</span>
-            <ArrowRight className="size-3.5" aria-hidden="true" />
+            <ArrowRight className="size-3.5" strokeWidth={NAV_ICON_STROKE_WIDTH} aria-hidden="true" />
           </Link>
         </Button>
 

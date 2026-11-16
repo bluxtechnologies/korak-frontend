@@ -32,6 +32,11 @@ function getGreeting(): string {
  * 2. Wallet balance (larger column) & Support (smaller column) 2-column section
  * 3. Popular services (4-column grid on desktop, 2-column on mobile)
  * 4. Recent transactions (~4 recent transactions in minimal table / responsive list)
+ *
+ * Design system rules (Doc 05):
+ * - 10px radius (rounded-md), no pill shapes.
+ * - Semantic tokens only (no raw colors or gradients).
+ * - Thin 1px neutral borders, no heavy shadows.
  */
 export function OverviewView({
   initialData,
@@ -146,21 +151,16 @@ export function OverviewView({
       data-testid="overview-view"
     >
       {/* 1. Welcome Section */}
-      <div className="flex items-center gap-3">
-        <div className="border-border/60 flex size-11 shrink-0 items-center justify-center rounded-full border bg-gradient-to-br from-[#7A1F3D]/20 to-[#7A1F3D]/40 text-sm font-bold text-[#7A1F3D] shadow-2xs sm:size-12 sm:text-base dark:from-[#7A1F3D]/40 dark:to-[#7A1F3D]/60 dark:text-rose-200">
-          {userFirstName.charAt(0).toUpperCase()}
-        </div>
-        <div>
-          <h1 className="text-foreground flex items-center gap-1.5 text-lg font-bold tracking-tight sm:text-xl">
-            <span>
-              {greeting}, {userFirstName}
-            </span>
-            <span aria-hidden="true">👋</span>
-          </h1>
-          <p className="text-muted-foreground mt-0.5 text-xs sm:text-sm">
-            Your digital services, all in one place.
-          </p>
-        </div>
+      <div className="space-y-1">
+        <h1 className="text-foreground flex items-center gap-1.5 text-xl font-semibold tracking-tight sm:text-2xl">
+          <span>
+            {greeting}, {userFirstName}
+          </span>
+          <span aria-hidden="true">👋</span>
+        </h1>
+        <p className="text-muted-foreground text-sm">
+          Your digital services, all in one place.
+        </p>
       </div>
 
       {/* 2. Wallet & Support Section (2-Column Grid on Desktop, Stacked on Mobile) */}

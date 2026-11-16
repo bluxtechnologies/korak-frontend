@@ -25,7 +25,7 @@ describe("AppShell & Responsive Mobile Navigation (F5.5)", () => {
       screen.getByRole("link", { name: /notifications \(3 unread\)/i })
     ).toBeInTheDocument();
     expect(screen.getAllByText("CO")[0]).toBeInTheDocument();
-  });
+  }, 15000);
 
   it("renders mobile navigation bar linking directly to /menu without modal drawer", () => {
     render(

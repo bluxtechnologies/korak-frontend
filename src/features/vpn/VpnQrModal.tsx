@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "motion/react";
+import { MOTION_VARIANTS, MOTION_TRANSITIONS } from "@/lib/motion";
 import { buildWireguardConfig, type VpnSubscription } from "./api";
 
 interface VpnQrModalProps {
@@ -172,10 +174,15 @@ export function VpnQrModal({
 
         {/* Body */}
         <div className="p-6 flex flex-col items-center text-center">
-          {/* QR Code Presentation */}
-          <div className="p-2 border border-border-subtle rounded-md bg-slate-50 dark:bg-slate-900/50 mb-4">
+          {/* QR Code Presentation with spring fade */}
+          <motion.div
+            variants={MOTION_VARIANTS.dialogScale}
+            initial="initial"
+            animate="animate"
+            className="p-2 border border-border-subtle rounded-md bg-slate-50 dark:bg-slate-900/50 mb-4"
+          >
             <WireGuardQrSvg value={configText} />
-          </div>
+          </motion.div>
 
           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-xs font-mono text-text-secondary mb-4">
             <ShieldCheck className="size-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -193,7 +200,7 @@ export function VpnQrModal({
               variant="outline"
               size="sm"
               onClick={handleCopy}
-              className="w-full text-xs font-medium border-border-subtle flex items-center justify-center gap-1.5"
+              className="w-full text-xs font-medium border-border-subtle flex items-center justify-center gap-1.5 transition-transform active:scale-[0.98]"
             >
               {copied ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
               {copied ? "Copied" : "Copy Config"}
@@ -204,7 +211,7 @@ export function VpnQrModal({
               variant="default"
               size="sm"
               onClick={handleDownload}
-              className="w-full text-xs font-medium bg-brand hover:bg-brand-hover text-brand-foreground flex items-center justify-center gap-1.5"
+              className="w-full text-xs font-medium bg-brand hover:bg-brand-hover text-brand-foreground flex items-center justify-center gap-1.5 transition-transform active:scale-[0.98]"
             >
               <Download className="size-3.5" />
               Download .conf
@@ -221,11 +228,19 @@ export function VpnQrModal({
               {showConfig ? "Hide raw configuration" : "View raw configuration text"}
             </button>
 
-            {showConfig && (
-              <pre className="mt-2 p-3 text-[11px] font-mono bg-slate-950 text-slate-200 rounded-md overflow-x-auto text-left max-h-40 border border-slate-800">
-                {configText}
-              </pre>
-            )}
+            <AnimatePresence>
+              {showConfig && (
+                <motion.pre
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={MOTION_TRANSITIONS.quick}
+                  className="mt-2 p-3 text-[11px] font-mono bg-slate-950 text-slate-200 rounded-md overflow-x-auto text-left max-h-40 border border-slate-800"
+                >
+                  {configText}
+                </motion.pre>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </DialogContent>

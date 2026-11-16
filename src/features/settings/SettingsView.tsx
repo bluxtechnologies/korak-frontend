@@ -4,6 +4,8 @@ import * as React from "react";
 import { User, Shield, Laptop } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { motion, AnimatePresence } from "motion/react";
+import { MOTION_VARIANTS } from "@/lib/motion";
 import { ProfileEditForm } from "./ProfileEditForm";
 import { ChangePasswordForm } from "./ChangePasswordForm";
 import { ActiveSessionsCard } from "./ActiveSessionsCard";
@@ -112,11 +114,11 @@ export function SettingsView({
 
   return (
     <div className={cn("space-y-6", className)} data-testid="settings-view">
-      {/* Tab Navigation Navigation Controls */}
+      {/* Tab Navigation Navigation Controls with Spring Sliding Pill Indicator */}
       <div
         role="tablist"
         aria-label="Settings sections"
-        className="flex flex-wrap gap-1.5 p-1 border border-border bg-surface rounded-md max-w-fit"
+        className="flex flex-wrap gap-1 p-1 border border-border bg-surface rounded-md max-w-fit"
       >
         {TABS.map((tab) => {
           const Icon = tab.icon;
@@ -133,14 +135,21 @@ export function SettingsView({
               tabIndex={isSelected ? 0 : -1}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium rounded-md transition-colors",
+                "relative flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium rounded-md transition-colors",
                 isSelected
-                  ? "bg-card text-foreground shadow-none border border-border/80 font-semibold"
-                  : "text-muted-foreground hover:text-foreground hover:bg-card/50"
+                  ? "text-foreground font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Icon className="h-3.5 w-3.5" />
-              <span>{tab.label}</span>
+              {isSelected && (
+                <motion.span
+                  layoutId="settingsActiveTabPill"
+                  className="absolute inset-0 rounded-md bg-card border border-border/80 shadow-xs"
+                  transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                />
+              )}
+              <Icon className="h-3.5 w-3.5 relative z-10" />
+              <span className="relative z-10">{tab.label}</span>
             </button>
           );
         })}

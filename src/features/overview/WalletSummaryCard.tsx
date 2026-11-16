@@ -5,10 +5,10 @@ import Link from "next/link";
 import { Eye, EyeOff, Plus, Clock, Wallet } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@/components/ui/button";
-import { ROUTES } from "@/config/navigation";
+import { NAV_ICON_STROKE_WIDTH, ROUTES } from "@/config/navigation";
 import { formatCurrency, maskCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
-import { MOTION_VARIANTS, INTERACTION_PRESETS } from "@/lib/motion";
+import { MOTION_VARIANTS } from "@/lib/motion";
 import type { WalletSummary } from "./api";
 
 export interface WalletSummaryCardProps {
@@ -20,8 +20,14 @@ export interface WalletSummaryCardProps {
 
 /**
  * WalletSummaryCard.
- * Elegant KORAK burgundy balance card with white typography,
+ * Clean, fintech-style KORAK burgundy balance card with white typography,
  * balance visibility toggle, last updated timestamp, Add Money and View Wallet actions.
+ *
+ * Design system rules (Doc 05):
+ * - 10px radius (rounded-md), no pill shapes.
+ * - Primary burgundy token (bg-primary).
+ * - Lucide icons with locked 1.75 stroke width.
+ * - Near-zero shadows.
  */
 export function WalletSummaryCard({
   wallet,
@@ -57,7 +63,7 @@ export function WalletSummaryCard({
   return (
     <div
       className={cn(
-        "relative flex min-h-[220px] flex-col justify-between overflow-hidden rounded-2xl bg-[#7A1F3D] p-6 text-white shadow-xs sm:p-7 dark:bg-[#5C142B]",
+        "bg-primary text-primary-foreground relative flex min-h-[220px] flex-col justify-between overflow-hidden rounded-md p-6 sm:p-7",
         className
       )}
       data-testid="wallet-summary-card"
@@ -98,13 +104,14 @@ export function WalletSummaryCard({
         <div className="flex items-center gap-2">
           <Wallet
             className="size-4 shrink-0 text-white/80"
+            strokeWidth={NAV_ICON_STROKE_WIDTH}
             aria-hidden="true"
           />
           <span className="text-xs font-medium tracking-wider text-white/90 uppercase">
             Available Balance
           </span>
           <span className="sr-only">Wallet Balance</span>
-          <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white">
+          <span className="rounded-sm border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white">
             {wallet.currency || "NGN"}
           </span>
         </div>
@@ -116,12 +123,12 @@ export function WalletSummaryCard({
           size="icon"
           onClick={toggleMask}
           aria-label={isMasked ? "Show balance" : "Hide balance"}
-          className="h-8 w-8 rounded-full text-white/80 hover:bg-white/15 hover:text-white"
+          className="h-8 w-8 rounded-md text-white/80 hover:bg-white/15 hover:text-white"
         >
           {isMasked ? (
-            <EyeOff className="size-4.5" aria-hidden="true" />
+            <EyeOff className="size-4" strokeWidth={NAV_ICON_STROKE_WIDTH} aria-hidden="true" />
           ) : (
-            <Eye className="size-4.5" aria-hidden="true" />
+            <Eye className="size-4" strokeWidth={NAV_ICON_STROKE_WIDTH} aria-hidden="true" />
           )}
         </Button>
       </div>
@@ -133,13 +140,13 @@ export function WalletSummaryCard({
           variants={MOTION_VARIANTS.balanceMask}
           initial="initial"
           animate="animate"
-          className="font-sans text-3xl font-extrabold tracking-tight text-white sm:text-4xl"
+          className="font-sans text-3xl font-bold tracking-tight text-white sm:text-4xl"
           data-testid="wallet-balance-amount"
         >
           {displayBalance}
         </motion.div>
         <p className="mt-1.5 flex items-center gap-1.5 text-xs text-white/70">
-          <Clock className="size-3.5 text-white/60" aria-hidden="true" />
+          <Clock className="size-3.5 text-white/60" strokeWidth={NAV_ICON_STROKE_WIDTH} aria-hidden="true" />
           <span>Last updated at {updatedTimeLabel}</span>
         </p>
         <span className="sr-only">
@@ -156,19 +163,19 @@ export function WalletSummaryCard({
             type="button"
             onClick={onTopUpClick}
             aria-label="Top up wallet"
-            className="h-9 gap-1.5 rounded-full bg-white px-5 text-xs font-semibold text-[#7A1F3D] shadow-xs transition-transform hover:bg-white/90 active:scale-[0.98] sm:text-sm"
+            className="text-primary h-9 gap-1.5 rounded-md bg-white px-5 text-xs font-semibold transition-colors hover:bg-white/90 sm:text-sm"
           >
-            <Plus className="size-3.5 stroke-[2.5px]" aria-hidden="true" />
+            <Plus className="size-4" strokeWidth={NAV_ICON_STROKE_WIDTH} aria-hidden="true" />
             <span>Add Money</span>
           </Button>
         ) : (
           <Button
             asChild
             aria-label="Top up wallet"
-            className="h-9 gap-1.5 rounded-full bg-white px-5 text-xs font-semibold text-[#7A1F3D] shadow-xs transition-transform hover:bg-white/90 active:scale-[0.98] sm:text-sm"
+            className="text-primary h-9 gap-1.5 rounded-md bg-white px-5 text-xs font-semibold transition-colors hover:bg-white/90 sm:text-sm"
           >
-            <Link href={ROUTES.TRANSACTIONS}>
-              <Plus className="size-3.5 stroke-[2.5px]" aria-hidden="true" />
+            <Link href={ROUTES.WALLET}>
+              <Plus className="size-4" strokeWidth={NAV_ICON_STROKE_WIDTH} aria-hidden="true" />
               <span>Add Money</span>
             </Link>
           </Button>
@@ -177,9 +184,9 @@ export function WalletSummaryCard({
         <Button
           asChild
           variant="ghost"
-          className="h-9 rounded-full border border-white/20 bg-white/10 px-4 text-xs font-medium text-white hover:bg-white/20 hover:text-white sm:text-sm"
+          className="h-9 rounded-md border border-white/20 bg-white/10 px-4 text-xs font-medium text-white hover:bg-white/20 hover:text-white sm:text-sm"
         >
-          <Link href={ROUTES.TRANSACTIONS}>
+          <Link href={ROUTES.WALLET}>
             <span>View Wallet</span>
           </Link>
         </Button>

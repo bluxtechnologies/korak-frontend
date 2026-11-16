@@ -27,7 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { ROUTES } from "@/config/navigation";
+import { NAV_ICON_STROKE_WIDTH, ROUTES } from "@/config/navigation";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { OverviewTransaction } from "./api";
@@ -48,22 +48,21 @@ function resolveTransactionIconAndLabel(tx: OverviewTransaction) {
     return {
       label: "Funding",
       Icon: Wallet,
-      containerClass:
-        "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+      containerClass: "bg-success-surface text-success",
     };
   }
   if (descLower.includes("airtime")) {
     return {
       label: "Airtime",
       Icon: Phone,
-      containerClass: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
+      containerClass: "bg-primary/10 text-primary",
     };
   }
   if (descLower.includes("data")) {
     return {
       label: "Data",
       Icon: Wifi,
-      containerClass: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+      containerClass: "bg-info-surface text-info",
     };
   }
   return {
@@ -77,6 +76,13 @@ function resolveTransactionIconAndLabel(tx: OverviewTransaction) {
  * RecentTransactionsCard (F12.3).
  * Minimal transaction ledger displaying ~4 recent activities.
  * Minimal table on desktop and responsive clean list on mobile.
+ *
+ * Design system rules (Doc 05):
+ * - 10px radius (rounded-md), no pill shapes.
+ * - Text-only status badges (no dots, no icons).
+ * - Semantic tokens only.
+ * - Lucide icons with locked 1.75 stroke width.
+ * - Near-zero shadows.
  */
 export function RecentTransactionsCard({
   transactions,
@@ -91,14 +97,14 @@ export function RecentTransactionsCard({
   return (
     <Card
       className={cn(
-        "border-border/80 bg-card rounded-2xl border p-0 shadow-xs",
+        "border-border bg-card rounded-md border p-0",
         className
       )}
       data-testid="recent-transactions-card"
     >
-      <CardHeader className="border-border/60 flex flex-row items-center justify-between space-y-0 border-b px-5 py-4 sm:px-6">
+      <CardHeader className="border-border flex flex-row items-center justify-between space-y-0 border-b px-5 py-4 sm:px-6">
         <div>
-          <CardTitle className="text-foreground text-base font-bold sm:text-lg">
+          <CardTitle className="text-foreground text-base font-semibold sm:text-lg">
             Recent Transactions
           </CardTitle>
           <CardDescription className="text-muted-foreground mt-0.5 text-xs sm:text-sm">
@@ -114,7 +120,7 @@ export function RecentTransactionsCard({
         >
           <Link href={ROUTES.TRANSACTIONS}>
             <span>View all</span>
-            <ArrowRight className="size-3.5" aria-hidden="true" />
+            <ArrowRight className="size-3.5" strokeWidth={NAV_ICON_STROKE_WIDTH} aria-hidden="true" />
           </Link>
         </Button>
       </CardHeader>
@@ -129,14 +135,14 @@ export function RecentTransactionsCard({
             className="py-10"
             action={
               <Button asChild size="sm" className="mt-2 text-xs">
-                <Link href={ROUTES.TRANSACTIONS}>Fund Wallet</Link>
+                <Link href={ROUTES.WALLET}>Fund Wallet</Link>
               </Button>
             }
           />
         ) : (
           <div>
-            {/* 1. Mobile Activity List (< sm) matching mobile design reference */}
-            <div className="divide-border/50 divide-y sm:hidden">
+            {/* 1. Mobile Activity List (< sm) */}
+            <div className="divide-border divide-y sm:hidden">
               {displayTransactions.map((tx) => {
                 const isCredit = tx.direction === "credit";
                 const formattedAmount = formatCurrency(tx.amount, tx.currency);
@@ -151,11 +157,11 @@ export function RecentTransactionsCard({
                     className="hover:bg-muted/30 flex items-center justify-between px-4 py-3.5 transition-colors"
                   >
                     <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#7A1F3D]/10 text-[#7A1F3D] dark:bg-[#7A1F3D]/25 dark:text-[#E892A8]">
-                        <Icon className="size-4.5" aria-hidden="true" />
+                      <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-md">
+                        <Icon className="size-4.5" strokeWidth={NAV_ICON_STROKE_WIDTH} aria-hidden="true" />
                       </div>
                       <div className="flex min-w-0 flex-col">
-                        <span className="text-foreground truncate text-xs font-bold">
+                        <span className="text-foreground truncate text-xs font-semibold">
                           {activityTitle}
                         </span>
                         <span className="text-muted-foreground truncate text-[11px]">
@@ -167,9 +173,9 @@ export function RecentTransactionsCard({
                     <div className="ml-3 flex shrink-0 flex-col items-end gap-1">
                       <span
                         className={cn(
-                          "text-xs font-bold",
+                          "text-xs font-semibold",
                           isCredit
-                            ? "text-emerald-600 dark:text-emerald-400"
+                            ? "text-success"
                             : "text-foreground"
                         )}
                       >
@@ -177,7 +183,7 @@ export function RecentTransactionsCard({
                           ? `+${formattedAmount}`
                           : `-${formattedAmount}`}
                       </span>
-                      <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                      <span className="bg-success-surface text-success inline-flex items-center rounded-sm px-2 py-0.5 text-[10px] font-medium">
                         Success
                       </span>
                     </div>
@@ -190,7 +196,7 @@ export function RecentTransactionsCard({
             <div className="hidden overflow-x-auto sm:block">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-border/60 hover:bg-transparent">
+                  <TableRow className="border-border hover:bg-transparent">
                     <TableHead className="text-muted-foreground px-6 text-[11px] font-semibold tracking-wider uppercase">
                       Type
                     </TableHead>
@@ -222,19 +228,20 @@ export function RecentTransactionsCard({
                     return (
                       <TableRow
                         key={tx.id}
-                        className="border-border/50 hover:bg-muted/40 text-xs transition-colors"
+                        className="border-border hover:bg-muted/40 text-xs transition-colors"
                       >
-                        {/* TYPE column with circular icon */}
+                        {/* TYPE column with square icon box */}
                         <TableCell className="px-6 py-3.5 font-medium">
                           <div className="flex items-center gap-2.5">
                             <div
                               className={cn(
-                                "flex size-8 shrink-0 items-center justify-center rounded-full",
+                                "flex size-8 shrink-0 items-center justify-center rounded-md",
                                 containerClass
                               )}
                             >
                               <Icon
                                 className="size-4 shrink-0"
+                                strokeWidth={NAV_ICON_STROKE_WIDTH}
                                 aria-hidden="true"
                               />
                             </div>
@@ -261,7 +268,7 @@ export function RecentTransactionsCard({
                           className={cn(
                             "py-3.5 text-right font-semibold sm:text-left",
                             isCredit
-                              ? "text-emerald-600 dark:text-emerald-400"
+                              ? "text-success"
                               : "text-foreground"
                           )}
                         >
@@ -272,7 +279,7 @@ export function RecentTransactionsCard({
 
                         {/* STATUS column */}
                         <TableCell className="hidden py-3.5 sm:table-cell">
-                          <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                          <span className="bg-success-surface text-success inline-flex items-center rounded-sm px-2.5 py-0.5 text-[11px] font-medium">
                             Completed
                           </span>
                         </TableCell>
@@ -296,6 +303,7 @@ export function RecentTransactionsCard({
                           >
                             <ChevronRight
                               className="size-4"
+                              strokeWidth={NAV_ICON_STROKE_WIDTH}
                               aria-hidden="true"
                             />
                           </Link>
