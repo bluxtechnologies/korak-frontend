@@ -16,6 +16,8 @@ import {
 import { ROUTES } from "@/config/navigation";
 import { useAuthUser } from "@/components/layout/DashboardShell";
 import { WalletSummaryCard } from "./WalletSummaryCard";
+import { motion } from "motion/react";
+import { MOTION_VARIANTS } from "@/lib/motion";
 import type { OverviewMetrics, WalletSummary } from "./api";
 
 export interface SummaryCardsProps {
@@ -46,17 +48,23 @@ export function SummaryCards({
   }
 
   return (
-    <div
+    <motion.div
+      variants={MOTION_VARIANTS.staggerContainer}
+      initial="initial"
+      animate="animate"
       className={
         className ?? "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
       }
       data-testid="overview-summary-cards"
     >
       {/* 1. Wallet Balance Card (F12.2) */}
-      <WalletSummaryCard wallet={wallet} onTopUpClick={onTopUpClick} />
+      <motion.div variants={MOTION_VARIANTS.staggerItem} className="h-full">
+        <WalletSummaryCard wallet={wallet} onTopUpClick={onTopUpClick} />
+      </motion.div>
 
       {/* 2. Active Services Card */}
-      <Card data-testid="active-services-card">
+      <motion.div variants={MOTION_VARIANTS.staggerItem} className="h-full">
+        <Card data-testid="active-services-card" className="h-full flex flex-col justify-between">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div className="flex items-center gap-2">
             <div
@@ -104,99 +112,104 @@ export function SummaryCards({
           </Button>
         </CardFooter>
       </Card>
+      </motion.div>
 
       {/* 3. Recent Orders Metric Card */}
-      <Card data-testid="orders-metric-card">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <div className="flex items-center gap-2">
-            <div
-              aria-hidden="true"
-              className="border-border bg-surface text-primary flex h-8 w-8 items-center justify-center rounded-md border"
+      <motion.div variants={MOTION_VARIANTS.staggerItem} className="h-full">
+        <Card data-testid="orders-metric-card" className="h-full flex flex-col justify-between">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div className="flex items-center gap-2">
+              <div
+                aria-hidden="true"
+                className="border-border bg-surface text-primary flex h-8 w-8 items-center justify-center rounded-md border"
+              >
+                <ShoppingBag className="h-4 w-4" />
+              </div>
+              <div>
+                <CardTitle className="text-muted-foreground text-sm font-medium">
+                  Total Orders
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Completed deliveries
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="pt-2">
+            <div className="text-foreground text-2xl font-semibold tracking-tight sm:text-3xl">
+              {metrics.completed_orders_count}
+            </div>
+            <p className="text-muted-foreground mt-1 text-xs">
+              {metrics.pending_orders_count > 0
+                ? `${metrics.pending_orders_count} order pending fulfillment`
+                : "All past orders fulfilled"}
+            </p>
+          </CardContent>
+
+          <CardFooter className="border-border/60 border-t pt-2">
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="text-primary hover:text-primary hover:bg-surface h-8 w-full justify-between px-2 text-xs font-medium"
             >
-              <ShoppingBag className="h-4 w-4" />
-            </div>
-            <div>
-              <CardTitle className="text-muted-foreground text-sm font-medium">
-                Total Orders
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Completed deliveries
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="pt-2">
-          <div className="text-foreground text-2xl font-semibold tracking-tight sm:text-3xl">
-            {metrics.completed_orders_count}
-          </div>
-          <p className="text-muted-foreground mt-1 text-xs">
-            {metrics.pending_orders_count > 0
-              ? `${metrics.pending_orders_count} order pending fulfillment`
-              : "All past orders fulfilled"}
-          </p>
-        </CardContent>
-
-        <CardFooter className="border-border/60 border-t pt-2">
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="text-primary hover:text-primary hover:bg-surface h-8 w-full justify-between px-2 text-xs font-medium"
-          >
-            <Link href={ROUTES.ORDERS}>
-              <span>View all orders</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </Button>
-        </CardFooter>
-      </Card>
+              <Link href={ROUTES.ORDERS}>
+                <span>View all orders</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </CardFooter>
+        </Card>
+      </motion.div>
 
       {/* 4. Account Standing Card */}
-      <Card data-testid="account-standing-card">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <div className="flex items-center gap-2">
-            <div
-              aria-hidden="true"
-              className="border-border bg-surface text-primary flex h-8 w-8 items-center justify-center rounded-md border"
+      <motion.div variants={MOTION_VARIANTS.staggerItem} className="h-full">
+        <Card data-testid="account-standing-card" className="h-full flex flex-col justify-between">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div className="flex items-center gap-2">
+              <div
+                aria-hidden="true"
+                className="border-border bg-surface text-primary flex h-8 w-8 items-center justify-center rounded-md border"
+              >
+                <UserCheck className="h-4 w-4" />
+              </div>
+              <div>
+                <CardTitle className="text-muted-foreground text-sm font-medium">
+                  Account Status
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Verification & standing
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="pt-2">
+            <div className="flex items-center gap-2">
+              <Badge variant="success">Active</Badge>
+              <Badge variant="secondary">Verified</Badge>
+            </div>
+            <p className="text-muted-foreground mt-2 truncate text-xs">
+              {currentUser?.email ?? "Standard customer access"}
+            </p>
+          </CardContent>
+
+          <CardFooter className="border-border/60 border-t pt-2">
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="text-primary hover:text-primary hover:bg-surface h-8 w-full justify-between px-2 text-xs font-medium"
             >
-              <UserCheck className="h-4 w-4" />
-            </div>
-            <div>
-              <CardTitle className="text-muted-foreground text-sm font-medium">
-                Account Status
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Verification & standing
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="pt-2">
-          <div className="flex items-center gap-2">
-            <Badge variant="success">Active</Badge>
-            <Badge variant="secondary">Verified</Badge>
-          </div>
-          <p className="text-muted-foreground mt-2 truncate text-xs">
-            {currentUser?.email ?? "Standard customer access"}
-          </p>
-        </CardContent>
-
-        <CardFooter className="border-border/60 border-t pt-2">
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="text-primary hover:text-primary hover:bg-surface h-8 w-full justify-between px-2 text-xs font-medium"
-          >
-            <Link href={ROUTES.PROFILE}>
-              <span>Profile settings</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </Button>
-        </CardFooter>
-      </Card>
-    </div>
+              <Link href={ROUTES.PROFILE}>
+                <span>Profile settings</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </CardFooter>
+        </Card>
+      </motion.div>
+    </motion.div>
   );
 }
