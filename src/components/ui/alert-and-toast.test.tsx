@@ -6,7 +6,7 @@ import { Alert, AlertTitle, AlertDescription } from "./alert";
 import { Toaster } from "./sonner";
 
 describe("Alert and Toast Provider Components", () => {
-  describe("Alert (Four Levels, 8px Radius, Icon + Text)", () => {
+  describe("Alert (Four Levels, 10px Radius, Icon + Text)", () => {
     it("renders info alert by default with title, description, and icon", () => {
       render(
         <Alert data-testid="info-alert">

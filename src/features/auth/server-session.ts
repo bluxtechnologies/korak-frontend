@@ -5,7 +5,7 @@ import { serverApi } from "@/lib/api/server";
 import { unwrapApiResponse } from "@/lib/api/errors";
 import { ApiClientError } from "@/lib/api/client";
 import type { ApiResponse } from "@/lib/api/types";
-import type { AuthUser } from "./api";
+import { type AuthUser, MOCK_AUTH_USER } from "./api";
 import { ROUTES } from "@/config/navigation";
 
 function isPublicAuthPath(pathname: string): boolean {
@@ -79,6 +79,16 @@ export async function requireAuthUser(intendedPath?: string): Promise<AuthUser> 
 
     if (error instanceof ApiClientError) {
       const status = error.status ?? (error as { statusCode?: number }).statusCode;
+
+      // In development: if unauthenticated or backend server is offline/unreachable,
+      // gracefully fall back to mock auth user so UI development and testing can proceed seamlessly
+      if (
+        process.env.NODE_ENV === "development" &&
+        (status === 401 || status === 0 || status === 500 || error.code === "network_error")
+      ) {
+        return MOCK_AUTH_USER;
+      }
+
       if (status === 401) {
         // Session missing or expired (Doc 04 §4)
         const intendedParam = encodeURIComponent(resolvedIntended);
@@ -89,6 +99,11 @@ export async function requireAuthUser(intendedPath?: string): Promise<AuthUser> 
         // Account locked (Doc 04 §4)
         redirect(`${ROUTES.LOGIN}?locked=true`);
       }
+    }
+
+    // In development: if raw fetch or any other server connection failed, fall back to mock auth user
+    if (process.env.NODE_ENV === "development") {
+      return MOCK_AUTH_USER;
     }
 
     // Rethrow to let error boundary handle 500 or unexpected exceptions

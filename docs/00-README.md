@@ -31,6 +31,7 @@ Korak Digitals is a customer marketplace for airtime, data, VPN, and social medi
 | 21 | Communication Rules | How Collins and Claude work, decide, and report |
 | 22 | Backend Roadmap | 20 phases (B1–B20) with sub-phases |
 | 23 | Frontend Roadmap | 20 phases (F1–F20) with sub-phases |
+| 25 | Frontend Customer Endpoints Handoff | TypeScript contracts, client methods, and integration guide for customer APIs |
 
 ## Conventions used in these documents
 
@@ -67,6 +68,13 @@ Korak Digitals is a customer marketplace for airtime, data, VPN, and social medi
 20. **Legal text review.** Privacy Policy and Terms of Service drafts require legal counsel review and sign-off before `legalReviewed` is enabled (Doc 23 F7A.3).
 21. **Contact & corporate identity details.** Formal company registration entity, legal jurisdiction, and official support contact email are unconfirmed (Doc 23 F7A.3).
 22. **Production site domain URL.** The official production domain is OPEN (documented via `NEXT_PUBLIC_SITE_URL` in `.env.example`).
+
+### From F5 / Numbers Activation
+23. **Numbers Activation provider.** Provider selection and API credentials for virtual number procurement and verification code reception (Doc 15, B17A.1, F16A.1).
+24. **Numbers Activation pricing.** Price source and margin rules for virtual numbers across countries and service targets (Doc 14, B17A.2).
+25. **Code delivery mechanism.** Method for delivering verification codes to the customer (polling vs. push). Do not make claims of instant delivery anywhere.
+26. **Refund and expiry rules.** Expiry duration, auto-cancellation, and automated wallet refund rules when no code arrives before expiration (Doc 14, B17A.4, F16A.4).
+27. **Compliance review.** Review of provider and platform terms for temporary virtual numbers used for verification codes (Doc 15).
 
 ## Changelog
 - v0.3: Added communication rules and the backend and frontend roadmaps (21–23).

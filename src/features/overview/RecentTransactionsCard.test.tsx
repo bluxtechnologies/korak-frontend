@@ -14,12 +14,12 @@ describe("RecentTransactionsCard (F12.3)", () => {
     expect(screen.getByText("Recent Transactions")).toBeInTheDocument();
     expect(screen.getByText("TXN-2026-0199")).toBeInTheDocument();
     expect(
-      screen.getByText("Wallet Funding via Card (Paystack)")
+      screen.getAllByText("Wallet Funding via Card (Paystack)")[0]
     ).toBeInTheDocument();
-    expect(screen.getByText("+₦50,000.00")).toBeInTheDocument();
+    expect(screen.getAllByText("+₦50,000.00")[0]).toBeInTheDocument();
 
     expect(screen.getByText("TXN-2026-0198")).toBeInTheDocument();
-    expect(screen.getByText("-₦1,500.00")).toBeInTheDocument();
+    expect(screen.getAllByText("-₦1,500.00")[0]).toBeInTheDocument();
   });
 
   it("renders empty state when transaction list is empty", () => {

@@ -7,7 +7,6 @@ import { useAuthUser } from "@/components/layout/DashboardShell";
 import { WalletSummaryCard } from "./WalletSummaryCard";
 import { NeedHelpCard } from "./NeedHelpCard";
 import { QuickServiceShortcuts } from "./QuickServiceShortcuts";
-import { RecentOrdersCard } from "./RecentOrdersCard";
 import { RecentTransactionsCard } from "./RecentTransactionsCard";
 import { OverviewSkeleton } from "./OverviewSkeleton";
 import { getOverviewData, type OverviewData, MOCK_OVERVIEW_DATA } from "./api";
@@ -19,11 +18,20 @@ export interface OverviewViewProps {
   enableFallbackMock?: boolean;
 }
 
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
 /**
  * OverviewView (F12).
- * Implements the dashboard overview layout matching the legacy design reference:
- * personalized greeting, available balance card with watermark, need help card,
- * quick service shortcuts grid, and full-width recent transactions table.
+ * KORAK Customer Dashboard interface strictly maintaining the 4-part hierarchy:
+ * 1. Welcome greeting ("Good morning, {name}" + "Your digital services, all in one place.")
+ * 2. Wallet balance (larger column) & Support (smaller column) 2-column section
+ * 3. Popular services (4-column grid on desktop, 2-column on mobile)
+ * 4. Recent transactions (~4 recent transactions in minimal table / responsive list)
  */
 export function OverviewView({
   initialData,
@@ -39,7 +47,6 @@ export function OverviewView({
   // Safely extract authenticated customer name for greeting banner
   let userFirstName = "there";
   try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
     const currentUser = useAuthUser();
     if (currentUser?.name) {
       userFirstName = currentUser.name.trim().split(/\s+/)[0];
@@ -50,18 +57,7 @@ export function OverviewView({
     userFirstName = "there";
   }
 
-  // Time-aware greeting
-  const [greeting, setGreeting] = React.useState("Good day");
-  React.useEffect(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) {
-      setGreeting("Good morning");
-    } else if (hour < 18) {
-      setGreeting("Good afternoon");
-    } else {
-      setGreeting("Good evening");
-    }
-  }, []);
+  const greeting = getGreeting();
 
   React.useEffect(() => {
     let ignore = false;
@@ -76,8 +72,6 @@ export function OverviewView({
         })
         .catch((err: unknown) => {
           if (!ignore) {
-            // In development or when backend endpoint is not yet mounted,
-            // allow fallback to mock fixture if requested
             if (
               enableFallbackMock &&
               (process.env.NODE_ENV !== "production" ||
@@ -147,22 +141,30 @@ export function OverviewView({
   }
 
   return (
-    <div className="space-y-8" data-testid="overview-view">
-      {/* 1. Dynamic Greeting Header */}
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-          <span>
-            {greeting}, {userFirstName}
-          </span>
-          <span aria-hidden="true">👏</span>
-        </h1>
-        <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-          Your digital services, all in one place.
-        </p>
+    <div
+      className="mx-auto max-w-7xl space-y-6 sm:space-y-8"
+      data-testid="overview-view"
+    >
+      {/* 1. Welcome Section */}
+      <div className="flex items-center gap-3">
+        <div className="border-border/60 flex size-11 shrink-0 items-center justify-center rounded-full border bg-gradient-to-br from-[#7A1F3D]/20 to-[#7A1F3D]/40 text-sm font-bold text-[#7A1F3D] shadow-2xs sm:size-12 sm:text-base dark:from-[#7A1F3D]/40 dark:to-[#7A1F3D]/60 dark:text-rose-200">
+          {userFirstName.charAt(0).toUpperCase()}
+        </div>
+        <div>
+          <h1 className="text-foreground flex items-center gap-1.5 text-lg font-bold tracking-tight sm:text-xl">
+            <span>
+              {greeting}, {userFirstName}
+            </span>
+            <span aria-hidden="true">👋</span>
+          </h1>
+          <p className="text-muted-foreground mt-0.5 text-xs sm:text-sm">
+            Your digital services, all in one place.
+          </p>
+        </div>
       </div>
 
-      {/* 2. Top 2-Column Hero Row matching legacy layout reference */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+      {/* 2. Wallet & Support Section (2-Column Grid on Desktop, Stacked on Mobile) */}
+      <div className="grid grid-cols-1 items-stretch gap-4 sm:gap-5 lg:grid-cols-12">
         <div className="lg:col-span-7 xl:col-span-8">
           <WalletSummaryCard wallet={data.wallet} />
         </div>
@@ -171,14 +173,11 @@ export function OverviewView({
         </div>
       </div>
 
-      {/* 3. Quick Access Grid ("What do you need today?") */}
+      {/* 3. Popular Services Grid */}
       <QuickServiceShortcuts />
 
-      {/* 4. Full-Width Recent Transactions Table */}
+      {/* 4. Recent Transactions Section (~4 records) */}
       <RecentTransactionsCard transactions={data.recent_transactions} />
-
-      {/* 5. Recent Orders Activity */}
-      <RecentOrdersCard orders={data.recent_orders} />
     </div>
   );
 }

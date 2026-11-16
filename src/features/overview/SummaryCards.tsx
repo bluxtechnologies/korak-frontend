@@ -28,7 +28,7 @@ export interface SummaryCardsProps {
 /**
  * SummaryCards (F12.1).
  * Overview metrics grid adhering strictly to Doc 05 §2 tokens:
- * 8px radius, 1px neutral borders, no heavy shadows, and text-only badges.
+ * 10px radius, 1px neutral borders, no heavy shadows, and text-only badges.
  */
 export function SummaryCards({
   wallet,

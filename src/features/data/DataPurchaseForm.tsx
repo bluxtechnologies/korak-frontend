@@ -14,6 +14,9 @@ import {
   ArrowRight,
   ShieldCheck,
   Check,
+  Lock,
+  Printer,
+  Copy,
 } from "lucide-react";
 import {
   Card,
@@ -85,6 +88,7 @@ export function DataPurchaseForm({
   const [isConfirmOpen, setIsConfirmOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [rootError, setRootError] = React.useState<string | null>(null);
+  const [pin, setPin] = React.useState<string>("1234");
   const [completedOrder, setCompletedOrder] =
     React.useState<DataOrderResult | null>(null);
 
@@ -248,11 +252,22 @@ export function DataPurchaseForm({
             Buy Another Data Bundle
           </Button>
           <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (typeof window !== "undefined") window.print();
+            }}
+            className="w-full flex-1 text-xs sm:w-auto gap-1.5"
+          >
+            <Printer className="size-3.5 text-muted-foreground" />
+            <span>Print Receipt</span>
+          </Button>
+          <Button
             asChild
             variant="outline"
             className="w-full flex-1 text-xs sm:w-auto"
           >
-            <Link href={ROUTES.TRANSACTIONS}>View Transactions</Link>
+            <Link href={ROUTES.ORDERS}>View in Orders</Link>
           </Button>
         </CardFooter>
       </Card>
@@ -421,19 +436,49 @@ export function DataPurchaseForm({
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-medium">
-                    4. Recipient Phone Number
-                  </FormLabel>
+                  <div className="flex items-center justify-between">
+                    <FormLabel className="text-xs font-medium">
+                      4. Recipient Phone Number
+                    </FormLabel>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-muted-foreground">Quick:</span>
+                      <button
+                        type="button"
+                        onClick={() => form.setValue("phone", "08031234567", { shouldValidate: true })}
+                        className="text-[10px] font-semibold text-primary hover:underline"
+                      >
+                        08031234567
+                      </button>
+                      <span className="text-muted-foreground/40">•</span>
+                      <button
+                        type="button"
+                        onClick={() => form.setValue("phone", "08051234567", { shouldValidate: true })}
+                        className="text-[10px] font-semibold text-primary hover:underline"
+                      >
+                        08051234567
+                      </button>
+                    </div>
+                  </div>
                   <FormControl>
-                    <Input
-                      {...field}
-                      type="tel"
-                      inputMode="numeric"
-                      placeholder="08031234567"
-                      maxLength={11}
-                      className="font-mono text-sm"
-                    />
+                    <div className="relative">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                        <span className="text-xs font-bold text-muted-foreground font-mono">
+                          +234
+                        </span>
+                      </div>
+                      <Input
+                        {...field}
+                        type="tel"
+                        inputMode="numeric"
+                        placeholder="08031234567"
+                        maxLength={11}
+                        className="font-mono text-sm pl-13"
+                      />
+                    </div>
                   </FormControl>
+                  <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                    <span>Note: Ensure line is active. Bundles apply to all ported/non-ported numbers.</span>
+                  </div>
                   <FormMessage className="text-xs" />
                 </FormItem>
               )}
@@ -498,36 +543,77 @@ export function DataPurchaseForm({
         onConfirm={handleConfirmPurchase}
         description="Please verify recipient phone number and package carefully before confirming. Data deliveries are automated and non-refundable once processed by the telecom operator."
       >
-        <div className="border-border bg-surface space-y-2 rounded-md border p-3 text-xs">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Network:</span>
-            <span className="text-foreground font-semibold uppercase">
-              {selectedNetwork}
-            </span>
+        <div className="space-y-3 pt-1">
+          <div className="border-border bg-surface space-y-2 rounded-xl border p-3.5 text-xs">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Network:</span>
+              <span className="text-foreground font-semibold uppercase">
+                {selectedNetwork}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Bundle:</span>
+              <span className="text-foreground font-medium">
+                {activePlan?.name} ({activePlan?.size})
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Validity:</span>
+              <span className="text-foreground font-medium">
+                {activePlan?.validity}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Recipient:</span>
+              <span className="text-foreground font-mono font-medium">
+                {enteredPhone}
+              </span>
+            </div>
+            <div className="border-border flex justify-between border-t pt-1.5 font-bold">
+              <span className="text-foreground">Total Debited:</span>
+              <span className="text-primary font-mono text-sm">
+                ₦{planPrice.toLocaleString()}
+              </span>
+            </div>
           </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Bundle:</span>
-            <span className="text-foreground font-medium">
-              {activePlan?.name} ({activePlan?.size})
-            </span>
+
+          {/* Wallet Balance Impact */}
+          <div className="grid grid-cols-2 gap-2 rounded-xl border border-border/80 bg-muted/20 p-2.5 text-[11px]">
+            <div>
+              <span className="text-muted-foreground block">Current Balance</span>
+              <span className="font-mono font-bold text-foreground">
+                {formatCurrency(walletBalance, "NGN")}
+              </span>
+            </div>
+            <div>
+              <span className="text-muted-foreground block">Balance After</span>
+              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                {formatCurrency(Math.max(0, walletBalance - planPriceMinor), "NGN")}
+              </span>
+            </div>
           </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Validity:</span>
-            <span className="text-foreground font-medium">
-              {activePlan?.validity}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Recipient:</span>
-            <span className="text-foreground font-mono font-medium">
-              {enteredPhone}
-            </span>
-          </div>
-          <div className="border-border flex justify-between border-t pt-1.5 font-bold">
-            <span className="text-foreground">Total Debited:</span>
-            <span className="text-primary font-mono text-sm">
-              ₦{planPrice.toLocaleString()}
-            </span>
+
+          {/* 4-Digit Transaction PIN Input */}
+          <div className="space-y-1.5 rounded-xl border border-border/70 bg-surface p-3 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-foreground flex items-center gap-1.5">
+                <Lock className="size-3 text-primary" />
+                <span>Transaction PIN</span>
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                4-digit security code
+              </span>
+            </div>
+            <Input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              placeholder="••••"
+              className="font-mono text-center text-lg tracking-widest h-9 rounded-lg"
+              aria-label="Transaction PIN"
+            />
           </div>
         </div>
       </ConfirmDialog>

@@ -35,6 +35,15 @@ export interface AuthUser {
   created_at: string;
 }
 
+export const MOCK_AUTH_USER: AuthUser = {
+  id: "usr_korak_091",
+  name: "Amara Nwosu",
+  username: "amaranwosu",
+  email: "amara.nwosu@example.com",
+  email_verified_at: "2026-10-15T08:00:00Z",
+  created_at: "2026-10-15T08:00:00Z",
+};
+
 export type CustomerResource = AuthUser;
 
 export interface LoginResponse {

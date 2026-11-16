@@ -43,8 +43,8 @@ describe("Card and Badge Components", () => {
     });
   });
 
-  describe("Badge (Text-Only, 8px Radius, No Icons/Dots)", () => {
-    it("renders badge with text and enforces 8px radius (rounded-md, not rounded-full)", () => {
+  describe("Badge (Text-Only, 10px Radius, No Icons/Dots)", () => {
+    it("renders badge with text and enforces 10px radius (rounded-md, not rounded-full)", () => {
       render(<Badge>Active</Badge>);
       const badge = screen.getByText("Active");
       expect(badge).toBeInTheDocument();

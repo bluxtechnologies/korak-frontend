@@ -35,11 +35,10 @@ describe("Breadcrumb", () => {
   });
 
   it("auto-resolves breadcrumbs from pathname", () => {
-    render(<Breadcrumb pathname="/vpn/logs" />);
+    render(<Breadcrumb pathname="/airtime" />);
 
     expect(screen.getByRole("link", { name: "Overview" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "VPN" })).toBeInTheDocument();
-    expect(screen.getByText("VPN Logs")).toHaveAttribute(
+    expect(screen.getByText("Airtime")).toHaveAttribute(
       "aria-current",
       "page"
     );
@@ -47,12 +46,17 @@ describe("Breadcrumb", () => {
 
   it("supports detailLabel for dynamic detail routes", () => {
     render(
-      <Breadcrumb pathname="/orders/ORD-9988" detailLabel="Order #ORD-9988" />
+      <Breadcrumb
+        pathname="/transactions/TXN-9988"
+        detailLabel="Transaction #TXN-9988"
+      />
     );
 
     expect(screen.getByRole("link", { name: "Overview" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Orders" })).toBeInTheDocument();
-    expect(screen.getByText("Order #ORD-9988")).toHaveAttribute(
+    expect(
+      screen.getByRole("link", { name: "Transactions" })
+    ).toBeInTheDocument();
+    expect(screen.getByText("Transaction #TXN-9988")).toHaveAttribute(
       "aria-current",
       "page"
     );

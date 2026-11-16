@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCurrency, formatDate, maskCurrency } from "./formatters";
+import { formatCurrency, formatDate, formatNaira, maskCurrency } from "./formatters";
 
 describe("formatters", () => {
   describe("formatCurrency", () => {
@@ -20,6 +20,13 @@ describe("formatters", () => {
       expect(formatCurrency(250000, "EUR")).toBe("€2,500.00");
       expect(formatCurrency(300000, "GBP")).toBe("£3,000.00");
       expect(formatCurrency(100000, "CAD")).toBe("CAD 1,000.00");
+    });
+  });
+
+  describe("formatNaira", () => {
+    it("formats major Naira units into currency string", () => {
+      expect(formatNaira(3500)).toBe("₦3,500.00");
+      expect(formatNaira(0)).toBe("₦0.00");
     });
   });
 

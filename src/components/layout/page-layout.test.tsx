@@ -56,8 +56,8 @@ describe("Page Layout Components (F5.4)", () => {
     });
 
     it("renders accessible breadcrumbs from getBreadcrumbs with aria-current='page'", () => {
-      const crumbs = getBreadcrumbs("/vpn/logs");
-      render(<PageHeader title="VPN Logs" breadcrumbs={crumbs} />);
+      const crumbs = getBreadcrumbs("/airtime");
+      render(<PageHeader title="Airtime" breadcrumbs={crumbs} />);
 
       const nav = screen.getByRole("navigation", { name: /breadcrumb/i });
       expect(nav).toBeInTheDocument();
@@ -65,10 +65,7 @@ describe("Page Layout Components (F5.4)", () => {
       const overviewCrumb = screen.getByRole("link", { name: "Overview" });
       expect(overviewCrumb).toHaveAttribute("href", "/overview");
 
-      // Parent group 'VPN' has no href so it is rendered as text, not a link
-      expect(screen.getByText("VPN").tagName).toBe("SPAN");
-
-      const currentCrumb = screen.getByText("VPN Logs", { selector: "span" });
+      const currentCrumb = screen.getByText("Airtime", { selector: "span" });
       expect(currentCrumb).toHaveAttribute("aria-current", "page");
     });
 

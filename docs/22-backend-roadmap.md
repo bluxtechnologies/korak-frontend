@@ -147,6 +147,14 @@
 
 **Done when:** an airtime or data order completes or refunds correctly under concurrent and failure tests.
 
+## B17A — Numbers Activation ⛔ *blocked by Numbers Activation OPEN items (provider, pricing, delivery, refund/expiry, compliance)*
+- B17A.1 Provider integration
+- B17A.2 Number request and order
+- B17A.3 Code delivery to the customer
+- B17A.4 Expiry, cancellation and refund
+
+**Done when:** virtual number orders allocate numbers, deliver incoming verification codes to the customer reliably without claims of instant delivery, and cleanly cancel and refund on expiry.
+
 ## B18 — VPN and VPN logs
 - B18.1 VPN purchase flow reusing the order engine
 - B18.2 Encrypted storage of delivered credentials; masked responses

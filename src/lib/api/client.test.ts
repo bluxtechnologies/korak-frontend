@@ -693,5 +693,36 @@ describe("API Client Layer (lib/api)", () => {
         expect(apiErr.reference_id).toBe("err_ref_999");
       }
     });
+
+    it("handles fetch network failure gracefully and throws ApiClientError with network_error code", async () => {
+      const mockFetch = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
+      vi.stubGlobal("fetch", mockFetch);
+
+      try {
+        await apiClient.get("/api/v1/health");
+        expect.fail("Should have thrown ApiClientError");
+      } catch (err) {
+        expect(err).toBeInstanceOf(ApiClientError);
+        const apiErr = err as ApiClientError;
+        expect(apiErr.status).toBe(0);
+        expect(apiErr.code).toBe("network_error");
+        expect(apiErr.message).toContain("Unable to connect to the server");
+      }
+    });
+
+    it("handles fetchCsrfCookie network failure gracefully", async () => {
+      const mockFetch = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
+      vi.stubGlobal("fetch", mockFetch);
+
+      try {
+        await fetchCsrfCookie();
+        expect.fail("Should have thrown ApiClientError");
+      } catch (err) {
+        expect(err).toBeInstanceOf(ApiClientError);
+        const apiErr = err as ApiClientError;
+        expect(apiErr.status).toBe(0);
+        expect(apiErr.code).toBe("network_error");
+      }
+    });
   });
 });

@@ -10,7 +10,8 @@ import "./globals.css";
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -55,13 +56,6 @@ export default function RootLayout({
       className={`${plusJakartaSans.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var d=document.documentElement,c=d.classList;c.remove('light','dark');var e=localStorage.getItem('theme');if('system'===e||(!e&&true)){var t='(prefers-color-scheme: dark)',m=window.matchMedia(t);if(m.media===t&&m.matches){d.style.colorScheme='dark';c.add('dark')}else{d.style.colorScheme='light';c.add('light')}}else if(e){c.add(e);'dark'===e?d.style.colorScheme='dark':'light'===e&&(d.style.colorScheme='light')}}catch(e){}})();`,
-          }}
-        />
-      </head>
       <body
         className="flex min-h-full flex-col font-sans"
         suppressHydrationWarning

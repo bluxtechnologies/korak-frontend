@@ -3,11 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Menu, X } from "lucide-react";
+import { Menu } from "lucide-react";
 import {
   type NavItem,
   type NavSection,
+  NAV_ICON_STROKE_WIDTH,
   ROUTES,
   SIDEBAR_NAV_SECTIONS,
   USER_MENU_ITEMS,
@@ -17,6 +17,7 @@ import { BrandLogoIcon } from "@/components/shared/BrandLogo";
 import { cn } from "@/lib/utils";
 import { Sidebar } from "./Sidebar";
 import { Topbar, type TopbarUser } from "./Topbar";
+import { MobileBottomNav } from "./MobileBottomNav";
 
 export interface AppShellProps {
   children: React.ReactNode;
@@ -45,14 +46,23 @@ export interface AppShellProps {
   className?: string;
 }
 
+/**
+ * AppShell Component (F5).
+ * Primary application shell wrapping customer dashboard views.
+ *
+ * Responsive behavior (F5.5):
+ * - Desktop (>= md): Persistent collapsible desktop sidebar (F5.2) + Topbar (F5.3).
+ * - Mobile (< md): Topbar + Persistent bottom navigation (MobileBottomNav) with
+ *   an app-like Menu page (/menu) rather than modal bottom sheets/drawers.
+ */
 export function AppShell({
   children,
   user,
   unreadCount = 0,
   notificationsSlot,
   topbarLeftSlot,
-  sections = SIDEBAR_NAV_SECTIONS,
-  abilities,
+  sections: _sections = SIDEBAR_NAV_SECTIONS,
+  abilities: _abilities,
   menuItems = USER_MENU_ITEMS,
   pathname: pathnameProp,
   onLogout,
@@ -63,35 +73,20 @@ export function AppShell({
   const routerPathname = usePathname();
   const currentPath = pathnameProp ?? routerPathname ?? ROUTES.OVERVIEW;
 
-  // Ties drawer open state to currentPath so any route navigation auto-closes the drawer cleanly
-  const [drawerState, setDrawerState] = React.useState<{
-    open: boolean;
-    path: string;
-  }>({ open: false, path: currentPath });
-
-  const isMobileDrawerOpen =
-    drawerState.open && drawerState.path === currentPath;
-
-  const setMobileDrawerOpen = React.useCallback(
-    (open: boolean) => {
-      setDrawerState({ open, path: currentPath });
-    },
-    [currentPath]
-  );
+  const isMenuPage = currentPath === ROUTES.MENU;
 
   const mobileTopbarLeft = (
     <div className="flex items-center gap-2.5">
       <Button
-        type="button"
+        asChild
         variant="ghost"
         size="icon"
-        onClick={() => setMobileDrawerOpen(true)}
-        aria-label="Open navigation menu"
-        aria-expanded={isMobileDrawerOpen}
-        aria-controls="mobile-navigation-drawer"
-        className="text-muted-foreground hover:text-foreground h-9 w-9 md:hidden"
+        aria-label={isMenuPage ? "Back to Dashboard" : "Open Menu Page"}
+        className="text-muted-foreground hover:text-foreground h-9 w-9 rounded-md md:hidden"
       >
-        <Menu className="h-5 w-5" aria-hidden="true" />
+        <Link href={isMenuPage ? ROUTES.OVERVIEW : ROUTES.MENU}>
+          <Menu className="size-5" strokeWidth={NAV_ICON_STROKE_WIDTH} aria-hidden="true" />
+        </Link>
       </Button>
 
       <Link
@@ -116,13 +111,14 @@ export function AppShell({
         className
       )}
     >
-      {/* Persistent collapsible desktop sidebar */}
+      {/* Persistent collapsible desktop sidebar (>= md) */}
       <div className="hidden shrink-0 md:block">
         <div className="sticky top-0 h-screen">
           <Sidebar
+            className="h-full"
             defaultCollapsed={defaultSidebarCollapsed}
-            sections={sections}
-            abilities={abilities}
+            user={user ? { name: user.name, email: user.email ?? "" } : null}
+            onLogout={onLogout}
             pathname={currentPath}
           />
         </div>
@@ -141,51 +137,11 @@ export function AppShell({
           className="sticky top-0 z-30"
         />
 
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 pb-20 md:pb-0">{children}</main>
       </div>
 
-      {/* Responsive mobile navigation drawer (< md) */}
-      <DialogPrimitive.Root
-        open={isMobileDrawerOpen}
-        onOpenChange={setMobileDrawerOpen}
-      >
-        <DialogPrimitive.Portal>
-          <DialogPrimitive.Overlay className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50 transition-opacity md:hidden" />
-          <DialogPrimitive.Content
-            id="mobile-navigation-drawer"
-            className="border-border bg-surface data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left fixed inset-y-0 left-0 z-50 flex h-full w-64 flex-col border-r shadow-lg duration-150 focus:outline-none md:hidden"
-          >
-            <DialogPrimitive.Title className="sr-only">
-              Navigation menu
-            </DialogPrimitive.Title>
-            <DialogPrimitive.Description className="sr-only">
-              Primary customer dashboard navigation
-            </DialogPrimitive.Description>
-
-            <Sidebar
-              collapsed={false}
-              showCollapseToggle={false}
-              sections={sections}
-              abilities={abilities}
-              pathname={currentPath}
-              onNavigate={() => setMobileDrawerOpen(false)}
-              className="w-full border-r-0"
-            />
-
-            <DialogPrimitive.Close asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Close navigation menu"
-                className="text-muted-foreground hover:text-foreground absolute top-3 right-3 h-8 w-8"
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </Button>
-            </DialogPrimitive.Close>
-          </DialogPrimitive.Content>
-        </DialogPrimitive.Portal>
-      </DialogPrimitive.Root>
+      {/* Mobile Bottom Navigation (< md) linking directly to /menu */}
+      <MobileBottomNav currentPath={currentPath} />
     </div>
   );
 }

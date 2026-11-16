@@ -6,12 +6,13 @@ Korak Digitals is a digital-services marketplace where customers buy and manage 
 ## 2. Services (customer-facing)
 - Airtime
 - Data
-- VPN (including VPN logs)
-- Buy social media accounts
-- Boost social media accounts
+- Numbers Activation: virtual numbers for receiving verification codes
+- VPN (including VPN logs) — *deferred: not in the sidebar yet*
+- Buy social media accounts — *deferred: not in the sidebar yet*
+- Boost social media accounts — *deferred: not in the sidebar yet*
 
 ## 3. Customer pages
-Account Overview · Airtime · Data · VPN Logs · Buy Social Media Account · Boost Social Media Account · Transaction History · Orders · Settings · Profile
+Dashboard · Wallet (view the wallet balance, display currency, and recent transactions; funding is blocked by the open payment-gateway decision) · Airtime · Data · Numbers Activation (virtual numbers for receiving verification codes) · Orders · Transactions · Profile · Settings · *VPN Logs (deferred: not in the sidebar yet)* · *Buy Social Media Account (deferred: not in the sidebar yet)* · *Boost Social Media Account (deferred: not in the sidebar yet)*
 
 ## 4. Authentication screens
 Login · Register · Forgot Password · Reset Password · Verify Device · Session Expired

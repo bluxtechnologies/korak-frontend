@@ -55,6 +55,8 @@ export interface WalletSummary {
   currency: string;
   ledger_count: number;
   updated_at: string;
+  total_deposited?: number; // integer minor units
+  total_spent?: number; // integer minor units
 }
 
 export interface OverviewMetrics {
@@ -93,6 +95,8 @@ export const MOCK_OVERVIEW_DATA: OverviewData = {
     currency: "NGN",
     ledger_count: 24,
     updated_at: "2026-11-14T10:15:00Z",
+    total_deposited: 12000000, // ₦120,000.00
+    total_spent: 7475000, // ₦74,750.00
   },
   metrics: {
     active_services_count: 2,

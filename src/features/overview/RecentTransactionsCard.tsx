@@ -2,7 +2,14 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowRight, ChevronRight, Phone, Receipt, Wallet, Wifi } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronRight,
+  Phone,
+  Receipt,
+  Wallet,
+  Wifi,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -33,11 +40,16 @@ export interface RecentTransactionsCardProps {
 function resolveTransactionIconAndLabel(tx: OverviewTransaction) {
   const descLower = tx.description.toLowerCase();
 
-  if (tx.direction === "credit" || tx.type === "wallet_funding" || descLower.includes("funding")) {
+  if (
+    tx.direction === "credit" ||
+    tx.type === "wallet_funding" ||
+    descLower.includes("funding")
+  ) {
     return {
       label: "Funding",
       Icon: Wallet,
-      containerClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+      containerClass:
+        "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
     };
   }
   if (descLower.includes("airtime")) {
@@ -63,24 +75,33 @@ function resolveTransactionIconAndLabel(tx: OverviewTransaction) {
 
 /**
  * RecentTransactionsCard (F12.3).
- * Read-only ledger transactions table matching the legacy dashboard design reference
- * with type icons, status pills, and direct row navigation.
+ * Minimal transaction ledger displaying ~4 recent activities.
+ * Minimal table on desktop and responsive clean list on mobile.
  */
 export function RecentTransactionsCard({
   transactions,
   className,
 }: RecentTransactionsCardProps) {
+  // Display approximately four recent transactions per design specification
+  const displayTransactions = React.useMemo(
+    () => transactions.slice(0, 4),
+    [transactions]
+  );
+
   return (
     <Card
-      className={cn("rounded-2xl border border-border/70 p-0 shadow-xs", className)}
+      className={cn(
+        "border-border/80 bg-card rounded-2xl border p-0 shadow-xs",
+        className
+      )}
       data-testid="recent-transactions-card"
     >
-      <CardHeader className="flex flex-row items-center justify-between border-b border-border/60 px-6 py-4 space-y-0">
+      <CardHeader className="border-border/60 flex flex-row items-center justify-between space-y-0 border-b px-5 py-4 sm:px-6">
         <div>
-          <CardTitle className="text-base font-bold text-foreground sm:text-lg">
+          <CardTitle className="text-foreground text-base font-bold sm:text-lg">
             Recent Transactions
           </CardTitle>
-          <CardDescription className="text-xs text-muted-foreground mt-0.5">
+          <CardDescription className="text-muted-foreground mt-0.5 text-xs sm:text-sm">
             Your latest purchases and wallet activities.
           </CardDescription>
         </div>
@@ -89,7 +110,7 @@ export function RecentTransactionsCard({
           asChild
           variant="ghost"
           size="sm"
-          className="h-8 gap-1 px-2 text-xs font-semibold text-primary hover:bg-primary/10 hover:text-primary"
+          className="text-primary hover:bg-primary/10 hover:text-primary h-8 shrink-0 gap-1 px-2.5 text-xs font-semibold"
         >
           <Link href={ROUTES.TRANSACTIONS}>
             <span>View all</span>
@@ -99,7 +120,7 @@ export function RecentTransactionsCard({
       </CardHeader>
 
       <CardContent className="p-0">
-        {transactions.length === 0 ? (
+        {displayTransactions.length === 0 ? (
           <EmptyState
             icon={Receipt}
             title="No transactions yet"
@@ -113,76 +134,40 @@ export function RecentTransactionsCard({
             }
           />
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-border/60 hover:bg-transparent">
-                  <TableHead className="px-6 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Type
-                  </TableHead>
-                  <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Description
-                  </TableHead>
-                  <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground text-right sm:text-left">
-                    Amount
-                  </TableHead>
-                  <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hidden sm:table-cell">
-                    Status
-                  </TableHead>
-                  <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hidden md:table-cell">
-                    Date
-                  </TableHead>
-                  <TableHead className="w-10 px-6"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.map((tx) => {
-                  const isCredit = tx.direction === "credit";
-                  const formattedAmount = formatCurrency(
-                    tx.amount,
-                    tx.currency
-                  );
-                  const { label, Icon, containerClass } =
-                    resolveTransactionIconAndLabel(tx);
+          <div>
+            {/* 1. Mobile Activity List (< sm) matching mobile design reference */}
+            <div className="divide-border/50 divide-y sm:hidden">
+              {displayTransactions.map((tx) => {
+                const isCredit = tx.direction === "credit";
+                const formattedAmount = formatCurrency(tx.amount, tx.currency);
+                const { label, Icon } = resolveTransactionIconAndLabel(tx);
+                const activityTitle =
+                  label === "Funding" ? "Wallet Funding" : `${label} Purchase`;
 
-                  return (
-                    <TableRow
-                      key={tx.id}
-                      className="border-border/50 text-xs transition-colors hover:bg-muted/40"
-                    >
-                      {/* TYPE column with circular icon */}
-                      <TableCell className="px-6 py-3.5 font-medium">
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className={cn(
-                              "flex size-8 shrink-0 items-center justify-center rounded-full",
-                              containerClass
-                            )}
-                          >
-                            <Icon className="size-4 shrink-0" aria-hidden="true" />
-                          </div>
-                          <span className="font-semibold text-foreground">
-                            {label}
-                          </span>
-                        </div>
-                      </TableCell>
+                return (
+                  <Link
+                    key={tx.id}
+                    href={`${ROUTES.TRANSACTIONS}/${tx.id}`}
+                    className="hover:bg-muted/30 flex items-center justify-between px-4 py-3.5 transition-colors"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#7A1F3D]/10 text-[#7A1F3D] dark:bg-[#7A1F3D]/25 dark:text-[#E892A8]">
+                        <Icon className="size-4.5" aria-hidden="true" />
+                      </div>
+                      <div className="flex min-w-0 flex-col">
+                        <span className="text-foreground truncate text-xs font-bold">
+                          {activityTitle}
+                        </span>
+                        <span className="text-muted-foreground truncate text-[11px]">
+                          {tx.description}
+                        </span>
+                      </div>
+                    </div>
 
-                      {/* DESCRIPTION column */}
-                      <TableCell className="py-3.5">
-                        <div className="flex flex-col">
-                          <span className="font-medium text-foreground">
-                            {tx.description}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground">
-                            {tx.reference}
-                          </span>
-                        </div>
-                      </TableCell>
-
-                      {/* AMOUNT column */}
-                      <TableCell
+                    <div className="ml-3 flex shrink-0 flex-col items-end gap-1">
+                      <span
                         className={cn(
-                          "py-3.5 text-right sm:text-left font-semibold",
+                          "text-xs font-bold",
                           isCredit
                             ? "text-emerald-600 dark:text-emerald-400"
                             : "text-foreground"
@@ -191,41 +176,136 @@ export function RecentTransactionsCard({
                         {isCredit
                           ? `+${formattedAmount}`
                           : `-${formattedAmount}`}
-                      </TableCell>
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                        Success
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
 
-                      {/* STATUS column */}
-                      <TableCell className="py-3.5 hidden sm:table-cell">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                          <span className="size-1.5 rounded-full bg-emerald-500" />
-                          Completed
-                        </span>
-                      </TableCell>
+            {/* 2. Desktop Table (>= sm) */}
+            <div className="hidden overflow-x-auto sm:block">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border/60 hover:bg-transparent">
+                    <TableHead className="text-muted-foreground px-6 text-[11px] font-semibold tracking-wider uppercase">
+                      Type
+                    </TableHead>
+                    <TableHead className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+                      Description
+                    </TableHead>
+                    <TableHead className="text-muted-foreground text-right text-[11px] font-semibold tracking-wider uppercase sm:text-left">
+                      Amount
+                    </TableHead>
+                    <TableHead className="text-muted-foreground hidden text-[11px] font-semibold tracking-wider uppercase sm:table-cell">
+                      Status
+                    </TableHead>
+                    <TableHead className="text-muted-foreground hidden text-[11px] font-semibold tracking-wider uppercase md:table-cell">
+                      Date
+                    </TableHead>
+                    <TableHead className="w-10 px-6"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {displayTransactions.map((tx) => {
+                    const isCredit = tx.direction === "credit";
+                    const formattedAmount = formatCurrency(
+                      tx.amount,
+                      tx.currency
+                    );
+                    const { label, Icon, containerClass } =
+                      resolveTransactionIconAndLabel(tx);
 
-                      {/* DATE column */}
-                      <TableCell className="py-3.5 text-muted-foreground hidden md:table-cell">
-                        {formatDate(tx.created_at, {
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </TableCell>
+                    return (
+                      <TableRow
+                        key={tx.id}
+                        className="border-border/50 hover:bg-muted/40 text-xs transition-colors"
+                      >
+                        {/* TYPE column with circular icon */}
+                        <TableCell className="px-6 py-3.5 font-medium">
+                          <div className="flex items-center gap-2.5">
+                            <div
+                              className={cn(
+                                "flex size-8 shrink-0 items-center justify-center rounded-full",
+                                containerClass
+                              )}
+                            >
+                              <Icon
+                                className="size-4 shrink-0"
+                                aria-hidden="true"
+                              />
+                            </div>
+                            <span className="text-foreground font-semibold">
+                              {label}
+                            </span>
+                          </div>
+                        </TableCell>
 
-                      {/* Action Chevron */}
-                      <TableCell className="px-6 py-3.5 text-right">
-                        <Link
-                          href={`${ROUTES.TRANSACTIONS}/${tx.id}`}
-                          aria-label={`View details for transaction ${tx.reference}`}
-                          className="text-muted-foreground hover:text-foreground inline-flex items-center"
+                        {/* DESCRIPTION column */}
+                        <TableCell className="py-3.5">
+                          <div className="flex flex-col">
+                            <span className="text-foreground font-medium">
+                              {tx.description}
+                            </span>
+                            <span className="text-muted-foreground text-[10px]">
+                              {tx.reference}
+                            </span>
+                          </div>
+                        </TableCell>
+
+                        {/* AMOUNT column */}
+                        <TableCell
+                          className={cn(
+                            "py-3.5 text-right font-semibold sm:text-left",
+                            isCredit
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-foreground"
+                          )}
                         >
-                          <ChevronRight className="size-4" aria-hidden="true" />
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                          {isCredit
+                            ? `+${formattedAmount}`
+                            : `-${formattedAmount}`}
+                        </TableCell>
+
+                        {/* STATUS column */}
+                        <TableCell className="hidden py-3.5 sm:table-cell">
+                          <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                            Completed
+                          </span>
+                        </TableCell>
+
+                        {/* DATE column */}
+                        <TableCell className="text-muted-foreground hidden py-3.5 md:table-cell">
+                          {formatDate(tx.created_at, {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </TableCell>
+
+                        {/* Action Chevron */}
+                        <TableCell className="px-6 py-3.5 text-right">
+                          <Link
+                            href={`${ROUTES.TRANSACTIONS}/${tx.id}`}
+                            aria-label={`View details for transaction ${tx.reference}`}
+                            className="text-muted-foreground hover:text-foreground inline-flex items-center"
+                          >
+                            <ChevronRight
+                              className="size-4"
+                              aria-hidden="true"
+                            />
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         )}
       </CardContent>

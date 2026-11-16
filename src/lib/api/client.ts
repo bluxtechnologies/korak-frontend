@@ -116,6 +116,20 @@ export async function fetchCsrfCookie(): Promise<void> {
           Accept: "application/json",
         },
       });
+    } catch (networkError: unknown) {
+      if (networkError instanceof ApiClientError) {
+        throw networkError;
+      }
+      const message =
+        networkError instanceof Error
+          ? networkError.message
+          : "Failed to connect to authentication server";
+
+      throw new ApiClientError(
+        `Unable to reach the server to initialize security cookie (${message}). Please verify the backend API server is running.`,
+        0,
+        "network_error"
+      );
     } finally {
       csrfPromise = null;
     }
@@ -227,12 +241,31 @@ async function baseApiClient<T>(
     }
   }
 
-  const response = await fetch(url, {
-    ...customOptions,
-    headers,
-    credentials: customOptions.credentials || "include",
-    body: processedBody,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...customOptions,
+      headers,
+      credentials: customOptions.credentials || "include",
+      body: processedBody,
+    });
+  } catch (networkError: unknown) {
+    if (networkError instanceof ApiClientError) {
+      throw networkError;
+    }
+    const message =
+      networkError instanceof Error
+        ? networkError.message
+        : "Failed to connect to server";
+
+    throw new ApiClientError(
+      `Unable to connect to the server (${message}). Please verify the backend API server is running and accessible.`,
+      0,
+      "network_error",
+      undefined,
+      requestId
+    );
+  }
 
   const responseRequestId =
     response.headers.get("x-request-id") ||

@@ -37,6 +37,15 @@ export function formatCurrency(
 }
 
 /**
+ * Formats a major-unit Naira amount into a localized currency string.
+ *
+ * @param amountMajor - Amount in major currency units (e.g. 3500 => "₦3,500.00")
+ */
+export function formatNaira(amountMajor: number): string {
+  return formatCurrency(Math.round(amountMajor * 100), "NGN");
+}
+
+/**
  * Returns a masked representation of a currency value for privacy.
  */
 export function maskCurrency(currency: string = "NGN"): string {

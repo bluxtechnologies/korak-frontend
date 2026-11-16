@@ -49,6 +49,14 @@ import {
   type TelecomNetwork,
   type AirtimeOrderResult,
 } from "./api";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Lock, Printer, Download, Copy, Check } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Schema — Doc 09 §6: client validation is a usability aid, server re-validates
@@ -84,6 +92,7 @@ export function AirtimePurchaseForm({
   const [isConfirmOpen, setIsConfirmOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [rootError, setRootError] = React.useState<string | null>(null);
+  const [pin, setPin] = React.useState<string>("1234");
   const [completedOrder, setCompletedOrder] =
     React.useState<AirtimeOrderResult | null>(null);
 
@@ -234,11 +243,22 @@ export function AirtimePurchaseForm({
             Buy Another Airtime
           </Button>
           <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (typeof window !== "undefined") window.print();
+            }}
+            className="w-full flex-1 text-xs sm:w-auto gap-1.5"
+          >
+            <Printer className="size-3.5 text-muted-foreground" />
+            <span>Print Receipt</span>
+          </Button>
+          <Button
             asChild
             variant="outline"
             className="w-full flex-1 text-xs sm:w-auto"
           >
-            <Link href={ROUTES.TRANSACTIONS}>View Transactions</Link>
+            <Link href={ROUTES.ORDERS}>View in Orders</Link>
           </Button>
         </CardFooter>
       </Card>
@@ -331,18 +351,43 @@ export function AirtimePurchaseForm({
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-medium">
-                    Phone Number
-                  </FormLabel>
+                  <div className="flex items-center justify-between">
+                    <FormLabel className="text-xs font-medium">
+                      Phone Number
+                    </FormLabel>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-muted-foreground">Quick:</span>
+                      <button
+                        type="button"
+                        onClick={() => form.setValue("phone", "08031234567", { shouldValidate: true })}
+                        className="text-[10px] font-semibold text-primary hover:underline"
+                      >
+                        08031234567
+                      </button>
+                      <span className="text-muted-foreground/40">•</span>
+                      <button
+                        type="button"
+                        onClick={() => form.setValue("phone", "08051234567", { shouldValidate: true })}
+                        className="text-[10px] font-semibold text-primary hover:underline"
+                      >
+                        08051234567
+                      </button>
+                    </div>
+                  </div>
                   <FormControl>
                     <div className="relative">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                        <span className="text-xs font-bold text-muted-foreground font-mono">
+                          +234
+                        </span>
+                      </div>
                       <Input
                         {...field}
                         type="tel"
                         inputMode="numeric"
                         placeholder="08031234567"
                         maxLength={11}
-                        className="font-mono text-sm"
+                        className="font-mono text-sm pl-13"
                       />
                       {activeNetworkInfo && field.value.length >= 4 && (
                         <div className="absolute top-2.5 right-2.5">
@@ -476,36 +521,77 @@ export function AirtimePurchaseForm({
         onConfirm={handleConfirmPurchase}
         description="Please verify your recipient details. Airtime top-ups are dispatched immediately and cannot be reversed once processed."
       >
-        <div className="border-border bg-surface space-y-2 rounded-md border p-3 text-xs">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Network:</span>
-            <span className="text-foreground font-semibold uppercase">
-              {selectedNetwork}
-            </span>
+        <div className="space-y-3 pt-1">
+          <div className="border-border bg-surface space-y-2 rounded-xl border p-3.5 text-xs">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Network:</span>
+              <span className="text-foreground font-semibold uppercase">
+                {selectedNetwork}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Recipient:</span>
+              <span className="text-foreground font-mono font-medium">
+                {enteredPhone}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Airtime Value:</span>
+              <span className="text-foreground font-mono font-medium">
+                ₦{enteredAmount.toLocaleString()}
+              </span>
+            </div>
+            <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+              <span>Discount:</span>
+              <span className="font-mono font-medium">
+                -₦{discountAmount.toLocaleString()}
+              </span>
+            </div>
+            <div className="border-border flex justify-between border-t pt-1.5 font-bold">
+              <span className="text-foreground">Net Wallet Debit:</span>
+              <span className="text-primary font-mono text-sm">
+                ₦{finalChargeAmount.toLocaleString()}
+              </span>
+            </div>
           </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Recipient:</span>
-            <span className="text-foreground font-mono font-medium">
-              {enteredPhone}
-            </span>
+
+          {/* Wallet Balance Impact */}
+          <div className="grid grid-cols-2 gap-2 rounded-xl border border-border/80 bg-muted/20 p-2.5 text-[11px]">
+            <div>
+              <span className="text-muted-foreground block">Current Balance</span>
+              <span className="font-mono font-bold text-foreground">
+                {formatCurrency(walletBalance, "NGN")}
+              </span>
+            </div>
+            <div>
+              <span className="text-muted-foreground block">Balance After</span>
+              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                {formatCurrency(Math.max(0, walletBalance - finalChargeMinor), "NGN")}
+              </span>
+            </div>
           </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Airtime Value:</span>
-            <span className="text-foreground font-mono font-medium">
-              ₦{enteredAmount.toLocaleString()}
-            </span>
-          </div>
-          <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-            <span>Discount:</span>
-            <span className="font-mono font-medium">
-              -₦{discountAmount.toLocaleString()}
-            </span>
-          </div>
-          <div className="border-border flex justify-between border-t pt-1.5 font-bold">
-            <span className="text-foreground">Net Wallet Debit:</span>
-            <span className="text-primary font-mono text-sm">
-              ₦{finalChargeAmount.toLocaleString()}
-            </span>
+
+          {/* 4-Digit Transaction PIN Input */}
+          <div className="space-y-1.5 rounded-xl border border-border/70 bg-surface p-3 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-foreground flex items-center gap-1.5">
+                <Lock className="size-3 text-primary" />
+                <span>Transaction PIN</span>
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                4-digit security code
+              </span>
+            </div>
+            <Input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              placeholder="••••"
+              className="font-mono text-center text-lg tracking-widest h-9 rounded-lg"
+              aria-label="Transaction PIN"
+            />
           </div>
         </div>
       </ConfirmDialog>

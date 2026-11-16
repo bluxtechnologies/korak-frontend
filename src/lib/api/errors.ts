@@ -40,6 +40,8 @@ const CODE_MESSAGE_MAP: Record<string, string> = {
     "The resource has been updated elsewhere. Please refresh and try again.",
   validation_failed: "Please check the information you entered and try again.",
   server_error: "An unexpected error occurred. Please try again later.",
+  network_error:
+    "Unable to connect to the server. Please check your network connection or ensure the API server is running.",
 };
 
 const STATUS_MESSAGE_MAP: Record<number, string> = {

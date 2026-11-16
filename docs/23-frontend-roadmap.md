@@ -48,7 +48,7 @@ Admin UI is not scheduled: its scope and hosting are OPEN (Docs 04 and 13). It w
 - F5.2 Sidebar: collapse, active states, nested items
 - F5.3 Top bar: notifications slot, user menu, profile, logout
 - F5.4 Page container, page header, dashboard grid
-- F5.5 Responsive behavior: sidebar becomes a drawer on small screens
+- F5.5 Responsive mobile navigation: app-like Menu page (/menu) replacing modal drawer/bottom sheet on small screens
 
 **Done when:** one consistent layout wraps every dashboard page. *Needs:* F3.
 
@@ -140,6 +140,14 @@ Admin UI is not scheduled: its scope and hosting are OPEN (Docs 04 and 13). It w
 - F16.4 Idempotent submit handling (no double orders)
 
 **Done when:** purchases complete and failures show safe messages. *Needs:* F7, B17.
+
+## F16A — Numbers Activation ⛔ *blocked by Numbers Activation OPEN items*
+- F16A.1 Provider integration & service selection UI
+- F16A.2 Number request and order flow
+- F16A.3 Code delivery to the customer (polling or push display; no claims of instant delivery)
+- F16A.4 Expiry countdown, cancellation, and refund state handling
+
+**Done when:** customers can order virtual numbers, view delivered verification codes, and observe cancellation and refund state on timeout. *Needs:* F7, B17A.
 
 ## F17 — Orders
 - F17.1 Orders list (table features from F6)

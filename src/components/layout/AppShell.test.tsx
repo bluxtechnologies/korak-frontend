@@ -1,5 +1,4 @@
 import { render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ROUTES } from "@/config/navigation";
 import { AppShell } from "./AppShell";
@@ -8,8 +7,8 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/overview",
 }));
 
-describe("AppShell & Responsive Mobile Drawer (F5.5)", () => {
-  it("renders persistent sidebar, topbar, and main children", () => {
+describe("AppShell & Responsive Mobile Navigation (F5.5)", () => {
+  it("renders persistent desktop sidebar, topbar, and main children", () => {
     render(
       <AppShell
         user={{ name: "Collins Okeke", email: "collins@example.com" }}
@@ -25,93 +24,64 @@ describe("AppShell & Responsive Mobile Drawer (F5.5)", () => {
     expect(
       screen.getByRole("link", { name: /notifications \(3 unread\)/i })
     ).toBeInTheDocument();
-    expect(screen.getByText("CO")).toBeInTheDocument();
+    expect(screen.getAllByText("CO")[0]).toBeInTheDocument();
   });
 
-  it("opens mobile navigation drawer via menu trigger and closes with close button", async () => {
-    const user = userEvent.setup();
+  it("renders mobile navigation bar linking directly to /menu without modal drawer", () => {
     render(
       <AppShell pathname={ROUTES.OVERVIEW}>
         <div>Content</div>
       </AppShell>
     );
 
-    const openBtn = screen.getByRole("button", {
-      name: /open navigation menu/i,
+    const mobileNav = screen.getByRole("navigation", {
+      name: /mobile navigation/i,
     });
-    expect(openBtn).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(mobileNav).toBeInTheDocument();
 
-    await user.click(openBtn);
+    // Verify 4 tabs in mobile navigation
+    const homeTab = within(mobileNav).getByRole("link", { name: /^home$/i });
+    expect(homeTab).toHaveAttribute("href", ROUTES.OVERVIEW);
+    expect(homeTab).toHaveAttribute("aria-current", "page");
 
-    const dialog = screen.getByRole("dialog");
-    expect(dialog).toBeInTheDocument();
-    expect(openBtn).toHaveAttribute("aria-expanded", "true");
+    const walletTab = within(mobileNav).getByRole("link", { name: /^wallet$/i });
+    expect(walletTab).toHaveAttribute("href", ROUTES.WALLET);
 
-    const closeBtn = within(dialog).getByRole("button", {
-      name: /close navigation menu/i,
+    const transactionsTab = within(mobileNav).getByRole("link", {
+      name: /^transactions$/i,
     });
-    await user.click(closeBtn);
+    expect(transactionsTab).toHaveAttribute("href", ROUTES.TRANSACTIONS);
 
+    const menuTab = within(mobileNav).getByRole("link", { name: /^menu$/i });
+    expect(menuTab).toHaveAttribute("href", ROUTES.MENU);
+
+    // Verify NO modal drawer / dialog is mounted
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(openBtn).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("closes mobile navigation drawer when pressing Escape", async () => {
-    const user = userEvent.setup();
+  it("mobile topbar trigger links directly to /menu instead of opening a drawer", () => {
     render(
       <AppShell pathname={ROUTES.OVERVIEW}>
         <div>Content</div>
       </AppShell>
     );
 
-    await user.click(
-      screen.getByRole("button", { name: /open navigation menu/i })
-    );
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-
-    await user.keyboard("{Escape}");
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    const mobileMenuTrigger = screen.getByRole("link", {
+      name: /open menu page/i,
+    });
+    expect(mobileMenuTrigger).toHaveAttribute("href", ROUTES.MENU);
   });
 
-  it("closes mobile drawer when clicking a navigation link inside the drawer", async () => {
-    const user = userEvent.setup();
+  it("mobile topbar trigger links back to overview when already on /menu", () => {
     render(
-      <AppShell pathname={ROUTES.OVERVIEW}>
-        <div>Content</div>
+      <AppShell pathname={ROUTES.MENU}>
+        <div>Menu Content</div>
       </AppShell>
     );
 
-    await user.click(
-      screen.getByRole("button", { name: /open navigation menu/i })
-    );
-    const dialog = screen.getByRole("dialog");
-
-    const airtimeLink = within(dialog).getByRole("link", { name: /airtime/i });
-    await user.click(airtimeLink);
-
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
-
-  it("auto-closes mobile drawer when pathname changes", async () => {
-    const user = userEvent.setup();
-    const { rerender } = render(
-      <AppShell pathname={ROUTES.OVERVIEW}>
-        <div>Overview</div>
-      </AppShell>
-    );
-
-    await user.click(
-      screen.getByRole("button", { name: /open navigation menu/i })
-    );
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-
-    rerender(
-      <AppShell pathname={ROUTES.ORDERS}>
-        <div>Orders</div>
-      </AppShell>
-    );
-
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    const backTrigger = screen.getByRole("link", {
+      name: /back to dashboard/i,
+    });
+    expect(backTrigger).toHaveAttribute("href", ROUTES.OVERVIEW);
   });
 });

@@ -2,108 +2,129 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowRight, LayoutGrid, Phone, TrendingUp, Wifi } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronRight,
+  Phone,
+  Wifi,
+  Smartphone,
+  LayoutGrid,
+  type LucideIcon,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ROUTES } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 
-interface ShortcutItem {
+export interface PopularServiceItem {
   id: string;
   title: string;
   description: string;
   href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  iconBg: string;
-  iconColor: string;
+  icon: LucideIcon;
 }
 
-const SHORTCUTS: ShortcutItem[] = [
+const DEFAULT_POPULAR_SERVICES: PopularServiceItem[] = [
   {
     id: "airtime",
     title: "Airtime",
-    description: "Buy airtime for any network",
+    description: "Instant recharge across all networks",
     href: ROUTES.AIRTIME,
     icon: Phone,
-    iconBg: "bg-rose-500/10",
-    iconColor: "text-rose-600 dark:text-rose-400",
   },
   {
     id: "data",
     title: "Data",
-    description: "Get data for browsing, streaming and more",
+    description: "Affordable SME & direct bundles",
     href: ROUTES.DATA,
     icon: Wifi,
-    iconBg: "bg-blue-500/10",
-    iconColor: "text-blue-600 dark:text-blue-400",
   },
   {
-    id: "social",
-    title: "Social",
-    description: "Social accounts, boosting and more",
-    href: ROUTES.SOCIAL_MEDIA_BUY,
-    icon: TrendingUp,
-    iconBg: "bg-pink-500/10",
-    iconColor: "text-pink-600 dark:text-pink-400",
+    id: "activation",
+    title: "Activation",
+    description: "Virtual numbers & OTP verifications",
+    href: ROUTES.NUMBERS_OTP,
+    icon: Smartphone,
   },
   {
     id: "more",
     title: "More",
-    description: "Explore all services",
-    href: ROUTES.AIRTIME,
+    description: "Explore all digital services",
+    href: ROUTES.SERVICES,
     icon: LayoutGrid,
-    iconBg: "bg-purple-500/10",
-    iconColor: "text-purple-600 dark:text-purple-400",
   },
 ];
 
 export interface QuickServiceShortcutsProps {
+  services?: PopularServiceItem[];
   className?: string;
 }
 
+/**
+ * PopularServices / QuickServiceShortcuts (F12.4).
+ * Clean 4-card horizontal grid (2-column on mobile, 4-column on desktop).
+ * Displays Airtime, Data, Activation, and More with compact icons,
+ * descriptions, and subtle navigation indicators.
+ */
 export function QuickServiceShortcuts({
+  services = DEFAULT_POPULAR_SERVICES,
   className,
 }: QuickServiceShortcutsProps) {
   return (
-    <section className={cn("space-y-3.5", className)} data-testid="quick-service-shortcuts">
-      <div>
-        <h2 className="text-base font-bold text-foreground sm:text-lg">
-          What do you need today?
-        </h2>
-        <p className="text-xs text-muted-foreground sm:text-sm">
-          Quick access to our most popular services.
-        </p>
+    <section
+      className={cn("space-y-3.5", className)}
+      data-testid="quick-service-shortcuts"
+    >
+      {/* Section Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-foreground text-base font-bold sm:text-lg">
+            What do you need today?
+          </h2>
+          <p className="text-muted-foreground text-xs sm:text-sm">
+            Quick access to our most popular services.
+          </p>
+        </div>
+
+        <Link
+          href={ROUTES.SERVICES}
+          className="text-primary flex shrink-0 items-center gap-1 text-xs font-semibold hover:underline"
+        >
+          <span>See all</span>
+          <ArrowRight className="size-3.5" aria-hidden="true" />
+        </Link>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {SHORTCUTS.map((item) => {
+      {/* 4-Column Horizontal Grid (2-column on mobile) */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+        {services.map((item) => {
           const Icon = item.icon;
           return (
             <Link
               key={item.id}
               href={item.href}
-              className="group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-2xl"
+              className="group focus-visible:ring-ring rounded-2xl focus-visible:ring-1 focus-visible:outline-none"
             >
-              <Card className="flex h-full flex-col justify-between rounded-2xl border border-border/70 p-5 transition-all hover:border-border hover:shadow-xs group-hover:bg-muted/30">
+              <Card className="border-border/80 hover:border-primary/40 hover:bg-muted/30 flex h-full flex-col justify-between rounded-2xl border p-4 transition-all hover:shadow-xs active:scale-[0.99] sm:p-5">
                 <div>
-                  <div
-                    className={cn(
-                      "flex size-10 items-center justify-center rounded-full transition-transform group-hover:scale-105",
-                      item.iconBg,
-                      item.iconColor
-                    )}
-                  >
-                    <Icon className="size-4.5" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex size-9 items-center justify-center rounded-xl bg-[#7A1F3D]/10 text-[#7A1F3D] transition-transform group-hover:scale-105 sm:size-10 dark:bg-[#7A1F3D]/25 dark:text-[#E892A8]">
+                      <Icon
+                        className="size-4.5 shrink-0 sm:size-5"
+                        aria-hidden="true"
+                      />
+                    </div>
+                    <ChevronRight
+                      className="text-muted-foreground/50 group-hover:text-primary size-4 transition-all group-hover:translate-x-0.5"
+                      aria-hidden="true"
+                    />
                   </div>
-                  <h3 className="mt-4 text-sm font-semibold text-foreground">
+
+                  <h3 className="text-foreground mt-3 text-sm leading-tight font-bold">
                     {item.title}
                   </h3>
-                  <p className="mt-1 text-xs text-muted-foreground leading-snug">
+                  <p className="text-muted-foreground mt-1 line-clamp-1 text-xs leading-snug">
                     {item.description}
                   </p>
-                </div>
-
-                <div className="mt-4 flex items-center text-muted-foreground transition-colors group-hover:text-foreground">
-                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
                 </div>
               </Card>
             </Link>

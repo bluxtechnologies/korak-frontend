@@ -23,7 +23,6 @@ describe("OverviewView (F12)", () => {
 
     expect(screen.getByTestId("overview-view")).toBeInTheDocument();
     expect(screen.getByTestId("wallet-summary-card")).toBeInTheDocument();
-    expect(screen.getByTestId("recent-orders-card")).toBeInTheDocument();
     expect(screen.getByTestId("recent-transactions-card")).toBeInTheDocument();
   });
 
@@ -83,7 +82,6 @@ describe("OverviewView (F12)", () => {
       expect(screen.getByTestId("overview-view")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("No orders yet")).toBeInTheDocument();
     expect(screen.getByText("No transactions yet")).toBeInTheDocument();
   });
 });

@@ -10,8 +10,8 @@ Fintech software: sleek, clean, classic, elegant, professional, spacious, consis
 ### Typography
 Plus Jakarta Sans (`next/font/google`), a single family. Weights limited to 400, 500, 600.
 
-### Radius — Locked: 8px
-One global value (`--radius: 8px`) for buttons, cards, inputs, tables, alerts, dropdowns, badges, modals. No second radius without a documented reason. No pill shapes.
+### Radius — Locked: 10px
+One global value (`--radius: 10px`) for buttons, cards, inputs, tables, alerts, dropdowns, badges, modals. No second radius without a documented reason. No pill shapes.
 
 ### Color — burgundy theme — Locked
 | Token | Light value | Use |
@@ -53,7 +53,7 @@ Transitions: short and functional (hover, focus, open/close) only; honor `prefer
 Build once, reuse everywhere, keep simple:
 Button · Card · Badge · Alert · Modal · Dropdown · Table · Search bar · Filter panel · Form controls · Pagination · Breadcrumb · Toast · Empty state · Loading state · Error state · Confirm dialog.
 
-- **Badge:** text only, 8px radius, no icon, no dot.
+- **Badge:** text only, 10px radius, no icon, no dot.
 - **Alert levels:** Information, Success, Warning, Error. Icon allowed in alerts (it aids recognition), always with text.
 - **Toasts:** a React toast library, used for transient feedback only; persistent problems use an inline Alert.
 - **Buttons:** one primary per view. While processing: disabled with a spinner icon (Lucide `Loader2`) and text.
@@ -64,7 +64,7 @@ Button · Card · Badge · Alert · Modal · Dropdown · Table · Search bar · 
 - **Top bar:** notifications, user menu, profile, logout.
 - **Page container:** consistent max width, padding, page header (title, breadcrumb, primary action).
 - **Dashboard grid:** consistent gap and card structure.
-- Desktop is the primary target; tablet and mobile are supported without degrading desktop (sidebar becomes a drawer; tables scroll or reflow).
+- Desktop is the primary target; tablet and mobile are supported without degrading desktop (sidebar collapses to an icon rail on desktop; mobile navigation uses a persistent bottom bar with an app-like Menu page (/menu) rather than modal drawers; tables scroll or reflow).
 
 ## 6. Icons
 Lucide only, and only where they improve usability. No decorative icons.

@@ -1,48 +1,69 @@
 import { describe, expect, it } from "vitest";
 import {
-  filterNavigationByAbilities,
-  findActiveNavItem,
+  ALL_NAV_ITEMS,
+  BOTTOM_NAV_ITEMS,
+  DASHBOARD_NAV,
+  MAIN_NAV_ITEMS,
+  NAV_ICON_STROKE_WIDTH,
+  ROUTES,
+  USER_MENU_ITEMS,
   getBreadcrumbs,
   hasActiveChild,
   isNavItemActive,
-  type NavSection,
-  ROUTES,
-  SIDEBAR_NAV_SECTIONS,
-  USER_MENU_ITEMS,
 } from "./navigation";
 
-describe("Navigation Configuration (config/navigation)", () => {
+describe("Navigation Configuration (F5.1: src/config/navigation.ts)", () => {
   describe("Single source routes and definitions", () => {
     it("uses valid kebab-case paths across all routes", () => {
       for (const route of Object.values(ROUTES)) {
-        expect(route.startsWith("/")).toBe(true);
-        expect(route).toBe(route.toLowerCase());
+        expect(route).toMatch(/^\/[a-z0-9\-/]*$/);
         expect(route).not.toContain("_");
       }
     });
 
-    it("includes all required customer navigation items", () => {
-      const allLabels = SIDEBAR_NAV_SECTIONS.flatMap((section) =>
-        section.items.flatMap((item) => [
-          item.label,
-          ...(item.children?.map((child) => child.label) ?? []),
-        ])
-      );
+    it("has exact 7 main items in the specified order with correct hrefs", () => {
+      expect(MAIN_NAV_ITEMS).toHaveLength(7);
 
-      expect(allLabels).toContain("Account Overview");
-      expect(allLabels).toContain("Airtime");
-      expect(allLabels).toContain("Data");
-      expect(allLabels).toContain("VPN");
-      expect(allLabels).toContain("Buy VPN");
-      expect(allLabels).toContain("VPN Logs");
-      expect(allLabels).toContain("Social Media");
-      expect(allLabels).toContain("Buy Account");
-      expect(allLabels).toContain("Boost Account");
-      expect(allLabels).toContain("Orders");
-      expect(allLabels).toContain("Transactions");
-      expect(allLabels).toContain("Notifications");
-      expect(allLabels).toContain("Settings");
-      expect(allLabels).toContain("Profile");
+      const expectedMain = [
+        { label: "Overview", href: "/overview" },
+        { label: "Wallet", href: "/wallet" },
+        { label: "Airtime", href: "/airtime" },
+        { label: "Data", href: "/data" },
+        { label: "Numbers Activation", href: "/numbers" },
+        { label: "Orders", href: "/orders" },
+        { label: "Transactions", href: "/transactions" },
+      ];
+
+      MAIN_NAV_ITEMS.forEach((item, index) => {
+        expect(item.label).toBe(expectedMain[index].label);
+        expect(item.href).toBe(expectedMain[index].href);
+        expect(item.icon).toBeDefined();
+      });
+    });
+
+    it("has exact 2 bottom items in the specified order with correct hrefs", () => {
+      expect(BOTTOM_NAV_ITEMS).toHaveLength(2);
+
+      const expectedBottom = [
+        { label: "Profile", href: "/profile" },
+        { label: "Settings", href: "/settings" },
+      ];
+
+      BOTTOM_NAV_ITEMS.forEach((item, index) => {
+        expect(item.label).toBe(expectedBottom[index].label);
+        expect(item.href).toBe(expectedBottom[index].href);
+        expect(item.icon).toBeDefined();
+      });
+    });
+
+    it("uses locked stroke width about 1.75 across icons", () => {
+      expect(NAV_ICON_STROKE_WIDTH).toBe(1.75);
+    });
+
+    it("contains total 9 navigation items in DASHBOARD_NAV and ALL_NAV_ITEMS", () => {
+      expect(DASHBOARD_NAV.main).toBe(MAIN_NAV_ITEMS);
+      expect(DASHBOARD_NAV.bottom).toBe(BOTTOM_NAV_ITEMS);
+      expect(ALL_NAV_ITEMS).toHaveLength(9);
     });
 
     it("aligns user menu links with customer routes", () => {
@@ -53,151 +74,68 @@ describe("Navigation Configuration (config/navigation)", () => {
   });
 
   describe("Active state matching", () => {
-    it("matches overview exactly without matching unrelated paths", () => {
-      const overviewItem = SIDEBAR_NAV_SECTIONS[0].items[0];
-      expect(isNavItemActive(overviewItem, "/overview")).toBe(true);
-      expect(isNavItemActive(overviewItem, "/overview/")).toBe(true);
-      expect(isNavItemActive(overviewItem, "/overview/stats")).toBe(false);
-      expect(isNavItemActive(overviewItem, "/orders")).toBe(false);
+    it("matches dashboard and overview routes", () => {
+      expect(isNavItemActive("/dashboard", "/dashboard")).toBe(true);
+      expect(isNavItemActive("/dashboard", "/overview")).toBe(true);
+      expect(isNavItemActive("/dashboard", "/airtime")).toBe(false);
     });
 
-    it("matches nested detail paths to parent section when exact is not set", () => {
-      const ordersItem = findActiveNavItem("/orders/ord_123");
-      expect(ordersItem?.id).toBe("orders");
-
-      const txItem = findActiveNavItem("/transactions/txn_456");
-      expect(txItem?.id).toBe("transactions");
+    it("matches exact routes and sub-paths for services", () => {
+      expect(isNavItemActive("/airtime", "/airtime")).toBe(true);
+      expect(isNavItemActive("/wallet", "/wallet")).toBe(true);
+      expect(isNavItemActive("/transactions", "/transactions/txn_123")).toBe(
+        true
+      );
+      expect(isNavItemActive("/transactions", "/orders")).toBe(false);
     });
 
-    it("distinguishes nested siblings correctly (/vpn vs /vpn/logs)", () => {
-      const vpnGroup = SIDEBAR_NAV_SECTIONS[1].items.find(
-        (i) => i.id === "vpn"
-      )!;
-      const buyVpnItem = vpnGroup.children![0];
-      const vpnLogsItem = vpnGroup.children![1];
+    it("supports child active matching via hasActiveChild", () => {
+      const parentItem = {
+        label: "Services",
+        href: "/services",
+        icon: MAIN_NAV_ITEMS[0].icon,
+        children: [
+          {
+            label: "Child 1",
+            href: "/services/child1",
+            icon: MAIN_NAV_ITEMS[0].icon,
+          },
+        ],
+      };
 
-      expect(isNavItemActive(buyVpnItem, "/vpn")).toBe(true);
-      expect(isNavItemActive(buyVpnItem, "/vpn/logs")).toBe(false);
-      expect(isNavItemActive(vpnLogsItem, "/vpn/logs")).toBe(true);
-
-      expect(hasActiveChild(vpnGroup, "/vpn")).toBe(true);
-      expect(hasActiveChild(vpnGroup, "/vpn/logs")).toBe(true);
-      expect(hasActiveChild(vpnGroup, "/airtime")).toBe(false);
+      expect(hasActiveChild(parentItem, "/services/child1")).toBe(true);
+      expect(hasActiveChild(parentItem, "/dashboard")).toBe(false);
     });
   });
 
   describe("Breadcrumb resolution", () => {
-    it("returns single Overview crumb when on /overview", () => {
+    it("returns single Overview crumb when on /dashboard or /overview", () => {
+      expect(getBreadcrumbs("/dashboard")).toEqual([
+        { label: "Overview", href: ROUTES.OVERVIEW, isCurrent: true },
+      ]);
       expect(getBreadcrumbs("/overview")).toEqual([
         { label: "Overview", href: ROUTES.OVERVIEW, isCurrent: true },
       ]);
     });
 
-    it("resolves top-level customer service routes with Overview parent", () => {
+    it("resolves top-level customer routes with Overview parent", () => {
       expect(getBreadcrumbs("/airtime")).toEqual([
         { label: "Overview", href: ROUTES.OVERVIEW, isCurrent: false },
         { label: "Airtime", href: ROUTES.AIRTIME, isCurrent: true },
       ]);
-    });
 
-    it("resolves nested group routes preserving group hierarchy", () => {
-      expect(getBreadcrumbs("/vpn/logs")).toEqual([
+      expect(getBreadcrumbs("/wallet")).toEqual([
         { label: "Overview", href: ROUTES.OVERVIEW, isCurrent: false },
-        { label: "VPN", href: undefined, isCurrent: false },
-        { label: "VPN Logs", href: ROUTES.VPN_LOGS, isCurrent: true },
+        { label: "Wallet", href: ROUTES.WALLET, isCurrent: true },
       ]);
+    });
 
-      expect(getBreadcrumbs("/social-media/boost")).toEqual([
+    it("resolves sub-routes preserving parent route", () => {
+      expect(getBreadcrumbs("/transactions/txn_01JABC")).toEqual([
         { label: "Overview", href: ROUTES.OVERVIEW, isCurrent: false },
-        { label: "Social Media", href: undefined, isCurrent: false },
-        {
-          label: "Boost Account",
-          href: ROUTES.SOCIAL_MEDIA_BOOST,
-          isCurrent: true,
-        },
+        { label: "Transactions", href: ROUTES.TRANSACTIONS, isCurrent: false },
+        { label: "txn_01JABC", isCurrent: true },
       ]);
-    });
-
-    it("resolves dynamic detail routes with default or overridden detail labels", () => {
-      expect(getBreadcrumbs("/orders/ord_01JABC")).toEqual([
-        { label: "Overview", href: ROUTES.OVERVIEW, isCurrent: false },
-        { label: "Orders", href: ROUTES.ORDERS, isCurrent: false },
-        {
-          label: "Order Details",
-          href: "/orders/ord_01JABC",
-          isCurrent: true,
-        },
-      ]);
-
-      expect(
-        getBreadcrumbs("/orders/ord_01JABC", {
-          detailLabel: "Order #ord_01JABC",
-        })
-      ).toEqual([
-        { label: "Overview", href: ROUTES.OVERVIEW, isCurrent: false },
-        { label: "Orders", href: ROUTES.ORDERS, isCurrent: false },
-        {
-          label: "Order #ord_01JABC",
-          href: "/orders/ord_01JABC",
-          isCurrent: true,
-        },
-      ]);
-    });
-  });
-
-  describe("Permission-aware filtering", () => {
-    const restrictedSections: NavSection[] = [
-      {
-        id: "main",
-        label: "Main",
-        items: [
-          { id: "public", label: "Public", href: "/public" },
-          {
-            id: "restricted",
-            label: "Restricted",
-            href: "/restricted",
-            requiredAbility: "view_reports",
-          },
-          {
-            id: "group",
-            label: "Group",
-            children: [
-              {
-                id: "child-restricted",
-                label: "Child Restricted",
-                href: "/group/child",
-                requiredAbility: "manage_group",
-              },
-            ],
-          },
-        ],
-      },
-    ];
-
-    it("hides items requiring abilities when abilities are missing (deny by default)", () => {
-      const filtered = filterNavigationByAbilities(restrictedSections);
-      expect(filtered).toHaveLength(1);
-      expect(filtered[0].items.map((i) => i.id)).toEqual(["public"]);
-    });
-
-    it("shows items whose requiredAbility is present", () => {
-      const filtered = filterNavigationByAbilities(restrictedSections, [
-        "view_reports",
-      ]);
-      expect(filtered[0].items.map((i) => i.id)).toEqual([
-        "public",
-        "restricted",
-      ]);
-    });
-
-    it("reveals group when nested child ability is granted or wildcard '*' is present", () => {
-      const filtered = filterNavigationByAbilities(restrictedSections, ["*"]);
-      expect(filtered[0].items.map((i) => i.id)).toEqual([
-        "public",
-        "restricted",
-        "group",
-      ]);
-      expect(filtered[0].items[2].children).toHaveLength(1);
     });
   });
 });

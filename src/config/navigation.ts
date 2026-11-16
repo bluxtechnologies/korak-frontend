@@ -1,23 +1,35 @@
 import {
-  Bell,
-  Clock,
-  Globe,
-  Hash,
-  Headphones,
-  Home,
-  LayoutGrid,
-  Phone,
+  LayoutDashboard,
+  MessageSquareText,
+  Package,
   ReceiptText,
   Settings,
-  Share2,
-  Shield,
-  TrendingUp,
-  User,
-  Users,
+  Smartphone,
+  UserRound,
   Wallet,
   Wifi,
   type LucideIcon,
 } from "lucide-react";
+
+/**
+ * Standard Lucide icon stroke width for consistent sidebar and navigation styling.
+ * Locked per F5.1 specification: about 1.75.
+ */
+export const NAV_ICON_STROKE_WIDTH = 1.75;
+
+/**
+ * Navigation item specification for F5.1.
+ * Typed single source of truth for the dashboard sidebar and breadcrumbs.
+ * Supports up to one optional nesting level (children) for future expansion.
+ * No permission logic is attached here (roles are OPEN per Doc 13).
+ */
+export interface NavItem {
+  id?: string;
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  children?: NavItem[];
+}
 
 /**
  * Single source of truth for application route paths.
@@ -28,22 +40,31 @@ export const ROUTES = {
   HOME: "/",
   PRIVACY: "/privacy",
   TERMS: "/terms",
-  // Customer dashboard routes
+
+  // Customer dashboard routes (F5.1 order)
+  DASHBOARD: "/overview",
   OVERVIEW: "/overview",
-  SERVICES: "/services",
+  WALLET: "/wallet",
   AIRTIME: "/airtime",
   DATA: "/data",
+  NUMBERS: "/numbers",
+  ORDERS: "/orders",
+  TRANSACTIONS: "/transactions",
+  PROFILE: "/profile",
+  SETTINGS: "/settings",
+  MENU: "/menu",
+
+  // Additional feature routes
+  NOTIFICATIONS: "/notifications",
+  SERVICES: "/services",
   VPN: "/vpn",
   VPN_LOGS: "/vpn/logs",
   SOCIAL_MEDIA_BUY: "/social-media/buy",
   SOCIAL_MEDIA_BOOST: "/social-media/boost",
-  ORDERS: "/orders",
-  TRANSACTIONS: "/transactions",
-  WALLET: "/wallet",
   SUPPORT: "/support",
-  NOTIFICATIONS: "/notifications",
-  SETTINGS: "/settings",
-  PROFILE: "/profile",
+  NUMBERS_OTP: "/numbers/otp",
+  RENT_NUMBERS: "/numbers/rent",
+
   // Auth routes (not displayed in authenticated sidebar navigation)
   LOGIN: "/login",
   REGISTER: "/register",
@@ -53,21 +74,110 @@ export const ROUTES = {
   SESSION_EXPIRED: "/session-expired",
 } as const;
 
-export interface NavItem {
-  id: string;
-  label: string;
-  href?: string;
-  icon?: LucideIcon;
-  exact?: boolean;
-  requiredAbility?: string;
-  detailLabel?: string;
-  children?: NavItem[];
+/**
+ * Flat main section navigation items (F5.1).
+ * Exactly 7 items in specified order.
+ */
+export const MAIN_NAV_ITEMS: NavItem[] = [
+  {
+    id: "overview",
+    label: "Overview",
+    href: ROUTES.OVERVIEW,
+    icon: LayoutDashboard,
+  },
+  {
+    id: "wallet",
+    label: "Wallet",
+    href: ROUTES.WALLET,
+    icon: Wallet,
+  },
+  {
+    id: "airtime",
+    label: "Airtime",
+    href: ROUTES.AIRTIME,
+    icon: Smartphone,
+  },
+  {
+    id: "data",
+    label: "Data",
+    href: ROUTES.DATA,
+    icon: Wifi,
+  },
+  {
+    id: "numbers",
+    label: "Numbers Activation",
+    href: ROUTES.NUMBERS,
+    icon: MessageSquareText,
+  },
+  {
+    id: "orders",
+    label: "Orders",
+    href: ROUTES.ORDERS,
+    icon: Package,
+  },
+  {
+    id: "transactions",
+    label: "Transactions",
+    href: ROUTES.TRANSACTIONS,
+    icon: ReceiptText,
+  },
+];
+
+/**
+ * Bottom section navigation items (F5.1), placed after a 1px divider.
+ * Exactly 2 items.
+ */
+export const BOTTOM_NAV_ITEMS: NavItem[] = [
+  {
+    id: "profile",
+    label: "Profile",
+    href: ROUTES.PROFILE,
+    icon: UserRound,
+  },
+  {
+    id: "settings",
+    label: "Settings",
+    href: ROUTES.SETTINGS,
+    icon: Settings,
+  },
+];
+
+export interface DashboardNavConfig {
+  main: NavItem[];
+  bottom: NavItem[];
 }
 
-export interface NavSection {
-  id: string;
-  label?: string;
-  items: NavItem[];
+export const DASHBOARD_NAV: DashboardNavConfig = {
+  main: MAIN_NAV_ITEMS,
+  bottom: BOTTOM_NAV_ITEMS,
+};
+
+export const ALL_NAV_ITEMS: NavItem[] = [
+  ...MAIN_NAV_ITEMS,
+  ...BOTTOM_NAV_ITEMS,
+];
+
+/**
+ * Determines whether a given navigation item is active for the current pathname.
+ */
+export function isNavItemActive(href: string, pathname: string): boolean {
+  if (href === "/overview" || href === "/dashboard") {
+    return (
+      pathname === "/dashboard" ||
+      pathname === "/overview" ||
+      pathname === "/dashboard/" ||
+      pathname === "/overview/"
+    );
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/**
+ * Checks whether any child of a navigation item matches the pathname.
+ */
+export function hasActiveChild(item: NavItem, pathname: string): boolean {
+  if (!item.children || item.children.length === 0) return false;
+  return item.children.some((child) => isNavItemActive(child.href, pathname));
 }
 
 export interface BreadcrumbItem {
@@ -77,338 +187,84 @@ export interface BreadcrumbItem {
 }
 
 /**
- * Customer dashboard navigation sections.
- * Structured into OVERVIEW, SERVICES, and ACCOUNT groups
- * matching the production dashboard layout design reference.
+ * Helper to build breadcrumb trails for current routes.
  */
-export const SIDEBAR_NAV_SECTIONS: NavSection[] = [
-  {
-    id: "overview",
-    label: "Overview",
-    items: [
-      {
-        id: "overview",
-        label: "Home",
-        href: ROUTES.OVERVIEW,
-        icon: Home,
-        exact: true,
-      },
-      {
-        id: "services-index",
-        label: "Services",
-        href: ROUTES.AIRTIME,
-        icon: LayoutGrid,
-      },
-    ],
-  },
-  {
-    id: "services",
-    label: "Services",
-    items: [
-      {
-        id: "numbers-otp",
-        label: "Numbers (OTP)",
-        href: ROUTES.AIRTIME,
-        icon: Hash,
-      },
-      {
-        id: "rent-numbers",
-        label: "Rent Numbers",
-        href: ROUTES.AIRTIME,
-        icon: Clock,
-      },
-      {
-        id: "data",
-        label: "Mobile Data",
-        href: ROUTES.DATA,
-        icon: Wifi,
-      },
-      {
-        id: "airtime",
-        label: "Airtime",
-        href: ROUTES.AIRTIME,
-        icon: Phone,
-      },
-      {
-        id: "social-growth",
-        label: "Social Growth",
-        href: ROUTES.SOCIAL_MEDIA_BOOST,
-        icon: TrendingUp,
-      },
-      {
-        id: "social-accounts",
-        label: "Social Accounts",
-        href: ROUTES.SOCIAL_MEDIA_BUY,
-        icon: Users,
-      },
-      {
-        id: "vpn",
-        label: "VPN",
-        icon: Shield,
-        children: [
-          {
-            id: "vpn-buy",
-            label: "Buy VPN",
-            href: ROUTES.VPN,
-            exact: true,
-          },
-          {
-            id: "vpn-logs",
-            label: "VPN Logs",
-            href: ROUTES.VPN_LOGS,
-          },
-        ],
-      },
-      {
-        id: "esim",
-        label: "eSIM",
-        href: ROUTES.AIRTIME,
-        icon: Globe,
-      },
-    ],
-  },
-  {
-    id: "account",
-    label: "Account",
-    items: [
-      {
-        id: "transactions",
-        label: "Transactions",
-        href: ROUTES.TRANSACTIONS,
-        icon: ReceiptText,
-        detailLabel: "Transaction Details",
-      },
-      {
-        id: "wallet",
-        label: "Wallet",
-        href: ROUTES.OVERVIEW,
-        icon: Wallet,
-      },
-      {
-        id: "support",
-        label: "Support",
-        href: ROUTES.SETTINGS,
-        icon: Headphones,
-      },
-      {
-        id: "settings",
-        label: "Settings",
-        href: ROUTES.SETTINGS,
-        icon: Settings,
-      },
-    ],
-  },
-];
+export function getBreadcrumbs(
+  pathname: string,
+  options?: { detailLabel?: string }
+): BreadcrumbItem[] {
+  const normalized = pathname.replace(/\/$/, "") || "/";
+  if (normalized === "/dashboard" || normalized === "/overview") {
+    return [{ label: "Overview", href: ROUTES.OVERVIEW, isCurrent: true }];
+  }
 
-/**
- * Top bar user dropdown menu links derived from the same route registry.
- */
+  const crumbs: BreadcrumbItem[] = [
+    { label: "Overview", href: ROUTES.OVERVIEW, isCurrent: false },
+  ];
+
+  // Check matching main or bottom nav item
+  const found = ALL_NAV_ITEMS.find((item) =>
+    normalized === item.href || normalized.startsWith(`${item.href}/`)
+  );
+
+  if (found) {
+    if (normalized === found.href) {
+      crumbs.push({ label: found.label, href: found.href, isCurrent: true });
+    } else {
+      crumbs.push({ label: found.label, href: found.href, isCurrent: false });
+      // Nested sub-path
+      const subpath =
+        options?.detailLabel ?? normalized.slice(found.href.length + 1);
+      crumbs.push({ label: subpath, isCurrent: true });
+    }
+  } else {
+    crumbs.push({
+      label: options?.detailLabel ?? normalized.replace(/^\//, ""),
+      isCurrent: true,
+    });
+  }
+
+  return crumbs;
+}
+
+// User menu items for Topbar compatibility
 export const USER_MENU_ITEMS: NavItem[] = [
   {
-    id: "user-profile",
+    id: "profile",
     label: "Profile",
     href: ROUTES.PROFILE,
-    icon: User,
+    icon: UserRound,
   },
   {
-    id: "user-settings",
+    id: "settings",
     label: "Settings",
     href: ROUTES.SETTINGS,
     icon: Settings,
   },
 ];
 
-function normalizePath(path: string): string {
-  if (!path || path === "/") return "/";
-  return path.replace(/\/+$/, "");
+// Compatibility interface for legacy sections if needed
+export interface NavSection {
+  id: string;
+  label?: string;
+  items: NavItem[];
 }
 
-function matchRoute(href: string, pathname: string, exact = false): boolean {
-  const normalizedHref = normalizePath(href);
-  const normalizedPath = normalizePath(pathname);
+export const SIDEBAR_NAV_SECTIONS: NavSection[] = [
+  {
+    id: "main",
+    items: MAIN_NAV_ITEMS,
+  },
+  {
+    id: "bottom",
+    items: BOTTOM_NAV_ITEMS,
+  },
+];
 
-  if (exact || normalizedHref === "/") {
-    return normalizedPath === normalizedHref;
-  }
-
-  return (
-    normalizedPath === normalizedHref ||
-    normalizedPath.startsWith(`${normalizedHref}/`)
-  );
-}
-
-/**
- * Checks whether a single nav item directly matches the active pathname.
- */
-export function isNavItemActive(item: NavItem, pathname: string): boolean {
-  if (!item.href) {
-    return false;
-  }
-  return matchRoute(item.href, pathname, item.exact);
-}
-
-/**
- * Checks whether any descendant of a parent nav item matches the active pathname.
- */
-export function hasActiveChild(item: NavItem, pathname: string): boolean {
-  if (!item.children || item.children.length === 0) {
-    return false;
-  }
-  return item.children.some(
-    (child) =>
-      isNavItemActive(child, pathname) || hasActiveChild(child, pathname)
-  );
-}
-
-/**
- * Filters navigation sections according to granted user abilities.
- * Items with a `requiredAbility` are excluded unless matched (deny by default).
- */
 export function filterNavigationByAbilities(
   sections: NavSection[],
-  abilities?: readonly string[]
+  _abilities?: readonly string[]
 ): NavSection[] {
-  const hasAbility = (required?: string): boolean => {
-    if (!required) return true;
-    if (!abilities || abilities.length === 0) return false;
-    return abilities.includes("*") || abilities.includes(required);
-  };
-
-  const filterItems = (items: NavItem[]): NavItem[] => {
-    return items.reduce<NavItem[]>((acc, item) => {
-      if (!hasAbility(item.requiredAbility)) {
-        return acc;
-      }
-
-      if (item.children) {
-        const filteredChildren = filterItems(item.children);
-        if (filteredChildren.length === 0 && !item.href) {
-          return acc;
-        }
-        acc.push({ ...item, children: filteredChildren });
-      } else {
-        acc.push(item);
-      }
-
-      return acc;
-    }, []);
-  };
-
-  return sections
-    .map((section) => ({
-      ...section,
-      items: filterItems(section.items),
-    }))
-    .filter((section) => section.items.length > 0);
-}
-
-interface MatchedPathTrail {
-  trail: NavItem[];
-  matchedItem: NavItem;
-}
-
-function findMatchedTrail(
-  items: NavItem[],
-  pathname: string,
-  ancestors: NavItem[] = []
-): MatchedPathTrail | null {
-  for (const item of items) {
-    const currentTrail = [...ancestors, item];
-
-    // Prefer deeper child match first
-    if (item.children && item.children.length > 0) {
-      const childMatch = findMatchedTrail(
-        item.children,
-        pathname,
-        currentTrail
-      );
-      if (childMatch) {
-        return childMatch;
-      }
-    }
-
-    if (isNavItemActive(item, pathname)) {
-      return { trail: currentTrail, matchedItem: item };
-    }
-  }
-
-  return null;
-}
-
-/**
- * Returns the deepest matching NavItem for a given pathname.
- */
-export function findActiveNavItem(
-  pathname: string,
-  sections: NavSection[] = SIDEBAR_NAV_SECTIONS
-): NavItem | null {
-  for (const section of sections) {
-    const match = findMatchedTrail(section.items, pathname);
-    if (match) {
-      return match.matchedItem;
-    }
-  }
-  return null;
-}
-
-/**
- * Resolves the breadcrumb trail for any pathname using SIDEBAR_NAV_SECTIONS.
- * Prepends Account Overview as the root dashboard crumb and handles nested detail routes.
- */
-export function getBreadcrumbs(
-  pathname: string,
-  options?: {
-    detailLabel?: string;
-    sections?: NavSection[];
-  }
-): BreadcrumbItem[] {
-  const normalizedPath = normalizePath(pathname);
-  const sections = options?.sections ?? SIDEBAR_NAV_SECTIONS;
-
-  const overviewRoot: BreadcrumbItem = {
-    label: "Overview",
-    href: ROUTES.OVERVIEW,
-    isCurrent: normalizedPath === normalizePath(ROUTES.OVERVIEW),
-  };
-
-  if (overviewRoot.isCurrent) {
-    return [overviewRoot];
-  }
-
-  let match: MatchedPathTrail | null = null;
-  for (const section of sections) {
-    match = findMatchedTrail(section.items, normalizedPath);
-    if (match) break;
-  }
-
-  if (!match) {
-    return [{ ...overviewRoot, isCurrent: false }];
-  }
-
-  const matchedHref = match.matchedItem.href
-    ? normalizePath(match.matchedItem.href)
-    : null;
-  const isDetailRoute =
-    matchedHref !== null &&
-    normalizedPath !== matchedHref &&
-    normalizedPath.startsWith(`${matchedHref}/`);
-
-  const trailCrumbs: BreadcrumbItem[] = match.trail.map((item, idx) => {
-    const isLastMatched = idx === match.trail.length - 1;
-    return {
-      label: item.label,
-      href: item.href,
-      isCurrent: isLastMatched && !isDetailRoute,
-    };
-  });
-
-  if (isDetailRoute) {
-    trailCrumbs.push({
-      label: options?.detailLabel ?? match.matchedItem.detailLabel ?? "Details",
-      href: normalizedPath,
-      isCurrent: true,
-    });
-  }
-
-  return [{ ...overviewRoot, isCurrent: false }, ...trailCrumbs];
+  // Roles and abilities are OPEN per Doc 13; no filtering is applied
+  return sections;
 }

@@ -1,5 +1,7 @@
 export * from "./api";
 export * from "./WalletSummaryCard";
+export * from "./NeedHelpCard";
+export * from "./QuickServiceShortcuts";
 export * from "./SummaryCards";
 export * from "./RecentOrdersCard";
 export * from "./RecentTransactionsCard";
