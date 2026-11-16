@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
+import { showToast } from "@/components/ui/sonner";
 import {
   type VpnSubscription,
   buildWireguardConfig,
@@ -56,9 +56,12 @@ export function VpnActiveConsole({
         setCopiedEndpoint(true);
         setTimeout(() => setCopiedEndpoint(false), 2000);
       }
-      toast.success(`Copied ${type === "ip" ? "Dedicated IP" : "Endpoint"} to clipboard`);
+      showToast.success(
+        "Copied to Clipboard",
+        `${type === "ip" ? "Dedicated IP" : "Endpoint"} copied to clipboard.`
+      );
     } catch {
-      toast.error("Failed to copy to clipboard");
+      showToast.error("Copy Failed", "Unable to access clipboard. Please copy manually.");
     }
   };
 
@@ -74,9 +77,15 @@ export function VpnActiveConsole({
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success(`Configuration file korak-${sub.node.id}.conf downloaded`);
+      showToast.success(
+        "Configuration Downloaded",
+        `File korak-${sub.node.id}.conf saved successfully.`
+      );
     } catch {
-      toast.error("Failed to download WireGuard configuration file");
+      showToast.error(
+        "Download Failed",
+        "Failed to download WireGuard configuration file."
+      );
     }
   };
 
@@ -87,9 +96,12 @@ export function VpnActiveConsole({
       setSub(updated);
       onSubscriptionUpdated?.(updated);
       setRegenConfirmOpen(false);
-      toast.success("Client keys regenerated. Existing tunnel configs must be updated.");
+      showToast.success(
+        "Encryption Keys Regenerated",
+        "Client keys regenerated. Please download or scan the updated config."
+      );
     } catch {
-      toast.error("Failed to regenerate encryption keys");
+      showToast.error("Regeneration Failed", "Failed to regenerate encryption keys.");
     } finally {
       setIsRegenerating(false);
     }

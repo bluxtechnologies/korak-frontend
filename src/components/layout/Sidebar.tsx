@@ -22,6 +22,7 @@ import {
 } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { BrandLogoIcon, BrandLogoImage } from "@/components/shared/BrandLogo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -316,12 +317,8 @@ function SidebarInner({
               aria-label="Korak Digitals Overview"
               className="flex items-center gap-2.5 rounded-[5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2"
             >
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-[5px] bg-primary text-primary-foreground font-bold text-base select-none">
-                K
-              </div>
-              <span className="truncate text-sm font-semibold tracking-tight text-foreground">
-                Korak Digitals
-              </span>
+              <BrandLogoImage className="h-8 w-auto max-w-[150px]" priority alt="Korak Digitals" />
+              <span className="sr-only">Korak Digitals</span>
             </Link>
             {showCollapseToggle && (
               <Button
@@ -348,9 +345,8 @@ function SidebarInner({
               aria-label="Korak Digitals Overview"
               className="rounded-[5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2"
             >
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-[5px] bg-primary text-primary-foreground font-bold text-sm select-none">
-                K
-              </div>
+              <BrandLogoIcon className="size-8" priority alt="Korak Digitals" />
+              <span className="sr-only">Korak Digitals</span>
             </Link>
             {showCollapseToggle && (
               <Button

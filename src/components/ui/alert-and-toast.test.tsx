@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { AlertCircle, CheckCircle2, Info, AlertTriangle } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "./alert";
-import { Toaster } from "./sonner";
+import { Toaster, showToast, toast } from "./sonner";
 
 describe("Alert and Toast Provider Components", () => {
   describe("Alert (Four Levels, 10px Radius, Icon + Text)", () => {
@@ -71,10 +71,30 @@ describe("Alert and Toast Provider Components", () => {
     });
   });
 
-  describe("Toaster Provider", () => {
+  describe("Toaster Provider & showToast Helper", () => {
     it("renders without crashing", () => {
       const { container } = render(<Toaster />);
       expect(container).toBeInTheDocument();
+    });
+
+    it("supports showToast.success with separate title and message", () => {
+      const id = showToast.success("Payment Received", "₦50,000 has been credited to your wallet.");
+      expect(id).toBeDefined();
+    });
+
+    it("supports showToast.error with payload object format", () => {
+      const id = showToast.error({
+        title: "Transaction Declined",
+        message: "Your bank rejected the request.",
+      });
+      expect(id).toBeDefined();
+    });
+
+    it("supports showToast.warning and showToast.info", () => {
+      const warnId = showToast.warning("Low Balance", "Your wallet balance is below ₦500.");
+      const infoId = showToast.info("System Notice", "Scheduled maintenance tonight.");
+      expect(warnId).toBeDefined();
+      expect(infoId).toBeDefined();
     });
   });
 });

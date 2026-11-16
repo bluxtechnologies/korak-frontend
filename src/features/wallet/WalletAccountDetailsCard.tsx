@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import { CreditCard, Copy, Check, Info } from "lucide-react";
-import { toast } from "sonner";
+import { showToast } from "@/components/ui/sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { NAV_ICON_STROKE_WIDTH } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 import type { VirtualAccountDetails } from "./api";
 
@@ -26,45 +27,53 @@ export function WalletAccountDetailsCard({
       if (typeof navigator !== "undefined" && navigator.clipboard) {
         await navigator.clipboard.writeText(accountDetails.account_number);
         setHasCopied(true);
-        toast.success("Account number copied to clipboard");
+        showToast.success(
+          "Account Number Copied",
+          "Dedicated virtual account number copied to clipboard."
+        );
         setTimeout(() => setHasCopied(false), 2000);
       }
     } catch {
-      toast.error("Failed to copy account number");
+      showToast.error(
+        "Copy Failed",
+        "Please manually highlight and copy the account number."
+      );
     }
   };
 
   return (
     <Card
       id={id}
-      className={cn("rounded-2xl border-border/80 shadow-xs", className)}
+      className={cn(
+        "rounded-[10px] border border-border bg-card p-5 shadow-none transition-colors",
+        className
+      )}
       data-testid="wallet-account-details-card"
     >
-      <CardHeader className="pb-3.5">
-        <div className="flex items-center gap-2 text-foreground">
-          <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <CreditCard className="size-4" aria-hidden="true" />
-          </div>
-          <CardTitle className="text-sm font-bold sm:text-base">
-            Wallet Account Details
-          </CardTitle>
+      {/* Header */}
+      <div className="flex items-center gap-2.5 pb-4 border-b border-border/50">
+        <div className="flex size-7 items-center justify-center rounded-[6px] bg-primary/10 text-primary">
+          <CreditCard className="size-4" strokeWidth={NAV_ICON_STROKE_WIDTH} aria-hidden="true" />
         </div>
-      </CardHeader>
+        <h3 className="text-sm font-bold text-foreground">
+          Wallet Account Details
+        </h3>
+      </div>
 
-      <CardContent className="space-y-4 pt-0">
+      <div className="space-y-4 pt-4 text-xs">
         {/* Account Name */}
         <div>
-          <span className="text-[11px] font-medium text-muted-foreground">
+          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
             Account Name
           </span>
-          <p className="mt-0.5 text-xs font-bold text-foreground sm:text-sm">
+          <p className="mt-0.5 text-xs font-bold text-foreground sm:text-sm font-mono">
             {accountDetails.account_name}
           </p>
         </div>
 
         {/* Account Number with Copy Button */}
         <div>
-          <span className="text-[11px] font-medium text-muted-foreground">
+          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
             Account Number
           </span>
           <div className="mt-0.5 flex items-center justify-between">
@@ -74,13 +83,11 @@ export function WalletAccountDetailsCard({
             >
               {accountDetails.account_number}
             </span>
-            <Button
+            <button
               type="button"
-              variant="ghost"
-              size="sm"
               onClick={handleCopy}
               aria-label="Copy account number"
-              className="h-7 gap-1 px-2 text-xs font-semibold text-primary hover:bg-primary/10 hover:text-primary"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors focus:outline-none"
             >
               {hasCopied ? (
                 <>
@@ -91,17 +98,17 @@ export function WalletAccountDetailsCard({
                 </>
               ) : (
                 <>
-                  <Copy className="size-3.5" />
+                  <Copy className="size-3.5" strokeWidth={NAV_ICON_STROKE_WIDTH} />
                   <span>Copy</span>
                 </>
               )}
-            </Button>
+            </button>
           </div>
         </div>
 
         {/* Bank */}
         <div>
-          <span className="text-[11px] font-medium text-muted-foreground">
+          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
             Bank
           </span>
           <p className="mt-0.5 text-xs font-bold text-foreground sm:text-sm">
@@ -110,14 +117,17 @@ export function WalletAccountDetailsCard({
         </div>
 
         {/* Informational Callout */}
-        <div className="flex items-start gap-2 rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs leading-relaxed text-foreground">
-          <Info className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+        <div className="flex items-start gap-2 rounded-[8px] border border-primary/20 bg-primary/5 p-3 text-[11px] leading-relaxed text-foreground">
+          <Info
+            className="mt-0.5 size-3.5 shrink-0 text-primary"
+            strokeWidth={NAV_ICON_STROKE_WIDTH}
+            aria-hidden="true"
+          />
           <span>
-            Use this account details to fund your wallet via bank transfer. Funds
-            are credited automatically upon confirmation.
+            Use this account details to fund your wallet via bank transfer.
           </span>
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 }

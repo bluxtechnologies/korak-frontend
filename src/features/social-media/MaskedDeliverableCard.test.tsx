@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MaskedDeliverableCard } from "./MaskedDeliverableCard";
 
 describe("MaskedDeliverableCard Component (F19.3 & Doc 12)", () => {
@@ -20,6 +21,7 @@ describe("MaskedDeliverableCard Component (F19.3 & Doc 12)", () => {
   });
 
   it("opens confirmation dialog naming the audit consequence when reveal is clicked", async () => {
+    const user = userEvent.setup();
     render(
       <MaskedDeliverableCard
         orderId="ord_123"
@@ -28,7 +30,7 @@ describe("MaskedDeliverableCard Component (F19.3 & Doc 12)", () => {
     );
 
     const revealBtn = screen.getByTestId("reveal-credentials-button");
-    fireEvent.click(revealBtn);
+    await user.click(revealBtn);
 
     expect(
       await screen.findByText("Reveal Account Access Credentials")
@@ -39,6 +41,7 @@ describe("MaskedDeliverableCard Component (F19.3 & Doc 12)", () => {
   });
 
   it("reveals unmasked credentials and displays audit ID on confirmation", async () => {
+    const user = userEvent.setup();
     const onRevealed = vi.fn();
     render(
       <MaskedDeliverableCard
@@ -48,11 +51,11 @@ describe("MaskedDeliverableCard Component (F19.3 & Doc 12)", () => {
       />
     );
 
-    fireEvent.click(screen.getByTestId("reveal-credentials-button"));
+    await user.click(screen.getByTestId("reveal-credentials-button"));
     const confirmBtn = await screen.findByRole("button", {
       name: /confirm & reveal/i,
     });
-    fireEvent.click(confirmBtn);
+    await user.click(confirmBtn);
 
     await waitFor(() => {
       expect(screen.getByText("KorakAuth_#9821_SecureX")).toBeInTheDocument();

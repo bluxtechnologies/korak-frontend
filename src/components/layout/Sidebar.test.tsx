@@ -19,8 +19,7 @@ describe("Sidebar Component (F5.1 & F5.2)", () => {
     render(<Sidebar pathname="/dashboard" />);
 
     // Brand header
-    expect(screen.getByText("Korak Digitals")).toBeInTheDocument();
-    expect(screen.getByText("K")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /korak digitals overview/i })).toBeInTheDocument();
 
     const links = screen.getAllByRole("link");
     const hrefs = links.map((l) => l.getAttribute("href"));
