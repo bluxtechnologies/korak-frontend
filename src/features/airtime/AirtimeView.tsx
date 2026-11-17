@@ -10,6 +10,9 @@ import {
   HelpCircle,
   ArrowUpRight,
   TrendingUp,
+  Smartphone,
+  Wifi,
+  History,
 } from "lucide-react";
 import {
   Card,
@@ -20,7 +23,8 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ROUTES } from "@/config/navigation";
+import { NAV_ICON_STROKE_WIDTH, ROUTES } from "@/config/navigation";
+import { cn } from "@/lib/utils";
 import { AirtimePurchaseForm } from "./AirtimePurchaseForm";
 import {
   TELECOM_NETWORKS,
@@ -66,120 +70,195 @@ export function AirtimeView() {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-12" data-testid="airtime-view">
-      {/* Primary Column: Airtime Form */}
-      <div className="lg:col-span-7 xl:col-span-8">
-        <AirtimePurchaseForm
-          walletBalance={walletBalance}
-          onOrderCompleted={handleOrderCompleted}
-        />
+    <div className="space-y-6" data-testid="airtime-view">
+      {/* Service Switcher Tabs & Quick Guarantee */}
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-[10px] border border-border bg-card p-3.5 shadow-none sm:p-4">
+        <div className="flex items-center gap-2">
+          <Button
+            asChild
+            variant="default"
+            size="sm"
+            className="h-9 px-4 rounded-[8px] text-xs font-semibold shadow-none"
+          >
+            <Link href={ROUTES.AIRTIME} className="gap-2">
+              <Smartphone className="size-3.5" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+              <span>Buy Airtime</span>
+            </Link>
+          </Button>
+
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="h-9 px-4 rounded-[8px] text-xs font-semibold shadow-none hover:bg-muted"
+          >
+            <Link href={ROUTES.DATA} className="gap-2">
+              <Wifi className="size-3.5" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+              <span>Mobile Data</span>
+            </Link>
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <ShieldCheck className="size-4 text-emerald-600 dark:text-emerald-400" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+          <span className="font-medium">Instant Telecom Dispatch • 0% Convenience Fee</span>
+        </div>
       </div>
 
-      {/* Secondary Column: Network Discounts & History */}
-      <div className="space-y-6 lg:col-span-5 xl:col-span-4">
-        {/* Network Cashback Rates */}
-        <Card data-testid="airtime-rates-card">
-          <CardHeader className="border-b border-border pb-3 space-y-1">
-            <div className="flex items-center gap-2">
-              <Zap className="size-4 text-primary" />
-              <CardTitle className="text-sm font-semibold text-foreground">
-                Network Rates & Cashback
-              </CardTitle>
-            </div>
-            <CardDescription className="text-xs text-muted-foreground">
-              Automated instant dispatch across all 4 major telcos
-            </CardDescription>
-          </CardHeader>
+      {/* Main 2-Column Grid */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
+        {/* Primary Column: Airtime Form */}
+        <div className="lg:col-span-7 xl:col-span-8">
+          <AirtimePurchaseForm
+            walletBalance={walletBalance}
+            onOrderCompleted={handleOrderCompleted}
+          />
+        </div>
 
-          <CardContent className="pt-4 space-y-3">
-            {TELECOM_NETWORKS.map((net) => (
-              <div
-                key={net.id}
-                className="flex items-center justify-between rounded-md border border-border bg-surface p-2.5 text-xs"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div
-                    className="size-2 rounded-full"
-                    style={{ backgroundColor: net.color }}
-                  />
-                  <span className="font-semibold text-foreground uppercase">
-                    {net.name}
-                  </span>
+        {/* Secondary Column: Network Discounts & History */}
+        <div className="space-y-6 lg:col-span-5 xl:col-span-4">
+          {/* Network Cashback Rates */}
+          <Card
+            className="rounded-[10px] border border-border bg-card shadow-none overflow-hidden"
+            data-testid="airtime-rates-card"
+          >
+            <CardHeader className="border-b border-border p-5 pb-4 space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="flex size-7 items-center justify-center rounded-[6px] bg-primary/10 text-primary">
+                  <Zap className="size-4" strokeWidth={NAV_ICON_STROKE_WIDTH} />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="success" className="text-[10px]">
-                    {Math.round(net.discountRate * 100)}% Discount
-                  </Badge>
-                  <span className="text-[11px] text-muted-foreground">
-                    Instant
-                  </span>
-                </div>
+                <CardTitle className="text-sm font-bold text-foreground">
+                  Network Rates & Cashback
+                </CardTitle>
               </div>
-            ))}
-
-            <div className="rounded-md border border-border/80 bg-muted/40 p-3 text-[11px] text-muted-foreground space-y-1">
-              <p className="font-medium text-foreground">
-                ⚡ Zero Dispatch Fees
-              </p>
-              <p>
-                No convenience charge. Top-ups are subsidized with instant wallet
-                cashback upon successful delivery.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Airtime Deliveries */}
-        <Card data-testid="recent-airtime-card">
-          <CardHeader className="flex flex-row items-center justify-between border-b border-border pb-3 space-y-0">
-            <div>
-              <CardTitle className="text-sm font-semibold text-foreground">
-                Recent Airtime
-              </CardTitle>
               <CardDescription className="text-xs text-muted-foreground">
-                Your latest top-up transactions
+                Automated instant dispatch across all 4 major telcos
               </CardDescription>
-            </div>
+            </CardHeader>
 
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-[11px] text-primary hover:text-primary gap-1"
-            >
-              <Link href={ROUTES.TRANSACTIONS}>
-                <span>History</span>
-                <ArrowUpRight className="size-3" />
-              </Link>
-            </Button>
-          </CardHeader>
+            <CardContent className="p-5 space-y-3">
+              {TELECOM_NETWORKS.map((net) => (
+                <div
+                  key={net.id}
+                  className="flex items-center justify-between rounded-[8px] border border-border bg-muted/20 p-3 text-xs transition-colors hover:bg-muted/40"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className="size-2.5 rounded-full"
+                      style={{ backgroundColor: net.color }}
+                      aria-hidden="true"
+                    />
+                    <span className="font-bold uppercase tracking-wider text-foreground">
+                      {net.name}
+                    </span>
+                  </div>
 
-          <CardContent className="pt-3 space-y-2.5">
-            {recentOrders.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between rounded-md border border-border p-2.5 text-xs"
-              >
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-medium text-foreground uppercase">
-                    {item.network} · {item.phone}
-                  </span>
-                  <span className="font-mono text-[10px] text-muted-foreground">
-                    {item.reference}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-[4px] bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      {Math.round(net.discountRate * 100)}% Discount
+                    </span>
+                    <span className="text-[11px] font-medium text-muted-foreground">
+                      Instant
+                    </span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="font-mono font-semibold text-foreground block">
-                    ₦{item.amount.toLocaleString()}
-                  </span>
-                  <Badge variant="success" className="text-[9px]">
-                    {item.status}
-                  </Badge>
-                </div>
+              ))}
+
+              <div className="rounded-[8px] border border-border bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
+                <p className="font-semibold text-foreground flex items-center gap-1.5">
+                  <span>⚡ Zero Dispatch Fees</span>
+                </p>
+                <p className="leading-relaxed">
+                  No convenience charge. Top-ups are subsidized with instant wallet
+                  cashback upon successful delivery.
+                </p>
               </div>
-            ))}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          {/* Recent Airtime Deliveries */}
+          <Card
+            className="rounded-[10px] border border-border bg-card shadow-none overflow-hidden"
+            data-testid="recent-airtime-card"
+          >
+            <CardHeader className="flex flex-row items-center justify-between border-b border-border p-5 pb-4 space-y-0">
+              <div>
+                <CardTitle className="text-sm font-bold text-foreground">
+                  Recent Airtime
+                </CardTitle>
+                <CardDescription className="text-xs text-muted-foreground">
+                  Your latest top-up transactions
+                </CardDescription>
+              </div>
+
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2.5 text-xs font-semibold text-primary hover:text-primary gap-1 rounded-[6px]"
+              >
+                <Link href={ROUTES.TRANSACTIONS}>
+                  <span>History</span>
+                  <ArrowUpRight className="size-3.5" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+                </Link>
+              </Button>
+            </CardHeader>
+
+            <CardContent className="p-5 space-y-2.5">
+              {recentOrders.length === 0 ? (
+                <div className="py-6 text-center text-xs text-muted-foreground">
+                  No recent airtime purchases found.
+                </div>
+              ) : (
+                recentOrders.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between rounded-[8px] border border-border bg-muted/20 p-3 text-xs transition-colors hover:bg-muted/40"
+                  >
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-bold text-foreground uppercase tracking-wide">
+                        {item.network} · <span className="font-mono font-medium">{item.phone}</span>
+                      </span>
+                      <span className="font-mono text-[10px] text-muted-foreground">
+                        {item.reference}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-mono font-bold text-foreground block">
+                        ₦{item.amount.toLocaleString()}
+                      </span>
+                      <span
+                        className={cn(
+                          "rounded-[4px] px-1.5 py-0.5 text-[9px] font-bold uppercase",
+                          item.status === "completed"
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                            : "bg-destructive/10 text-destructive border border-destructive/20"
+                        )}
+                      >
+                        {item.status}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Security & Reliability Info */}
+          <div className="rounded-[10px] border border-border bg-muted/15 p-4 flex items-start gap-3">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-[8px] bg-primary/10 text-primary">
+              <ShieldCheck className="size-4" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-xs font-bold text-foreground">
+                Your Airtime is Guaranteed
+              </h4>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Direct integration with official telecom switches ensures immediate recharge. Automated wallet reversals protect you against carrier delays.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
