@@ -211,43 +211,6 @@ export function WalletSummaryCard({
           />
           <span>Last updated at {updatedTimeLabel}</span>
         </div>
-
-        {/* Total Deposited / Total Spent mini-stat cards */}
-        {(wallet.total_deposited !== undefined ||
-          wallet.total_spent !== undefined) && (
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            {wallet.total_deposited !== undefined && (
-              <div className="rounded-[5px] border border-white/15 bg-white/10 p-2.5 backdrop-blur-xs">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/60 leading-normal">
-                  Total Deposited
-                </p>
-                <p
-                  className="mt-0.5 text-sm font-bold text-white leading-tight"
-                  data-testid="wallet-total-deposited"
-                >
-                  {isMasked
-                    ? maskCurrency(wallet.currency)
-                    : formatCurrency(wallet.total_deposited, wallet.currency)}
-                </p>
-              </div>
-            )}
-            {wallet.total_spent !== undefined && (
-              <div className="rounded-[5px] border border-white/15 bg-white/10 p-2.5 backdrop-blur-xs">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/60 leading-normal">
-                  Total Spent
-                </p>
-                <p
-                  className="mt-0.5 text-sm font-bold text-white leading-tight"
-                  data-testid="wallet-total-spent"
-                >
-                  {isMasked
-                    ? maskCurrency(wallet.currency)
-                    : formatCurrency(wallet.total_spent, wallet.currency)}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Action Buttons: Fund Wallet & History */}
