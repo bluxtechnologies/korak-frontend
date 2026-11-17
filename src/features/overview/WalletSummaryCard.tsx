@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Eye, EyeOff, Plus, Clock, Wallet } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { Eye, EyeOff, Plus, Wallet, History } from "lucide-react";
+import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { NAV_ICON_STROKE_WIDTH, ROUTES } from "@/config/navigation";
 import { formatCurrency, maskCurrency } from "@/lib/formatters";
@@ -63,120 +63,222 @@ export function WalletSummaryCard({
   return (
     <div
       className={cn(
-        "bg-primary text-primary-foreground relative flex min-h-[220px] flex-col justify-between overflow-hidden rounded-md p-6 sm:p-7",
+        "bg-primary text-primary-foreground relative flex min-h-[220px] flex-col justify-between overflow-hidden rounded-[10px] p-6 sm:p-7 shadow-xs",
         className
       )}
       data-testid="wallet-summary-card"
     >
-      {/* Decorative concentric circular watermark */}
+      {/* Decorative refined concentric circular watermark */}
       <svg
-        className="pointer-events-none absolute -right-6 -bottom-8 h-48 w-48 text-white/5 sm:h-56 sm:w-56"
-        viewBox="0 0 200 200"
+        className="pointer-events-none absolute -right-10 -bottom-14 h-64 w-64 select-none text-white sm:h-72 sm:w-72"
+        viewBox="0 0 300 300"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
       >
+        <defs>
+          <radialGradient
+            id="wallet-card-radial"
+            cx="150"
+            cy="150"
+            r="150"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop offset="0%" stopColor="white" stopOpacity="0.08" />
+            <stop offset="60%" stopColor="white" stopOpacity="0.03" />
+            <stop offset="100%" stopColor="white" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+
+        {/* Ambient radial glow */}
+        <circle cx="150" cy="150" r="140" fill="url(#wallet-card-radial)" />
+
+        {/* Delicate concentric precision rings */}
         <circle
-          cx="100"
-          cy="100"
-          r="40"
+          cx="150"
+          cy="150"
+          r="30"
           stroke="currentColor"
-          strokeWidth="10"
+          strokeWidth="1.25"
+          strokeOpacity="0.16"
         />
         <circle
-          cx="100"
-          cy="100"
-          r="70"
+          cx="150"
+          cy="150"
+          r="60"
           stroke="currentColor"
-          strokeWidth="10"
+          strokeWidth="1.25"
+          strokeOpacity="0.13"
         />
         <circle
-          cx="100"
-          cy="100"
-          r="100"
+          cx="150"
+          cy="150"
+          r="90"
           stroke="currentColor"
-          strokeWidth="10"
+          strokeWidth="1.25"
+          strokeOpacity="0.10"
+        />
+        <circle
+          cx="150"
+          cy="150"
+          r="120"
+          stroke="currentColor"
+          strokeWidth="1.25"
+          strokeOpacity="0.07"
+        />
+        <circle
+          cx="150"
+          cy="150"
+          r="150"
+          stroke="currentColor"
+          strokeWidth="1.25"
+          strokeOpacity="0.05"
+        />
+        <circle
+          cx="150"
+          cy="150"
+          r="180"
+          stroke="currentColor"
+          strokeWidth="1.25"
+          strokeOpacity="0.03"
         />
       </svg>
 
       {/* Top Header Row */}
-      <div className="relative z-10 flex items-center justify-between">
+      <div className="relative z-10 flex items-center justify-between gap-3">
+        {/* Left: Icon & Label */}
         <div className="flex items-center gap-2">
           <Wallet
             className="size-4 shrink-0 text-white/80"
             strokeWidth={NAV_ICON_STROKE_WIDTH}
             aria-hidden="true"
           />
-          <span className="text-xs font-medium tracking-wider text-white/90 uppercase">
+          <span className="text-xs font-semibold tracking-wider text-white/90 uppercase select-none">
             Available Balance
           </span>
           <span className="sr-only">Wallet Balance</span>
-          <span className="rounded-sm border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white">
-            {wallet.currency || "NGN"}
-          </span>
         </div>
 
-        {/* Visibility Toggle */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={toggleMask}
-          aria-label={isMasked ? "Show balance" : "Hide balance"}
-          className="h-8 w-8 rounded-md text-white/80 hover:bg-white/15 hover:text-white"
-        >
-          {isMasked ? (
-            <EyeOff className="size-4" strokeWidth={NAV_ICON_STROKE_WIDTH} aria-hidden="true" />
-          ) : (
-            <Eye className="size-4" strokeWidth={NAV_ICON_STROKE_WIDTH} aria-hidden="true" />
-          )}
-        </Button>
+        {/* Right: NGN Currency Badge + Visibility Toggle */}
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center rounded-[5px] border border-white/20 bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold tracking-wider text-white select-none backdrop-blur-xs">
+            {wallet.currency || "NGN"}
+          </span>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={toggleMask}
+            aria-label={isMasked ? "Show balance" : "Hide balance"}
+            className="h-8 w-8 rounded-[5px] text-white/80 hover:bg-white/15 hover:text-white transition-colors"
+          >
+            {isMasked ? (
+              <EyeOff
+                className="size-4"
+                strokeWidth={NAV_ICON_STROKE_WIDTH}
+                aria-hidden="true"
+              />
+            ) : (
+              <Eye
+                className="size-4"
+                strokeWidth={NAV_ICON_STROKE_WIDTH}
+                aria-hidden="true"
+              />
+            )}
+          </Button>
+        </div>
       </div>
 
-      {/* Current Wallet Balance & Last Updated */}
+      {/* Middle: Current Wallet Balance & Metadata */}
       <div className="relative z-10 my-4 sm:my-5">
         <motion.div
           key={isMasked ? "masked" : "unmasked"}
           variants={MOTION_VARIANTS.balanceMask}
           initial="initial"
           animate="animate"
-          className="font-sans text-3xl font-bold tracking-tight text-white sm:text-4xl"
+          className="font-sans text-3xl font-extrabold tracking-tight text-white leading-none sm:text-4xl"
           data-testid="wallet-balance-amount"
         >
           {displayBalance}
         </motion.div>
-        <p className="mt-1.5 flex items-center gap-1.5 text-xs text-white/70">
-          <Clock className="size-3.5 text-white/60" strokeWidth={NAV_ICON_STROKE_WIDTH} aria-hidden="true" />
+
+        {/* Timestamp */}
+        <div className="mt-2 flex items-center gap-1.5 text-xs text-white/70">
+          <span
+            className="size-1.5 rounded-full bg-emerald-400 shrink-0"
+            aria-hidden="true"
+          />
           <span>Last updated at {updatedTimeLabel}</span>
-        </p>
-        <span className="sr-only">
-          {wallet.ledger_count > 0
-            ? `${wallet.ledger_count} recorded ledger events`
-            : "No transaction entries yet"}
-        </span>
+        </div>
+
+        {/* Total Deposited / Total Spent mini-stat cards */}
+        {(wallet.total_deposited !== undefined ||
+          wallet.total_spent !== undefined) && (
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {wallet.total_deposited !== undefined && (
+              <div className="rounded-[5px] border border-white/15 bg-white/10 p-2.5 backdrop-blur-xs">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/60 leading-normal">
+                  Total Deposited
+                </p>
+                <p
+                  className="mt-0.5 text-sm font-bold text-white leading-tight"
+                  data-testid="wallet-total-deposited"
+                >
+                  {isMasked
+                    ? maskCurrency(wallet.currency)
+                    : formatCurrency(wallet.total_deposited, wallet.currency)}
+                </p>
+              </div>
+            )}
+            {wallet.total_spent !== undefined && (
+              <div className="rounded-[5px] border border-white/15 bg-white/10 p-2.5 backdrop-blur-xs">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/60 leading-normal">
+                  Total Spent
+                </p>
+                <p
+                  className="mt-0.5 text-sm font-bold text-white leading-tight"
+                  data-testid="wallet-total-spent"
+                >
+                  {isMasked
+                    ? maskCurrency(wallet.currency)
+                    : formatCurrency(wallet.total_spent, wallet.currency)}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Action Buttons: Add Money & View Wallet */}
+      {/* Action Buttons: Fund Wallet & History */}
       <div className="relative z-10 flex flex-wrap items-center gap-3">
         {onTopUpClick ? (
           <Button
             type="button"
             onClick={onTopUpClick}
             aria-label="Top up wallet"
-            className="text-primary h-9 gap-1.5 rounded-md bg-white px-5 text-xs font-semibold transition-colors hover:bg-white/90 sm:text-sm"
+            className="text-primary h-9 gap-1.5 rounded-[5px] bg-white px-5 text-xs font-semibold leading-none shadow-none transition-colors hover:bg-white/95 sm:text-sm"
           >
-            <Plus className="size-4" strokeWidth={NAV_ICON_STROKE_WIDTH} aria-hidden="true" />
-            <span>Add Money</span>
+            <Plus
+              className="size-4"
+              strokeWidth={NAV_ICON_STROKE_WIDTH}
+              aria-hidden="true"
+            />
+            <span>Fund Wallet</span>
           </Button>
         ) : (
           <Button
             asChild
             aria-label="Top up wallet"
-            className="text-primary h-9 gap-1.5 rounded-md bg-white px-5 text-xs font-semibold transition-colors hover:bg-white/90 sm:text-sm"
+            className="text-primary h-9 gap-1.5 rounded-[5px] bg-white px-5 text-xs font-semibold leading-none shadow-none transition-colors hover:bg-white/95 sm:text-sm"
           >
             <Link href={ROUTES.WALLET}>
-              <Plus className="size-4" strokeWidth={NAV_ICON_STROKE_WIDTH} aria-hidden="true" />
-              <span>Add Money</span>
+              <Plus
+                className="size-4"
+                strokeWidth={NAV_ICON_STROKE_WIDTH}
+                aria-hidden="true"
+              />
+              <span>Fund Wallet</span>
             </Link>
           </Button>
         )}
@@ -184,10 +286,16 @@ export function WalletSummaryCard({
         <Button
           asChild
           variant="ghost"
-          className="h-9 rounded-md border border-white/20 bg-white/10 px-4 text-xs font-medium text-white hover:bg-white/20 hover:text-white sm:text-sm"
+          aria-label="View transaction history"
+          className="h-9 gap-1.5 rounded-[5px] border border-white/20 bg-white/10 px-4 text-xs font-medium leading-none text-white hover:bg-white/20 hover:text-white sm:text-sm"
         >
-          <Link href={ROUTES.WALLET}>
-            <span>View Wallet</span>
+          <Link href={ROUTES.TRANSACTIONS}>
+            <History
+              className="size-3.5 text-white/80"
+              strokeWidth={NAV_ICON_STROKE_WIDTH}
+              aria-hidden="true"
+            />
+            <span>History</span>
           </Link>
         </Button>
       </div>

@@ -1,6 +1,49 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { BoostAccountView } from "./BoostAccountView";
+
+vi.mock("./api", () => {
+  return {
+    BOOST_PLATFORMS: [
+      { id: "all", label: "All Services" },
+      { id: "instagram", label: "Instagram" },
+      { id: "tiktok", label: "TikTok" },
+      { id: "x_twitter", label: "X (Twitter)" },
+      { id: "youtube", label: "YouTube" },
+    ],
+    getBoostServices: vi.fn().mockResolvedValue([
+      {
+        id: "srv_ig_fol",
+        platform: "instagram",
+        platform_label: "Instagram",
+        service_type: "followers",
+        title: "Instagram High-Quality Profile Followers",
+        description: "Real looking accounts with profile pictures and posts.",
+        min_quantity: 100,
+        max_quantity: 50000,
+        rate_per_thousand: 250000, // ₦2,500.00 per 1k
+        delivery_speed: "500 - 2k / day",
+        target_type: "profile_url",
+        example_input: "https://instagram.com/username or @username",
+      },
+    ]),
+    createSocialBoostOrder: vi.fn().mockResolvedValue({
+      id: "ord_mock_boost",
+      reference: "BST-87654321",
+      category: "social",
+      service_name: "Instagram High-Quality Profile Followers (1,000 units)",
+      beneficiary: "https://instagram.com/korakdemo",
+      amount: 250000,
+      currency: "NGN",
+      status: "processing",
+      created_at: new Date().toISOString(),
+      credentials: {
+        target_link: "https://instagram.com/korakdemo",
+        notes: "Boosting task queued on Instagram network.",
+      },
+    }),
+  };
+});
 
 describe("BoostAccountView Component (F19.2)", () => {
   it("renders platform selection, service items, and config inputs", async () => {

@@ -430,9 +430,9 @@ export function WalletView({ initialData, className }: WalletViewProps) {
                         >
                           {isCredit ? `+${formattedAmount}` : `-${formattedAmount}`}
                         </p>
-                        <Badge variant="outline" className="text-[10px] uppercase font-medium mt-0.5">
-                          {tx.status}
-                        </Badge>
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mt-0.5 block">
+                          {tx.type.replace(/_/g, " ")}
+                        </span>
                       </div>
                     </button>
                   );

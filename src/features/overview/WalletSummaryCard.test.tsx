@@ -12,14 +12,13 @@ const mockWallet: WalletSummary = {
 };
 
 describe("WalletSummaryCard (F12.2)", () => {
-  it("renders the formatted balance and ledger count", () => {
+  it("renders the formatted balance", () => {
     render(<WalletSummaryCard wallet={mockWallet} />);
 
     expect(screen.getByText("Wallet Balance")).toBeInTheDocument();
     expect(screen.getByTestId("wallet-balance-amount")).toHaveTextContent(
       "₦45,250.00"
     );
-    expect(screen.getByText("12 recorded ledger events")).toBeInTheDocument();
   });
 
   it("toggles balance masking when clicking the eye toggle button", async () => {
@@ -57,7 +56,7 @@ describe("WalletSummaryCard (F12.2)", () => {
     expect(handleTopUp).toHaveBeenCalledTimes(1);
   });
 
-  it("renders empty ledger messaging when ledger_count is 0", () => {
+  it("renders zero balance correctly", () => {
     render(
       <WalletSummaryCard
         wallet={{
@@ -71,6 +70,5 @@ describe("WalletSummaryCard (F12.2)", () => {
     expect(screen.getByTestId("wallet-balance-amount")).toHaveTextContent(
       "₦0.00"
     );
-    expect(screen.getByText("No transaction entries yet")).toBeInTheDocument();
   });
 });

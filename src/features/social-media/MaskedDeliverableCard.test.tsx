@@ -2,6 +2,23 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MaskedDeliverableCard } from "./MaskedDeliverableCard";
+import * as socialApi from "./api";
+
+vi.mock("./api", async (importOriginal) => {
+  const actual = await importOriginal<typeof socialApi>();
+  return {
+    ...actual,
+    revealSocialCredentials: vi.fn().mockResolvedValue({
+      order_id: "ord_123",
+      username: "creator_transferred_admin",
+      password: "KorakAuth_#9821_SecureX",
+      recovery_email: "transfer-backup@korakdigital.com",
+      two_factor_backup_key: "K79A 28BC 9901 4410",
+      audit_id: "aud_rev_mock_9821",
+      revealed_at: new Date().toISOString(),
+    }),
+  };
+});
 
 describe("MaskedDeliverableCard Component (F19.3 & Doc 12)", () => {
   it("renders masked credentials by default with a reveal button", () => {

@@ -392,11 +392,11 @@ function SidebarInner({
       {/* 5. User Card at the very bottom */}
       <SidebarFooter className="p-3 mt-auto">
         {!isCollapsed ? (
-          <div className="flex w-full items-center justify-between gap-3 rounded-[5px] border border-sidebar-border bg-sidebar p-3">
+          <div className="flex w-full items-center justify-between gap-3 rounded-lg border border-sidebar-border bg-sidebar p-3 transition-colors hover:bg-sidebar-accent/40">
             <div className="flex min-w-0 items-center gap-3">
               <div
                 aria-label="User avatar"
-                className="flex size-9 shrink-0 items-center justify-center rounded-[5px] bg-muted text-xs font-semibold text-foreground select-none"
+                className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#7A1F3D] to-[#5C142B] text-white text-xs font-bold shadow-xs ring-1 ring-black/10 select-none"
               >
                 {initials}
               </div>
@@ -416,7 +416,7 @@ function SidebarInner({
                   variant="ghost"
                   size="icon"
                   aria-label="User options menu"
-                  className="size-8 shrink-0 rounded-[5px] text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
+                  className="size-8 shrink-0 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-foreground"
                 >
                   <EllipsisVertical
                     className="size-4"
@@ -428,16 +428,26 @@ function SidebarInner({
               <DropdownMenuContent
                 align="end"
                 side="top"
-                className="w-36 rounded-[5px] p-1"
+                sideOffset={6}
+                className="w-52 rounded-xl p-2 shadow-2xl shadow-black/12 border border-border/80 bg-popover/98 backdrop-blur-md"
               >
+                {/* Mini user identity header */}
+                <div className="px-2 py-1.5 mb-1 border-b border-border/60 pb-2">
+                  <p className="text-xs font-semibold text-foreground truncate">{user?.name ?? "Account"}</p>
+                  {user?.email && (
+                    <p className="text-[11px] text-muted-foreground truncate mt-0.5">{user.email}</p>
+                  )}
+                </div>
                 <DropdownMenuItem
                   onClick={onLogout}
-                  className="cursor-pointer rounded-[5px] text-xs font-medium text-destructive focus:bg-destructive/10 focus:text-destructive"
+                  className="cursor-pointer rounded-lg px-2.5 py-2 text-xs font-semibold text-destructive focus:bg-destructive/10 focus:text-destructive transition-colors gap-2"
                 >
-                  <LogOut
-                    className="mr-2 size-3.5"
-                    strokeWidth={NAV_ICON_STROKE_WIDTH}
-                  />
+                  <div className="flex size-6 items-center justify-center rounded-md bg-destructive/10 text-destructive shrink-0">
+                    <LogOut
+                      className="size-3.5"
+                      strokeWidth={NAV_ICON_STROKE_WIDTH}
+                    />
+                  </div>
                   <span>Log out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -450,7 +460,7 @@ function SidebarInner({
                 <button
                   type="button"
                   aria-label={`User menu for ${user?.name ?? "Account"}`}
-                  className="flex size-9 shrink-0 items-center justify-center rounded-[5px] bg-muted text-xs font-semibold text-foreground outline-none transition-all hover:ring-2 hover:ring-sidebar-ring focus-visible:ring-2 focus-visible:ring-sidebar-ring select-none"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#7A1F3D] to-[#5C142B] text-white text-xs font-bold shadow-xs ring-1 ring-black/10 outline-none transition-all hover:opacity-90 hover:ring-2 hover:ring-[#7A1F3D]/40 focus-visible:ring-2 focus-visible:ring-sidebar-ring select-none"
                 >
                   {initials}
                 </button>
@@ -458,16 +468,26 @@ function SidebarInner({
               <DropdownMenuContent
                 align="start"
                 side="right"
-                className="w-36 rounded-[5px] p-1"
+                sideOffset={8}
+                className="w-52 rounded-xl p-2 shadow-2xl shadow-black/12 border border-border/80 bg-popover/98 backdrop-blur-md"
               >
+                {/* Mini user identity header */}
+                <div className="px-2 py-1.5 mb-1 border-b border-border/60 pb-2">
+                  <p className="text-xs font-semibold text-foreground truncate">{user?.name ?? "Account"}</p>
+                  {user?.email && (
+                    <p className="text-[11px] text-muted-foreground truncate mt-0.5">{user.email}</p>
+                  )}
+                </div>
                 <DropdownMenuItem
                   onClick={onLogout}
-                  className="cursor-pointer rounded-[5px] text-xs font-medium text-destructive focus:bg-destructive/10 focus:text-destructive"
+                  className="cursor-pointer rounded-lg px-2.5 py-2 text-xs font-semibold text-destructive focus:bg-destructive/10 focus:text-destructive transition-colors gap-2"
                 >
-                  <LogOut
-                    className="mr-2 size-3.5"
-                    strokeWidth={NAV_ICON_STROKE_WIDTH}
-                  />
+                  <div className="flex size-6 items-center justify-center rounded-md bg-destructive/10 text-destructive shrink-0">
+                    <LogOut
+                      className="size-3.5"
+                      strokeWidth={NAV_ICON_STROKE_WIDTH}
+                    />
+                  </div>
                   <span>Log out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>

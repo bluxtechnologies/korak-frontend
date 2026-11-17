@@ -5,6 +5,8 @@ import Link from "next/link";
 import {
   Bell,
   ChevronDown,
+  ChevronRight,
+  Headphones,
   Loader2,
   LogOut,
   Search,
@@ -73,7 +75,7 @@ function getUserInitials(name?: string): string {
  *
  * Design system rules (Doc 05):
  * - 64px height (h-16) aligned seamlessly with sidebar header.
- * - Global radius token (10px / rounded-md), no pill shapes.
+ * - Global radius token (8px-12px / rounded-lg / rounded-md), no pill shapes on topbar buttons.
  * - No status dots on avatar or badges (text-only unread badge).
  * - Lucide icons with locked 1.75 stroke width.
  * - No heavy shadows or glow effects.
@@ -108,7 +110,7 @@ export function Topbar({
         {leftSlot}
 
         {/* Global Search Input */}
-        <div className="border-border bg-muted/40 text-muted-foreground hover:border-border/80 focus-within:border-ring focus-within:ring-ring hidden h-9 w-60 items-center gap-2 rounded-md border px-3 text-xs transition-colors focus-within:ring-1 sm:flex md:w-72 lg:w-80">
+        <div className="border-border bg-muted/40 text-muted-foreground hover:border-border/80 focus-within:border-ring focus-within:ring-ring hidden h-9 w-60 items-center gap-2 rounded-lg border px-3 text-xs transition-colors focus-within:ring-1 sm:flex md:w-72 lg:w-80">
           <Search
             className="text-muted-foreground size-4 shrink-0"
             strokeWidth={NAV_ICON_STROKE_WIDTH}
@@ -131,7 +133,7 @@ export function Topbar({
           <Link
             href={ROUTES.WALLET}
             aria-label={`Wallet balance: ${walletBalance}`}
-            className="border-border bg-card hover:bg-muted/60 text-foreground focus-visible:ring-ring hidden h-9 items-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors sm:flex focus-visible:ring-1 focus-visible:outline-none"
+            className="border-border bg-card hover:bg-muted/60 text-foreground focus-visible:ring-ring hidden h-9 items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors sm:flex focus-visible:ring-1 focus-visible:outline-none"
           >
             <Wallet
               className="text-muted-foreground size-4 shrink-0"
@@ -150,7 +152,7 @@ export function Topbar({
             asChild
             variant="ghost"
             size="icon"
-            className="text-muted-foreground hover:text-foreground relative h-9 w-9 rounded-md"
+            className="text-muted-foreground hover:text-foreground relative h-9 w-9 rounded-lg"
           >
             <Link
               href={ROUTES.NOTIFICATIONS}
@@ -184,71 +186,156 @@ export function Topbar({
               type="button"
               variant="ghost"
               aria-label="User menu"
-              className="text-foreground hover:bg-muted/60 focus-visible:ring-ring h-9 gap-2.5 rounded-md px-2 text-sm font-medium transition-colors focus-visible:ring-1"
+              className="group text-foreground hover:bg-muted/70 focus-visible:ring-ring h-10 gap-2.5 rounded-xl px-2.5 text-sm font-medium transition-all focus-visible:ring-1 border border-transparent hover:border-border/60 data-[state=open]:bg-muted/80 data-[state=open]:border-border/80"
             >
               <span
                 aria-hidden="true"
-                className="bg-primary text-primary-foreground flex size-7 shrink-0 items-center justify-center rounded-[5px] text-xs font-semibold"
+                className="bg-gradient-to-br from-[#7A1F3D] to-[#5C142B] text-white flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold shadow-xs ring-1 ring-black/10"
               >
                 {initials || (
                   <UserRound
-                    className="text-primary-foreground size-4"
+                    className="text-white size-4"
                     strokeWidth={NAV_ICON_STROKE_WIDTH}
                     aria-hidden="true"
                   />
                 )}
               </span>
-              <span className="hidden max-w-[140px] truncate font-medium sm:inline">
+              <span className="hidden max-w-[140px] truncate font-semibold sm:inline text-xs sm:text-sm">
                 {displayName}
               </span>
               <ChevronDown
-                className="text-muted-foreground size-4 shrink-0"
+                className="text-muted-foreground size-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180"
                 strokeWidth={NAV_ICON_STROKE_WIDTH}
                 aria-hidden="true"
               />
             </Button>
           </DropdownMenuTrigger>
 
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1">
-                <p className="text-foreground truncate text-sm font-medium">
-                  {displayName}
-                </p>
-                {displaySecondary && (
-                  <p className="text-muted-foreground truncate text-xs">
-                    {displaySecondary}
-                  </p>
-                )}
-              </div>
-            </DropdownMenuLabel>
-
-            <DropdownMenuSeparator />
-
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <DropdownMenuItem
-                  key={item.id ?? item.href}
-                  asChild
-                  className="focus:bg-muted focus:text-foreground cursor-pointer"
-                >
-                  <Link href={item.href ?? ROUTES.PROFILE}>
-                    {Icon && (
-                      <Icon
-                        className="text-muted-foreground mr-2 size-4"
+          <DropdownMenuContent
+            align="end"
+            sideOffset={8}
+            className="w-72 rounded-2xl border border-border/70 bg-card/95 backdrop-blur-xl p-2.5 shadow-2xl shadow-black/12 ring-1 ring-black/5 dark:ring-white/8"
+          >
+            {/* 1. Rich User Identity Header Card */}
+            <DropdownMenuLabel className="p-0 font-normal mb-2">
+              <div className="bg-gradient-to-br from-[#7A1F3D]/8 to-[#7A1F3D]/3 rounded-xl p-3 border border-[#7A1F3D]/15 space-y-2.5">
+                <div className="flex items-center gap-3">
+                  <div
+                    aria-hidden="true"
+                    className="bg-gradient-to-br from-[#7A1F3D] to-[#5C142B] text-white flex size-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold shadow-sm ring-1 ring-black/10"
+                  >
+                    {initials || (
+                      <UserRound
+                        className="text-white size-4"
                         strokeWidth={NAV_ICON_STROKE_WIDTH}
                         aria-hidden="true"
                       />
                     )}
-                    <span>{item.label}</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1.5">
+                      <p className="text-foreground truncate text-sm font-bold leading-tight">
+                        {displayName}
+                      </p>
+                      <span className="text-[10px] font-semibold text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded-md shrink-0">
+                        Active
+                      </span>
+                    </div>
+                    {displaySecondary && (
+                      <p className="text-muted-foreground truncate text-xs mt-0.5">
+                        {displaySecondary}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quick Live Wallet Balance Glance */}
+                <div className="flex items-center justify-between pt-2 border-t border-[#7A1F3D]/15 text-xs">
+                  <span className="text-muted-foreground text-[11px] font-medium flex items-center gap-1.5">
+                    <Wallet
+                      className="size-3.5 text-muted-foreground"
+                      strokeWidth={NAV_ICON_STROKE_WIDTH}
+                      aria-hidden="true"
+                    />
+                    <span>Wallet Balance</span>
+                  </span>
+                  <Link
+                    href={ROUTES.WALLET}
+                    className="font-bold text-foreground text-xs hover:text-primary transition-colors"
+                  >
+                    {walletBalance}
                   </Link>
-                </DropdownMenuItem>
-              );
-            })}
+                </div>
+              </div>
+            </DropdownMenuLabel>
 
-            <DropdownMenuSeparator />
+            {/* 2. Menu Navigation Items */}
+            <div className="space-y-0.5">
+              {menuItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <DropdownMenuItem
+                    key={item.id ?? item.href}
+                    asChild
+                    className="focus:bg-muted/80 focus:text-foreground cursor-pointer rounded-xl px-3 py-2.5 text-xs sm:text-sm font-medium transition-all group flex items-center justify-between"
+                  >
+                    <Link
+                      href={item.href ?? ROUTES.PROFILE}
+                      className="flex items-center justify-between w-full"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {Icon && (
+                          <div className="flex size-7 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground group-hover:bg-[#7A1F3D]/10 group-hover:text-[#7A1F3D] dark:group-hover:text-[#E892A8] transition-colors shrink-0">
+                            <Icon
+                              className="size-4"
+                              strokeWidth={NAV_ICON_STROKE_WIDTH}
+                              aria-hidden="true"
+                            />
+                          </div>
+                        )}
+                        <span className="truncate">{item.label}</span>
+                      </div>
+                      <ChevronRight
+                        className="size-3.5 text-muted-foreground/40 group-hover:text-foreground group-hover:translate-x-0.5 transition-all"
+                        strokeWidth={NAV_ICON_STROKE_WIDTH}
+                        aria-hidden="true"
+                      />
+                    </Link>
+                  </DropdownMenuItem>
+                );
+              })}
 
+              {/* Help & Support Quick Item */}
+              <DropdownMenuItem
+                asChild
+                className="focus:bg-muted/80 focus:text-foreground cursor-pointer rounded-xl px-3 py-2.5 text-xs sm:text-sm font-medium transition-all group flex items-center justify-between"
+              >
+                <Link
+                  href={ROUTES.SUPPORT}
+                  className="flex items-center justify-between w-full"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="flex size-7 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground group-hover:bg-[#7A1F3D]/10 group-hover:text-[#7A1F3D] dark:group-hover:text-[#E892A8] transition-colors shrink-0">
+                      <Headphones
+                        className="size-4"
+                        strokeWidth={NAV_ICON_STROKE_WIDTH}
+                        aria-hidden="true"
+                      />
+                    </div>
+                    <span className="truncate">Help & Support</span>
+                  </div>
+                  <ChevronRight
+                    className="size-3.5 text-muted-foreground/40 group-hover:text-foreground group-hover:translate-x-0.5 transition-all"
+                    strokeWidth={NAV_ICON_STROKE_WIDTH}
+                    aria-hidden="true"
+                  />
+                </Link>
+              </DropdownMenuItem>
+            </div>
+
+            <DropdownMenuSeparator className="my-1.5 bg-border/60" />
+
+            {/* 3. Refined Log Out Action */}
             <DropdownMenuItem
               disabled={isLoggingOut}
               onSelect={(event) => {
@@ -258,22 +345,26 @@ export function Topbar({
                 }
                 void onLogout?.();
               }}
-              className="text-destructive focus:bg-destructive-surface focus:text-destructive cursor-pointer"
+              className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer rounded-xl px-3 py-2.5 text-xs sm:text-sm font-medium transition-all group flex items-center gap-2.5"
             >
-              {isLoggingOut ? (
-                <Loader2
-                  className="mr-2 size-4 animate-spin"
-                  strokeWidth={NAV_ICON_STROKE_WIDTH}
-                  aria-hidden="true"
-                />
-              ) : (
-                <LogOut
-                  className="mr-2 size-4"
-                  strokeWidth={NAV_ICON_STROKE_WIDTH}
-                  aria-hidden="true"
-                />
-              )}
-              <span>{isLoggingOut ? "Logging out..." : "Log out"}</span>
+              <div className="flex size-7 items-center justify-center rounded-lg bg-destructive/10 text-destructive group-hover:bg-destructive/20 transition-colors shrink-0">
+                {isLoggingOut ? (
+                  <Loader2
+                    className="size-4 animate-spin"
+                    strokeWidth={NAV_ICON_STROKE_WIDTH}
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <LogOut
+                    className="size-4"
+                    strokeWidth={NAV_ICON_STROKE_WIDTH}
+                    aria-hidden="true"
+                  />
+                )}
+              </div>
+              <span className="font-semibold">
+                {isLoggingOut ? "Logging out..." : "Log out"}
+              </span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

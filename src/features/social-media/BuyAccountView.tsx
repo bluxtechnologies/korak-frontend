@@ -59,24 +59,31 @@ export function BuyAccountView() {
   );
   const [termsAccepted, setTermsAccepted] = React.useState(false);
 
-  const fetchAccounts = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await getAvailableAccounts({
-        platform: selectedPlatform,
-        search,
-      });
-      setAccounts(data);
-    } catch {
-      toast.error("Failed to load available accounts");
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedPlatform, search]);
+  const [refreshToken, setRefreshToken] = React.useState(0);
 
   React.useEffect(() => {
-    fetchAccounts();
-  }, [fetchAccounts]);
+    let ignore = false;
+    getAvailableAccounts({
+      platform: selectedPlatform,
+      search,
+    })
+      .then((data) => {
+        if (!ignore) {
+          setAccounts(data);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          toast.error("Failed to load available accounts");
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [selectedPlatform, search, refreshToken]);
 
   const handleOpenPurchase = (product: SocialAccountProduct) => {
     setSelectedProduct(product);
@@ -107,7 +114,7 @@ export function BuyAccountView() {
       setCompletedOrder(order);
       toast.success("Account purchased successfully! Deliverables ready.");
       // Refresh list to reflect sold/reserved
-      fetchAccounts();
+      setRefreshToken((prev) => prev + 1);
     } catch {
       toast.error("Transaction failed. Please check your wallet balance.");
     } finally {

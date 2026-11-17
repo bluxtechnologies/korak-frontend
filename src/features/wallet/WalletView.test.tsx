@@ -64,4 +64,36 @@ describe("WalletView Component", () => {
 
     expect(screen.getByText("Fund Your Wallet")).toBeInTheDocument();
   });
+
+  it("renders back to services link and wallet security card", () => {
+    render(<WalletView initialData={MOCK_WALLET_PAGE_DATA} />);
+
+    const backLink = screen.getByRole("link", { name: /back to services/i });
+    expect(backLink).toHaveAttribute("href", "/services");
+
+    expect(screen.getByText("Your Wallet is Secure")).toBeInTheDocument();
+    expect(screen.getByText("Quick Actions")).toBeInTheDocument();
+  });
+
+  it("filters transactions when searching in the search bar", async () => {
+    const user = userEvent.setup();
+    render(<WalletView initialData={MOCK_WALLET_PAGE_DATA} />);
+
+    const searchInput = screen.getByPlaceholderText(/search transactions/i);
+    await user.type(searchInput, "non_existent_reference_xyz");
+
+    expect(screen.getByText("No transactions recorded yet")).toBeInTheDocument();
+  });
+
+  it("switches currency using the currency selector dropdown", async () => {
+    const user = userEvent.setup();
+    render(<WalletView initialData={MOCK_WALLET_PAGE_DATA} />);
+
+    const currencySelect = screen.getByRole("combobox", {
+      name: /select display currency/i,
+    });
+    await user.selectOptions(currencySelect, "USD");
+
+    expect(screen.getByText(/US Dollar \(\$\)/i)).toBeInTheDocument();
+  });
 });

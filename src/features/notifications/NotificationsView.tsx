@@ -7,19 +7,20 @@ import {
   Bell,
   Check,
   CheckCheck,
-  Shield,
+  ShieldCheck,
   ShoppingBag,
-  ExternalLink,
+  Wallet,
+  Smartphone,
+  KeyRound,
+  ArrowRight,
+  type LucideIcon,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";
+import { NAV_ICON_STROKE_WIDTH } from "@/config/navigation";
 import { formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import {
@@ -29,17 +30,71 @@ import {
   type AppNotification,
   MOCK_NOTIFICATIONS,
 } from "./api";
+import {
+  formatNotificationMessage,
+  formatNotificationTime,
+} from "./formatters";
 
 export interface NotificationsViewProps {
   initialNotifications?: AppNotification[];
   className?: string;
 }
 
-const CATEGORY_ICONS = {
-  security: Shield,
-  commerce: ShoppingBag,
-  system: Bell,
-};
+interface NotificationTheme {
+  icon: LucideIcon;
+  badgeClass: string;
+}
+
+function getNotificationTheme(notif: AppNotification): NotificationTheme {
+  const type = notif.type.toLowerCase();
+  const category = notif.category.toLowerCase();
+  const title = notif.title.toLowerCase();
+
+  if (category === "security" || type.includes("device") || type.includes("password")) {
+    return {
+      icon: type.includes("password") ? KeyRound : ShieldCheck,
+      badgeClass:
+        "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    };
+  }
+
+  if (
+    type.includes("wallet") ||
+    title.includes("wallet") ||
+    title.includes("credited") ||
+    title.includes("refund")
+  ) {
+    return {
+      icon: Wallet,
+      badgeClass:
+        "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    };
+  }
+
+  if (
+    type.includes("airtime") ||
+    type.includes("data") ||
+    title.includes("data") ||
+    title.includes("airtime")
+  ) {
+    return {
+      icon: Smartphone,
+      badgeClass: "border-primary/20 bg-primary/10 text-primary",
+    };
+  }
+
+  if (category === "commerce" || type.includes("order")) {
+    return {
+      icon: ShoppingBag,
+      badgeClass: "border-primary/20 bg-primary/10 text-primary",
+    };
+  }
+
+  return {
+    icon: Bell,
+    badgeClass: "border-border bg-muted/60 text-muted-foreground",
+  };
+}
 
 /**
  * NotificationsView (F14.3).
@@ -166,7 +221,7 @@ export function NotificationsView({
         <div
           role="tablist"
           aria-label="Filter notifications"
-          className="flex items-center gap-1.5 p-1 border border-border bg-surface rounded-md max-w-fit"
+          className="flex items-center gap-1 p-1 border border-border bg-muted/40 rounded-[8px] max-w-fit"
         >
           <button
             role="tab"
@@ -174,9 +229,9 @@ export function NotificationsView({
             aria-selected={filter === "all"}
             onClick={() => setFilter("all")}
             className={cn(
-              "px-3.5 py-1.5 text-xs font-medium rounded-md transition-colors",
+              "px-3.5 py-1.5 text-xs font-semibold rounded-[6px] transition-all",
               filter === "all"
-                ? "bg-card text-foreground border border-border/80 font-semibold"
+                ? "bg-card text-foreground shadow-xs font-bold"
                 : "text-muted-foreground hover:text-foreground"
             )}
             data-testid="filter-all-tab"
@@ -189,16 +244,16 @@ export function NotificationsView({
             aria-selected={filter === "unread"}
             onClick={() => setFilter("unread")}
             className={cn(
-              "flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-md transition-colors",
+              "flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-[6px] transition-all",
               filter === "unread"
-                ? "bg-card text-foreground border border-border/80 font-semibold"
+                ? "bg-card text-foreground shadow-xs font-bold"
                 : "text-muted-foreground hover:text-foreground"
             )}
             data-testid="filter-unread-tab"
           >
             <span>Unread</span>
             {unreadCount > 0 && (
-              <span className="bg-primary text-primary-foreground flex h-4 min-w-4 items-center justify-center rounded-md px-1 text-[10px] font-semibold">
+              <span className="bg-primary text-primary-foreground flex h-4 min-w-4 items-center justify-center rounded-[4px] px-1 text-[10px] font-bold">
                 {unreadCount}
               </span>
             )}
@@ -211,10 +266,10 @@ export function NotificationsView({
             variant="outline"
             size="sm"
             onClick={handleMarkAllRead}
-            className="text-xs h-8 gap-1.5"
+            className="text-xs h-8 gap-1.5 rounded-[8px]"
             data-testid="mark-all-read-page-btn"
           >
-            <CheckCheck className="h-3.5 w-3.5 text-primary" />
+            <CheckCheck className="size-3.5 text-primary" strokeWidth={NAV_ICON_STROKE_WIDTH} />
             <span>Mark all as read</span>
           </Button>
         )}
@@ -224,16 +279,16 @@ export function NotificationsView({
       {isLoading && (
         <div className="space-y-3" data-testid="notifications-loading-skeleton">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} className="shadow-none">
+            <Card key={i} className="shadow-none rounded-[10px] border border-border">
               <CardContent className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Skeleton className="h-9 w-9 rounded-md" />
+                  <Skeleton className="size-9 rounded-[8px]" />
                   <div className="space-y-1.5">
                     <Skeleton className="h-4 w-40" />
                     <Skeleton className="h-3 w-64" />
                   </div>
                 </div>
-                <Skeleton className="h-6 w-16 rounded-md" />
+                <Skeleton className="h-6 w-16 rounded-[6px]" />
               </CardContent>
             </Card>
           ))}
@@ -253,7 +308,7 @@ export function NotificationsView({
 
       {/* Empty State */}
       {!isLoading && !error && displayedNotifications.length === 0 && (
-        <Card className="shadow-none">
+        <Card className="shadow-none rounded-[10px] border border-border">
           <CardContent className="p-0">
             <EmptyState
               icon={Bell}
@@ -276,17 +331,21 @@ export function NotificationsView({
 
       {/* Notifications List */}
       {!isLoading && !error && displayedNotifications.length > 0 && (
-        <div className="space-y-3" data-testid="notifications-list">
+        <div className="space-y-2.5" data-testid="notifications-list">
           {displayedNotifications.map((notif) => {
             const isUnread = !notif.read_at;
-            const Icon = CATEGORY_ICONS[notif.category] ?? Bell;
+            const { icon: Icon, badgeClass } = getNotificationTheme(notif);
+            const cleanMessage = formatNotificationMessage(notif.message);
+            const relativeTime = formatNotificationTime(notif.created_at);
 
             return (
               <Card
                 key={notif.id}
                 className={cn(
-                  "shadow-none transition-colors",
-                  isUnread && "border-primary/40 bg-surface/60"
+                  "shadow-none rounded-[10px] border transition-colors",
+                  isUnread
+                    ? "border-primary/30 bg-primary/[0.02]"
+                    : "border-border bg-card"
                 )}
                 data-testid={`notification-card-${notif.id}`}
               >
@@ -296,35 +355,35 @@ export function NotificationsView({
                       <div
                         aria-hidden="true"
                         className={cn(
-                          "flex h-9 w-9 shrink-0 items-center justify-center rounded-md border mt-0.5",
-                          isUnread
-                            ? "border-primary/30 bg-primary/10 text-primary"
-                            : "border-border bg-surface text-muted-foreground"
+                          "size-9 shrink-0 rounded-[8px] border flex items-center justify-center mt-0.5",
+                          badgeClass
                         )}
                       >
-                        <Icon className="h-4 w-4" />
+                        <Icon className="size-4" strokeWidth={NAV_ICON_STROKE_WIDTH} />
                       </div>
 
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-semibold text-foreground">
+                          <h4 className="text-sm font-bold text-foreground">
                             {notif.title}
                           </h4>
-                          <Badge variant={isUnread ? "info" : "outline"}>
-                            {isUnread ? "Unread" : "Read"}
-                          </Badge>
+                          {isUnread && (
+                            <span className="rounded-[4px] bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary border border-primary/20">
+                              Unread
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-muted-foreground leading-relaxed">
-                          {notif.message}
+                          {cleanMessage}
                         </p>
-                        <p className="text-[10px] text-muted-foreground/80">
+                        <p className="text-[10px] font-medium text-muted-foreground/75">
                           {formatDate(notif.created_at, {
                             month: "short",
                             day: "numeric",
                             year: "numeric",
                             hour: "2-digit",
                             minute: "2-digit",
-                          })}
+                          })} • {relativeTime}
                         </p>
                       </div>
                     </div>
@@ -335,11 +394,11 @@ export function NotificationsView({
                           asChild
                           variant="ghost"
                           size="sm"
-                          className="h-8 text-xs font-medium text-primary hover:text-primary gap-1"
+                          className="h-8 text-xs font-semibold text-primary hover:text-primary gap-1.5 rounded-[6px]"
                         >
                           <Link href={notif.action_url}>
                             <span>View</span>
-                            <ExternalLink className="h-3 w-3" />
+                            <ArrowRight className="size-3.5" strokeWidth={NAV_ICON_STROKE_WIDTH} />
                           </Link>
                         </Button>
                       )}
@@ -350,10 +409,10 @@ export function NotificationsView({
                           variant="outline"
                           size="sm"
                           onClick={() => handleMarkAsRead(notif.id)}
-                          className="h-8 text-xs gap-1"
+                          className="h-8 text-xs font-medium gap-1.5 rounded-[6px]"
                           aria-label={`Mark "${notif.title}" as read`}
                         >
-                          <Check className="h-3.5 w-3.5" />
+                          <Check className="size-3.5" strokeWidth={NAV_ICON_STROKE_WIDTH} />
                           <span>Mark read</span>
                         </Button>
                       )}
