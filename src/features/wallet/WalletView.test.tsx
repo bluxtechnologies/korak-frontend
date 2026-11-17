@@ -5,13 +5,13 @@ import { WalletView } from "./WalletView";
 import { MOCK_WALLET_PAGE_DATA } from "./api";
 
 describe("WalletView Component", () => {
-  it("renders wallet page title, available balance, and converted subtitle", () => {
+  it("renders wallet page title, available balance, and last updated time", () => {
     render(<WalletView initialData={MOCK_WALLET_PAGE_DATA} />);
 
     expect(screen.getByTestId("wallet-view")).toBeInTheDocument();
     expect(screen.getByText("Available Balance")).toBeInTheDocument();
     expect(screen.getByTestId("wallet-large-balance")).toHaveTextContent("₦45,250.00");
-    expect(screen.getByText(/≈ \$30\.17 USD/i)).toBeInTheDocument();
+    expect(screen.queryByText(/USD \(Estimated\)/i)).not.toBeInTheDocument();
     expect(screen.getByText(/Last updated today at/i)).toBeInTheDocument();
   });
 
@@ -85,15 +85,14 @@ describe("WalletView Component", () => {
     expect(screen.getByText("No transactions recorded yet")).toBeInTheDocument();
   });
 
-  it("switches currency using the currency selector dropdown", async () => {
-    const user = userEvent.setup();
+  it("renders static NGN display currency badge without a select dropdown", () => {
     render(<WalletView initialData={MOCK_WALLET_PAGE_DATA} />);
 
-    const currencySelect = screen.getByRole("combobox", {
-      name: /select display currency/i,
-    });
-    await user.selectOptions(currencySelect, "USD");
-
-    expect(screen.getByText(/US Dollar \(\$\)/i)).toBeInTheDocument();
+    expect(screen.getByText("DISPLAY CURRENCY")).toBeInTheDocument();
+    expect(screen.getByText("Nigerian Naira (₦)")).toBeInTheDocument();
+    expect(screen.getByTestId("currency-badge")).toHaveTextContent("NGN");
+    expect(
+      screen.queryByRole("combobox", { name: /select display currency/i })
+    ).not.toBeInTheDocument();
   });
 });

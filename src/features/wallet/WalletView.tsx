@@ -9,7 +9,6 @@ import {
   EyeOff,
   FileText,
   FolderOpen,
-  Info,
   Search,
   ShieldCheck,
   Wallet as WalletIcon,
@@ -19,7 +18,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { ROUTES, NAV_ICON_STROKE_WIDTH } from "@/config/navigation";
 import { formatCurrency, maskCurrency, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -34,20 +32,6 @@ export interface WalletViewProps {
   className?: string;
 }
 
-interface CurrencyOption {
-  code: string;
-  name: string;
-  symbol: string;
-  rateToNgn: number; // 1 Foreign = X NGN
-}
-
-const SUPPORTED_CURRENCIES: CurrencyOption[] = [
-  { code: "NGN", name: "Nigerian Naira", symbol: "₦", rateToNgn: 1 },
-  { code: "USD", name: "US Dollar", symbol: "$", rateToNgn: 1500 },
-  { code: "GBP", name: "British Pound", symbol: "£", rateToNgn: 1950 },
-  { code: "EUR", name: "Euro", symbol: "€", rateToNgn: 1650 },
-];
-
 export function WalletView({ initialData, className }: WalletViewProps) {
   const [data] = React.useState<WalletPageData>(initialData);
   const [isMasked, setIsMasked] = React.useState(false);
@@ -55,33 +39,17 @@ export function WalletView({ initialData, className }: WalletViewProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedTx, setSelectedTx] = React.useState<TransactionRecord | null>(null);
   const [isFundModalOpen, setIsFundModalOpen] = React.useState(false);
-  const [selectedCurrencyCode, setSelectedCurrencyCode] = React.useState("NGN");
 
   const toggleMask = () => setIsMasked((prev) => !prev);
-
-  // Active currency details
-  const activeCurrency =
-    SUPPORTED_CURRENCIES.find((c) => c.code === selectedCurrencyCode) ||
-    SUPPORTED_CURRENCIES[0];
 
   // Primary balance display
   const displayBalance = isMasked
     ? maskCurrency(data.wallet.currency)
     : formatCurrency(data.wallet.balance, data.wallet.currency);
 
-  const balanceInMajorNgn = data.wallet.balance / 100;
-
-  // Estimated USD conversion
-  const estimatedUsd = isMasked
-    ? "••••"
-    : (balanceInMajorNgn / 1500).toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-
-  // Formatted last updated timestamp
+  // Formatted last updated timestamp with relative day handling
   const updatedTimeLabel = React.useMemo(() => {
-    if (isMasked) return "Last updated: ••••";
+    if (isMasked) return "Last updated ••••";
     if (!data.wallet.updated_at) return "Last updated today at 10:15 AM";
     try {
       const d = new Date(data.wallet.updated_at);
@@ -91,14 +59,46 @@ export function WalletView({ initialData, className }: WalletViewProps) {
         minute: "2-digit",
         hour12: true,
       });
-      return `Last updated today at ${timeStr}`;
+
+      const now = new Date();
+      const startOfToday = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate()
+      );
+      const startOfTarget = new Date(
+        d.getFullYear(),
+        d.getMonth(),
+        d.getDate()
+      );
+      const diffDays = Math.round(
+        (startOfToday.getTime() - startOfTarget.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      if (diffDays === 0) {
+        return `Last updated today at ${timeStr}`;
+      }
+      if (diffDays === 1) {
+        return `Last updated yesterday at ${timeStr}`;
+      }
+
+      const dateStr = d.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        ...(d.getFullYear() !== now.getFullYear() ? { year: "numeric" } : {}),
+      });
+
+      return `Last updated on ${dateStr} at ${timeStr}`;
     } catch {
       return "Last updated today at 10:15 AM";
     }
   }, [data.wallet.updated_at, isMasked]);
 
   // Transaction counts for filter pills
-  const allTxs = data.transactions || [];
+  const allTxs = React.useMemo(
+    () => data.transactions || [],
+    [data.transactions]
+  );
   const moneyInTxs = React.useMemo(
     () => allTxs.filter((t) => t.direction === "credit"),
     [allTxs]
@@ -168,25 +168,6 @@ export function WalletView({ initialData, className }: WalletViewProps) {
             className="relative overflow-hidden rounded-[10px] bg-[#7A1F3D] dark:bg-[#5C142B] p-6 text-white shadow-none sm:p-7 transition-colors"
             data-testid="wallet-main-balance-card"
           >
-            {/* Subtle Decorative Wave Background Pattern */}
-            <svg
-              className="pointer-events-none absolute inset-0 size-full opacity-10"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 800 400"
-              preserveAspectRatio="none"
-              aria-hidden="true"
-            >
-              <path
-                d="M 0,200 C 200,140 400,260 800,180 L 800,400 L 0,400 Z"
-                fill="currentColor"
-              />
-              <path
-                d="M 0,260 C 250,210 500,320 800,240 L 800,400 L 0,400 Z"
-                fill="currentColor"
-                opacity="0.5"
-              />
-            </svg>
-
             {/* Top Row: Available Balance + Eye Toggle + Top Right Wallet Icon */}
             <div className="relative z-10 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -222,24 +203,22 @@ export function WalletView({ initialData, className }: WalletViewProps) {
                 {displayBalance}
               </div>
 
-              <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-white/75">
-                <span className="inline-flex items-center gap-1">
-                  <span>≈ ${estimatedUsd} USD (Estimated)</span>
-                  <Info className="size-3 text-white/60" strokeWidth={NAV_ICON_STROKE_WIDTH} aria-hidden="true" />
-                </span>
-                <span className="text-white/40">•</span>
-                <span className="text-white/70 font-medium">
+              <div className="mt-2 flex items-center gap-1.5 text-xs text-white/75">
+                <span
+                  className="size-1.5 rounded-full bg-emerald-400 shrink-0"
+                  aria-hidden="true"
+                />
+                <span className="text-white/80 font-medium">
                   {updatedTimeLabel}
                 </span>
               </div>
             </div>
 
             {/* Bottom Row: Currency Indicator + Action Buttons */}
-            <div className="relative z-10 mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-white/15 pt-5 sm:mt-8">
+            <div className="relative z-10 mt-6 flex flex-wrap items-center justify-between gap-3 sm:mt-7">
               {/* Currency Pill */}
-              <div className="inline-flex items-center gap-1.5 rounded-[8px] bg-white/15 px-3 py-1 text-xs font-semibold text-white">
+              <div className="inline-flex items-center rounded-[8px] bg-white/15 px-3 py-1 text-xs font-semibold text-white">
                 <span>{data.wallet.currency || "NGN"}</span>
-                <ChevronRight className="size-3 rotate-90 opacity-70" strokeWidth={NAV_ICON_STROKE_WIDTH} aria-hidden="true" />
               </div>
 
               {/* Action Buttons */}
@@ -452,29 +431,16 @@ export function WalletView({ initialData, className }: WalletViewProps) {
                   DISPLAY CURRENCY
                 </span>
                 <p className="mt-0.5 text-xs font-bold text-foreground">
-                  {activeCurrency.name} ({activeCurrency.symbol})
+                  Nigerian Naira (₦)
                 </p>
               </div>
 
-              {/* Currency Selector Dropdown */}
-              <div className="relative">
-                <select
-                  value={selectedCurrencyCode}
-                  onChange={(e) => setSelectedCurrencyCode(e.target.value)}
-                  className="appearance-none rounded-[8px] border border-border bg-muted/30 px-3 py-1.5 pr-7 text-xs font-bold text-foreground hover:bg-muted/60 focus:outline-none cursor-pointer"
-                  aria-label="Select display currency"
-                >
-                  {SUPPORTED_CURRENCIES.map((curr) => (
-                    <option key={curr.code} value={curr.code}>
-                      {curr.code}
-                    </option>
-                  ))}
-                </select>
-                <ChevronRight
-                  className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 rotate-90 text-muted-foreground"
-                  strokeWidth={NAV_ICON_STROKE_WIDTH}
-                  aria-hidden="true"
-                />
+              {/* Static Currency Badge (no select) */}
+              <div
+                className="inline-flex items-center rounded-[8px] border border-border bg-muted/40 px-3 py-1 text-xs font-bold text-foreground"
+                data-testid="currency-badge"
+              >
+                {data.wallet.currency || "NGN"}
               </div>
             </CardContent>
           </Card>

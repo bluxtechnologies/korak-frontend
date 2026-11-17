@@ -38,7 +38,7 @@ export const MOCK_WALLET_PAGE_DATA: WalletPageData = {
     balance: 4525000, // ₦45,250.00
     currency: "NGN",
     ledger_count: 24,
-    updated_at: "2026-11-15T10:15:00Z",
+    updated_at: new Date().toISOString(),
   },
   account_details: MOCK_VIRTUAL_ACCOUNT,
   transactions: MOCK_TRANSACTION_RECORDS,
