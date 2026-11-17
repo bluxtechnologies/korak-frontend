@@ -94,7 +94,7 @@ export const MOCK_OVERVIEW_DATA: OverviewData = {
     balance: 4525000, // ₦45,250.00
     currency: "NGN",
     ledger_count: 24,
-    updated_at: "2026-11-14T10:15:00Z",
+    updated_at: new Date().toISOString(),
     total_deposited: 12000000, // ₦120,000.00
     total_spent: 7475000, // ₦74,750.00
   },

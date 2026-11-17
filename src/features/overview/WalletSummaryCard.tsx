@@ -50,11 +50,42 @@ export function WalletSummaryCard({
     try {
       const d = new Date(wallet.updated_at);
       if (isNaN(d.getTime())) return "today at 10:15 AM";
-      return d.toLocaleTimeString("en-US", {
+
+      const timeStr = d.toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
         hour12: true,
       });
+
+      const now = new Date();
+      const startOfToday = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate()
+      );
+      const startOfTarget = new Date(
+        d.getFullYear(),
+        d.getMonth(),
+        d.getDate()
+      );
+      const diffDays = Math.round(
+        (startOfToday.getTime() - startOfTarget.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      if (diffDays === 0) {
+        return `today at ${timeStr}`;
+      }
+      if (diffDays === 1) {
+        return `yesterday at ${timeStr}`;
+      }
+
+      const dateStr = d.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        ...(d.getFullYear() !== now.getFullYear() ? { year: "numeric" } : {}),
+      });
+
+      return `on ${dateStr} at ${timeStr}`;
     } catch {
       return "today at 10:15 AM";
     }
@@ -209,7 +240,7 @@ export function WalletSummaryCard({
             className="size-1.5 rounded-full bg-emerald-400 shrink-0"
             aria-hidden="true"
           />
-          <span>Last updated at {updatedTimeLabel}</span>
+          <span>Last updated {updatedTimeLabel}</span>
         </div>
       </div>
 

@@ -71,4 +71,33 @@ describe("WalletSummaryCard (F12.2)", () => {
       "₦0.00"
     );
   });
+
+  it("renders 'Last updated today at ...' when updated_at is today", () => {
+    const today = new Date();
+    render(
+      <WalletSummaryCard
+        wallet={{
+          ...mockWallet,
+          updated_at: today.toISOString(),
+        }}
+      />
+    );
+
+    expect(screen.getByText(/Last updated today at/i)).toBeInTheDocument();
+  });
+
+  it("renders 'Last updated yesterday at ...' when updated_at is yesterday", () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    render(
+      <WalletSummaryCard
+        wallet={{
+          ...mockWallet,
+          updated_at: yesterday.toISOString(),
+        }}
+      />
+    );
+
+    expect(screen.getByText(/Last updated yesterday at/i)).toBeInTheDocument();
+  });
 });
