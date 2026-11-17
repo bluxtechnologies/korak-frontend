@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import {
-  Zap,
+  BadgePercent,
   CheckCircle2,
   Clock,
   ShieldCheck,
@@ -125,7 +125,7 @@ export function AirtimeView() {
             <CardHeader className="border-b border-border p-5 pb-4 space-y-1">
               <div className="flex items-center gap-2">
                 <div className="flex size-7 items-center justify-center rounded-[6px] bg-primary/10 text-primary">
-                  <Zap className="size-4" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+                  <BadgePercent className="size-4" strokeWidth={NAV_ICON_STROKE_WIDTH} />
                 </div>
                 <CardTitle className="text-sm font-bold text-foreground">
                   Network Rates & Cashback

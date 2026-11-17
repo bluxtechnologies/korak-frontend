@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import {
   Sparkles,
-  Zap,
   Clock,
   Layers,
   ArrowRight,
@@ -186,7 +185,7 @@ export function BoostAccountView() {
         </div>
 
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Zap className="size-4 text-primary" />
+          <Sparkles className="size-4 text-primary" />
           <span>High-Retention Safe Networks • Real-Time Progression</span>
         </div>
       </div>

@@ -5,7 +5,7 @@ import {
   MessageSquareText,
   Clock,
   ShieldCheck,
-  Zap,
+  KeyRound,
   HelpCircle,
   Hash,
   PhoneCall,
@@ -97,7 +97,7 @@ export function NumbersView({
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <Zap className="size-3.5" />
+            <KeyRound className="size-3.5" />
             <span>One-Time OTP (20 Mins)</span>
           </button>
 

@@ -8,7 +8,7 @@ import {
   Activity,
   Lock,
   Globe2,
-  Zap,
+  Gauge,
 } from "lucide-react";
 import {
   type VpnServerNode,
@@ -182,7 +182,7 @@ export function VpnView({
 
             <div className="rounded-md border border-border-subtle bg-bg-surface p-4 flex items-start gap-3">
               <div className="size-8 rounded-md bg-brand-subtle flex items-center justify-center text-brand shrink-0">
-                <Zap className="size-4" />
+                <Gauge className="size-4" />
               </div>
               <div>
                 <h2 className="text-xs font-semibold text-text-primary">

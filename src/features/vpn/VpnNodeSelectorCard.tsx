@@ -4,7 +4,7 @@ import * as React from "react";
 import {
   Shield,
   Server,
-  Zap,
+  Activity,
   Check,
   ChevronRight,
   Sparkles,
@@ -185,7 +185,7 @@ export function VpnNodeSelectorCard({
                       </div>
                     </div>
                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                      <Zap className="size-2.5" />
+                      <Activity className="size-2.5" />
                       {node.ping_ms}ms
                     </span>
                   </div>

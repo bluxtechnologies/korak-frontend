@@ -7,7 +7,6 @@ import {
   ChevronDown,
   Globe,
   ShieldCheck,
-  Zap,
   Sparkles,
   Wallet,
   ArrowRight,
