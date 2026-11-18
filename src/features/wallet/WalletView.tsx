@@ -203,11 +203,7 @@ export function WalletView({ initialData, className }: WalletViewProps) {
                 {displayBalance}
               </div>
 
-              <div className="mt-2 flex items-center gap-1.5 text-xs text-white/75">
-                <span
-                  className="size-1.5 rounded-full bg-emerald-400 shrink-0"
-                  aria-hidden="true"
-                />
+              <div className="mt-2 text-xs text-white/75">
                 <span className="text-white/80 font-medium">
                   {updatedTimeLabel}
                 </span>

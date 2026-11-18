@@ -235,11 +235,7 @@ export function WalletSummaryCard({
         </motion.div>
 
         {/* Timestamp */}
-        <div className="mt-2 flex items-center gap-1.5 text-xs text-white/70">
-          <span
-            className="size-1.5 rounded-full bg-emerald-400 shrink-0"
-            aria-hidden="true"
-          />
+        <div className="mt-2 text-xs text-white/70">
           <span>Last updated {updatedTimeLabel}</span>
         </div>
       </div>
