@@ -367,7 +367,7 @@ export async function getTransactionById(id: string): Promise<TransactionRecord>
       `/api/v1/wallet/transactions/${encodeURIComponent(id)}`
     );
     return unwrapApiResponse(response);
-  } catch {
+  } catch (err) {
     try {
       const response = await api.get<ApiResponse<TransactionRecord>>(
         `/api/v1/transactions/${encodeURIComponent(id)}`
@@ -378,7 +378,7 @@ export async function getTransactionById(id: string): Promise<TransactionRecord>
         (t) => t.id === id || t.reference === id
       );
       if (mock) return mock;
-      throw new Error(`Transaction not found: ${id}`);
+      throw err;
     }
   }
 }
