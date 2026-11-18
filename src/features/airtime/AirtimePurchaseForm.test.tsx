@@ -17,45 +17,52 @@ describe("AirtimePurchaseForm (F16.1 & F16.4)", () => {
     vi.clearAllMocks();
   });
 
-  it("renders the airtime form with default network and quick amounts", () => {
+  it("renders the airtime form with recipient carrier, amount grid, and order summary", () => {
     render(<AirtimePurchaseForm walletBalance={500000} />);
 
     expect(screen.getByTestId("airtime-purchase-card")).toBeInTheDocument();
-    expect(screen.getByText("Buy Airtime")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /MTN/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Airtel/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Glo/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /9mobile/i })).toBeInTheDocument();
+    expect(screen.getByText("1. Recipient Phone Number & Carrier")).toBeInTheDocument();
+    expect(screen.getByText("2. Select Amount")).toBeInTheDocument();
+    expect(screen.getByTestId("airtime-order-summary")).toBeInTheDocument();
 
-    // Quick amounts
+    // Network selector button
+    expect(
+      screen.getByRole("button", { name: /select network carrier/i })
+    ).toBeInTheDocument();
+
+    // Quick preset amounts
     expect(screen.getByRole("button", { name: "₦100" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "₦500" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "₦1,000" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "₦5,000" })).toBeInTheDocument();
   });
 
   it("auto-detects network when a Nigerian phone number is entered", async () => {
     const user = userEvent.setup();
     render(<AirtimePurchaseForm walletBalance={500000} />);
 
-    const phoneInput = screen.getByPlaceholderText("08031234567");
+    const phoneInput = screen.getByPlaceholderText("08012345678");
 
     // Type Glo prefix 0805
     await user.type(phoneInput, "08051234567");
 
-    const gloButton = screen.getByRole("button", { name: /GLO/i });
-    expect(gloButton).toHaveAttribute("aria-pressed", "true");
+    const networkTrigger = screen.getByRole("button", {
+      name: /select network carrier/i,
+    });
+    expect(networkTrigger).toHaveTextContent("Glo");
+    expect(screen.getByText("Glo Nigeria")).toBeInTheDocument();
   });
 
-  it("calculates live discount and displays net payable amount", async () => {
+  it("updates order summary values dynamically when amount is selected", async () => {
     const user = userEvent.setup();
     render(<AirtimePurchaseForm walletBalance={500000} />);
 
     // Select ₦1,000 quick button
     await user.click(screen.getByRole("button", { name: "₦1,000" }));
 
-    // MTN has 2% discount: 2% of 1000 = 20, net = 980
-    expect(screen.getByText("-₦20")).toBeInTheDocument();
-    expect(screen.getByText("₦980")).toBeInTheDocument();
+    // In Order Summary, Airtime Amount should show ₦1,000.00
+    expect(screen.getByTestId("summary-airtime-amount")).toHaveTextContent("₦1,000.00");
+    expect(screen.getByTestId("summary-total-amount")).toHaveTextContent("₦1,000.00");
   });
 
   it("disables submission and warns if wallet balance is insufficient", async () => {
@@ -66,11 +73,9 @@ describe("AirtimePurchaseForm (F16.1 & F16.4)", () => {
     // Select ₦1,000
     await user.click(screen.getByRole("button", { name: "₦1,000" }));
 
-    expect(
-      screen.getByText(/Insufficient wallet balance/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Insufficient balance/i)).toBeInTheDocument();
 
-    const submitBtn = screen.getByRole("button", { name: /Review Order/i });
+    const submitBtn = screen.getByRole("button", { name: /Continue to Review/i });
     expect(submitBtn).toBeDisabled();
   });
 
@@ -98,11 +103,13 @@ describe("AirtimePurchaseForm (F16.1 & F16.4)", () => {
       />
     );
 
-    const phoneInput = screen.getByPlaceholderText("08031234567");
+    const phoneInput = screen.getByPlaceholderText("08012345678");
     await user.type(phoneInput, "08031234567");
 
-    // Click Review Order
-    await user.click(screen.getByRole("button", { name: /Review Order/i }));
+    // Click Continue to Review
+    const submitBtn = screen.getByRole("button", { name: /Continue to Review/i });
+    expect(submitBtn).not.toBeDisabled();
+    await user.click(submitBtn);
 
     // Confirm dialog should be visible
     expect(screen.getByText("Confirm Airtime Purchase")).toBeInTheDocument();

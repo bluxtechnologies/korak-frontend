@@ -16,7 +16,7 @@ describe("AirtimeView (F16)", () => {
     vi.clearAllMocks();
   });
 
-  it("renders the composite airtime purchase view with sidebar cards", async () => {
+  it("renders the redesigned airtime purchase page with form and order summary", async () => {
     vi.mocked(overviewApi.getOverviewData).mockResolvedValueOnce({
       ...overviewApi.MOCK_OVERVIEW_DATA,
       wallet: {
@@ -28,9 +28,12 @@ describe("AirtimeView (F16)", () => {
     render(<AirtimeView />);
 
     expect(screen.getByTestId("airtime-view")).toBeInTheDocument();
+    expect(screen.getByText("Back to Services")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Airtime" })).toBeInTheDocument();
+    expect(screen.getByText("Buy airtime for any supported network.")).toBeInTheDocument();
+
     expect(screen.getByTestId("airtime-purchase-card")).toBeInTheDocument();
-    expect(screen.getByTestId("airtime-rates-card")).toBeInTheDocument();
-    expect(screen.getByTestId("recent-airtime-card")).toBeInTheDocument();
+    expect(screen.getByTestId("airtime-order-summary")).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByText("₦7,500.00")).toBeInTheDocument();

@@ -12,8 +12,10 @@ export type TelecomNetwork = "mtn" | "airtel" | "glo" | "9mobile";
 export interface NetworkInfo {
   id: TelecomNetwork;
   name: string;
+  fullName: string;
+  logo: string;
   discountRate: number; // e.g. 0.02 is 2% discount
-  minAmount: number; // in Naira (e.g. 50)
+  minAmount: number; // in Naira (e.g. 100)
   maxAmount: number; // in Naira (e.g. 50000)
   color: string;
 }
@@ -22,32 +24,40 @@ export const TELECOM_NETWORKS: NetworkInfo[] = [
   {
     id: "mtn",
     name: "MTN",
+    fullName: "MTN Nigeria",
+    logo: "/vtu-logos/mtn-seeklogo.svg",
     discountRate: 0.02,
-    minAmount: 50,
+    minAmount: 100,
     maxAmount: 50000,
     color: "#eab308",
   },
   {
     id: "airtel",
     name: "Airtel",
+    fullName: "Airtel Nigeria",
+    logo: "/vtu-logos/airtel.svg",
     discountRate: 0.02,
-    minAmount: 50,
+    minAmount: 100,
     maxAmount: 50000,
     color: "#ef4444",
   },
   {
     id: "glo",
     name: "Glo",
+    fullName: "Glo Nigeria",
+    logo: "/vtu-logos/glo-limited-seeklogo.svg",
     discountRate: 0.03,
-    minAmount: 50,
+    minAmount: 100,
     maxAmount: 50000,
     color: "#10b981",
   },
   {
     id: "9mobile",
     name: "9mobile",
+    fullName: "9mobile Nigeria",
+    logo: "/vtu-logos/9mobile-seeklogo.svg",
     discountRate: 0.025,
-    minAmount: 50,
+    minAmount: 100,
     maxAmount: 50000,
     color: "#84cc16",
   },
