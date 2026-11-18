@@ -57,7 +57,7 @@ export const airtimeFormSchema = z.object({
       "Please enter a valid 11-digit Nigerian phone number (e.g. 08012345678)."
     ),
   amount: z
-    .number({ invalid_type_error: "Please enter an amount." })
+    .number()
     .min(100, "Minimum airtime amount is ₦100.")
     .max(50000, "Maximum airtime amount is ₦50,000."),
 });
