@@ -16,7 +16,7 @@ describe("DataView (F16)", () => {
     vi.clearAllMocks();
   });
 
-  it("renders the composite data purchase view with codes and recent cards", async () => {
+  it("renders the clean 2-column data purchase interface without bottom cards", async () => {
     vi.mocked(overviewApi.getOverviewData).mockResolvedValueOnce({
       ...overviewApi.MOCK_OVERVIEW_DATA,
       wallet: {
@@ -29,8 +29,11 @@ describe("DataView (F16)", () => {
 
     expect(screen.getByTestId("data-view")).toBeInTheDocument();
     expect(screen.getByTestId("data-purchase-card")).toBeInTheDocument();
-    expect(screen.getByTestId("data-codes-card")).toBeInTheDocument();
-    expect(screen.getByTestId("recent-data-card")).toBeInTheDocument();
+    expect(screen.getByTestId("data-order-summary")).toBeInTheDocument();
+
+    // Verify the bottom cards are removed
+    expect(screen.queryByTestId("data-codes-card")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("recent-data-card")).not.toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByText("₦12,000.00")).toBeInTheDocument();
