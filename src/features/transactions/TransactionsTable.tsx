@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Eye, Receipt } from "lucide-react";
+import Link from "next/link";
+import { Eye, Receipt, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -188,6 +189,37 @@ export function TransactionsTable({
             </span>
           ),
         }),
+        columnHelper.accessor("status", {
+          id: "status",
+          header: "Status",
+          enableSorting: false,
+          meta: { align: "center" },
+          cell: (info) => {
+            const status = info.getValue() ?? "successful";
+            if (status === "successful") {
+              return (
+                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                  <CheckCircle2 className="size-3" />
+                  <span>Successful</span>
+                </span>
+              );
+            }
+            if (status === "pending") {
+              return (
+                <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                  <Clock className="size-3" />
+                  <span>Pending</span>
+                </span>
+              );
+            }
+            return (
+              <span className="inline-flex items-center gap-1 rounded-full border border-rose-500/20 bg-rose-500/10 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:text-rose-400">
+                <AlertCircle className="size-3" />
+                <span>Failed</span>
+              </span>
+            );
+          },
+        }),
         columnHelper.display({
           id: "actions",
           header: "Actions",
@@ -219,14 +251,18 @@ export function TransactionsTable({
       description={
         hasActiveFilters
           ? "No ledger records matched your active search or filter criteria."
-          : "When you fund your wallet or make purchases, every balance change will appear in this append-only ledger."
+          : "Your wallet activities will appear here when you fund your wallet or make a purchase."
       }
       action={
         hasActiveFilters && onResetFilters ? (
           <Button variant="outline" size="sm" onClick={onResetFilters}>
             Reset filters
           </Button>
-        ) : undefined
+        ) : (
+          <Button asChild size="sm" className="bg-[#7A1F3D] text-white hover:bg-[#681a34] rounded-xl text-xs font-semibold">
+            <Link href="/wallet">Fund Wallet</Link>
+          </Button>
+        )
       }
     />
   );

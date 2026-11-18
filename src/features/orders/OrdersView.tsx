@@ -12,64 +12,98 @@ import {
   Clock,
   AlertCircle,
   Package,
-  Phone,
-  Wifi,
-  Hash,
-  Shield,
   FileText,
   ChevronRight,
-  Sparkles,
+  ChevronLeft,
+  RotateCcw,
+  ShoppingBag,
+  Receipt,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { ROUTES } from "@/config/navigation";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
+import { OrderDetailModal, getOrderStatusBadge, getServiceCategoryIcon } from "./OrderDetailModal";
 import { OrderReceiptModal } from "./OrderReceiptModal";
-import type { OrderRecord } from "./api";
+import {
+  calculateOrderStats,
+  type OrderRecord,
+} from "./api";
 
 export interface OrdersViewProps {
   initialOrders?: OrderRecord[];
   className?: string;
 }
 
-type FilterTab = "all" | "active" | "completed" | "refunded";
+type FilterTab = "all" | "completed" | "processing" | "failed" | "cancelled";
+type DateFilter = "all" | "today" | "7days" | "30days";
 
 export function OrdersView({ initialOrders = [], className }: OrdersViewProps) {
   const [orders] = React.useState<OrderRecord[]>(initialOrders ?? []);
   const [activeTab, setActiveTab] = React.useState<FilterTab>("all");
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [categoryFilter, setCategoryFilter] = React.useState<string>("all");
+  const [dateFilter, setDateFilter] = React.useState<DateFilter>("all");
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [perPage, setPerPage] = React.useState(10);
+
+  // Modals state
   const [selectedOrder, setSelectedOrder] = React.useState<OrderRecord | null>(null);
+  const [receiptOrder, setReceiptOrder] = React.useState<OrderRecord | null>(null);
   const [copiedRefId, setCopiedRefId] = React.useState<string | null>(null);
 
-  const safeOrders = orders || [];
+  const safeOrders = React.useMemo(() => orders || [], [orders]);
+  const stats = React.useMemo(() => calculateOrderStats(safeOrders), [safeOrders]);
 
   // Tab counts
-  const counts = React.useMemo(() => {
+  const tabCounts = React.useMemo(() => {
     return {
       all: safeOrders.length,
-      active: safeOrders.filter((o) => o.status === "active" || o.status === "processing").length,
       completed: safeOrders.filter((o) => o.status === "completed").length,
-      refunded: safeOrders.filter((o) => o.status === "refunded" || o.status === "cancelled").length,
+      processing: safeOrders.filter(
+        (o) => o.status === "processing" || o.status === "active" || o.status === "pending"
+      ).length,
+      failed: safeOrders.filter((o) => o.status === "failed").length,
+      cancelled: safeOrders.filter((o) => o.status === "cancelled" || o.status === "refunded").length,
     };
   }, [safeOrders]);
+
+  // Active filters check
+  const hasActiveFilters = Boolean(
+    activeTab !== "all" ||
+      searchQuery.trim() !== "" ||
+      categoryFilter !== "all" ||
+      dateFilter !== "all"
+  );
 
   // Filtered orders
   const filteredOrders = React.useMemo(() => {
     let list = safeOrders;
 
-    if (activeTab === "active") {
-      list = list.filter((o) => o.status === "active" || o.status === "processing");
-    } else if (activeTab === "completed") {
+    // Status Tab filter
+    if (activeTab === "completed") {
       list = list.filter((o) => o.status === "completed");
-    } else if (activeTab === "refunded") {
-      list = list.filter((o) => o.status === "refunded" || o.status === "cancelled");
+    } else if (activeTab === "processing") {
+      list = list.filter(
+        (o) => o.status === "processing" || o.status === "active" || o.status === "pending"
+      );
+    } else if (activeTab === "failed") {
+      list = list.filter((o) => o.status === "failed");
+    } else if (activeTab === "cancelled") {
+      list = list.filter((o) => o.status === "cancelled" || o.status === "refunded");
     }
 
+    // Category filter
+    if (categoryFilter !== "all") {
+      list = list.filter((o) => o.category === categoryFilter);
+    }
+
+    // Search query filter
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+      const q = searchQuery.toLowerCase().trim();
       list = list.filter(
         (o) =>
           o.reference.toLowerCase().includes(q) ||
@@ -78,8 +112,36 @@ export function OrdersView({ initialOrders = [], className }: OrdersViewProps) {
       );
     }
 
+    // Date range filter
+    if (dateFilter !== "all") {
+      const now = new Date().getTime();
+      list = list.filter((o) => {
+        const orderTime = new Date(o.created_at).getTime();
+        const diffMs = now - orderTime;
+        if (dateFilter === "today") return diffMs <= 24 * 60 * 60 * 1000;
+        if (dateFilter === "7days") return diffMs <= 7 * 24 * 60 * 60 * 1000;
+        if (dateFilter === "30days") return diffMs <= 30 * 24 * 60 * 60 * 1000;
+        return true;
+      });
+    }
+
     return list;
-  }, [orders, activeTab, searchQuery]);
+  }, [safeOrders, activeTab, categoryFilter, searchQuery, dateFilter]);
+
+  // Pagination calculation
+  const totalItems = filteredOrders.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * perPage;
+  const paginatedOrders = filteredOrders.slice(startIndex, startIndex + perPage);
+
+  const resetFilters = () => {
+    setActiveTab("all");
+    setSearchQuery("");
+    setCategoryFilter("all");
+    setDateFilter("all");
+    setCurrentPage(1);
+  };
 
   const copyRef = async (ref: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -101,86 +163,37 @@ export function OrdersView({ initialOrders = [], className }: OrdersViewProps) {
       const rows = filteredOrders
         .map(
           (o) =>
-            `"${o.reference}","${o.service_name}","${o.beneficiary}",${o.amount / 100},"${o.currency}","${o.status}","${o.created_at}"`
+            `"${o.reference}","${o.service_name}","${o.beneficiary}","${o.amount / 100}","${
+              o.currency
+            }","${o.status}","${o.created_at}"`
         )
         .join("\n");
+
       const blob = new Blob([headers + rows], {
         type: format === "csv" ? "text/csv;charset=utf-8;" : "text/plain;charset=utf-8;",
       });
       const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `korak_orders_${Date.now()}.${format}`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast.success(`Exported ${filteredOrders.length} orders as ${format.toUpperCase()}`);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `korak-orders-${new Date().toISOString().split("T")[0]}.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${filteredOrders.length} orders to ${format.toUpperCase()}`);
     } catch {
-      toast.error("Export failed. Please try again.");
-    }
-  };
-
-  const getServiceIcon = (category: OrderRecord["category"]) => {
-    switch (category) {
-      case "data":
-        return <Wifi className="size-4" />;
-      case "airtime":
-        return <Phone className="size-4" />;
-      case "numbers_otp":
-      case "numbers_rent":
-        return <Hash className="size-4" />;
-      case "vpn":
-        return <Shield className="size-4" />;
-      case "social":
-        return <Sparkles className="size-4" />;
-      default:
-        return <Package className="size-4" />;
-    }
-  };
-
-  const getStatusBadge = (status: OrderRecord["status"]) => {
-    switch (status) {
-      case "completed":
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2 className="size-3" />
-            <span>Completed</span>
-          </span>
-        );
-      case "active":
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
-            <span className="size-1.5 animate-pulse rounded-full bg-primary" />
-            <span>Active</span>
-          </span>
-        );
-      case "processing":
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
-            <Clock className="size-3" />
-            <span>Processing</span>
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/20 bg-rose-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
-            <AlertCircle className="size-3" />
-            <span className="capitalize">{status}</span>
-          </span>
-        );
+      toast.error("Failed to export orders");
     }
   };
 
   return (
     <div className={cn("space-y-6", className)} data-testid="orders-view">
-      {/* 1. Header & Export Bar */}
+      {/* 1. Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            Order History
+            Orders
           </h1>
           <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-            Digital deliveries, SMS OTP receipts, and telecom fulfillments recorded with audit integrity.
+            View and manage your digital service purchases.
           </p>
         </div>
 
@@ -210,7 +223,7 @@ export function OrdersView({ initialOrders = [], className }: OrdersViewProps) {
           <Button
             asChild
             size="sm"
-            className="h-9 gap-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-xs hover:bg-primary/95"
+            className="h-9 gap-1.5 rounded-xl bg-[#7A1F3D] text-white text-xs font-bold shadow-xs hover:bg-[#681a34]"
           >
             <Link href={ROUTES.SERVICES}>
               <Plus className="size-3.5" />
@@ -220,256 +233,535 @@ export function OrdersView({ initialOrders = [], className }: OrdersViewProps) {
         </div>
       </div>
 
-      {/* 2. Status Filter Tabs */}
+      {/* 2. Compact Order Statistics */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {/* Total Orders */}
+        <div className="rounded-xl border border-border/70 bg-card p-3.5 shadow-none transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Total Orders
+            </span>
+            <div className="flex size-7 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+              <Package className="size-3.5" />
+            </div>
+          </div>
+          <div className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+            {stats.total}
+          </div>
+          <div className="mt-0.5 text-[11px] text-muted-foreground">Lifetime purchases</div>
+        </div>
+
+        {/* Successful Orders */}
+        <div className="rounded-xl border border-border/70 bg-card p-3.5 shadow-none transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+              Completed
+            </span>
+            <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="size-3.5" />
+            </div>
+          </div>
+          <div className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+            {stats.completed}
+          </div>
+          <div className="mt-0.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+            Fulfilled successfully
+          </div>
+        </div>
+
+        {/* Processing Orders */}
+        <div className="rounded-xl border border-border/70 bg-card p-3.5 shadow-none transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-amber-700 dark:text-amber-400">
+              Processing
+            </span>
+            <div className="flex size-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <Clock className="size-3.5" />
+            </div>
+          </div>
+          <div className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+            {stats.processing}
+          </div>
+          <div className="mt-0.5 text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+            Active / In transit
+          </div>
+        </div>
+
+        {/* Failed / Cancelled Orders */}
+        <div className="rounded-xl border border-border/70 bg-card p-3.5 shadow-none transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Failed / Refunded
+            </span>
+            <div className="flex size-7 items-center justify-center rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">
+              <AlertCircle className="size-3.5" />
+            </div>
+          </div>
+          <div className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+            {stats.failed}
+          </div>
+          <div className="mt-0.5 text-[11px] text-muted-foreground">
+            Cancelled or refunded
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Filter Tabs (Segmented Control) */}
       <div
         role="tablist"
         aria-label="Order status filter"
-        className="flex flex-wrap items-center gap-2 border-b border-border/70 pb-3"
+        className="flex flex-wrap items-center gap-1.5 border-b border-border/70 pb-3"
       >
         <button
           type="button"
           role="tab"
           aria-selected={activeTab === "all"}
-          onClick={() => setActiveTab("all")}
+          onClick={() => {
+            setActiveTab("all");
+            setCurrentPage(1);
+          }}
           className={cn(
-            "rounded-full px-4 py-1.5 text-xs font-semibold transition-colors",
+            "rounded-full px-3.5 py-1 text-xs font-semibold transition-all",
             activeTab === "all"
-              ? "bg-primary text-primary-foreground shadow-xs"
+              ? "bg-[#7A1F3D] text-white shadow-xs"
               : "bg-surface text-muted-foreground hover:bg-muted border border-border/70"
           )}
         >
-          All ({counts.all})
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "active"}
-          onClick={() => setActiveTab("active")}
-          className={cn(
-            "rounded-full px-4 py-1.5 text-xs font-semibold transition-colors",
-            activeTab === "active"
-              ? "bg-primary text-primary-foreground shadow-xs"
-              : "bg-surface text-muted-foreground hover:bg-muted border border-border/70"
-          )}
-        >
-          Active / Processing ({counts.active})
+          All Orders ({tabCounts.all})
         </button>
         <button
           type="button"
           role="tab"
           aria-selected={activeTab === "completed"}
-          onClick={() => setActiveTab("completed")}
+          onClick={() => {
+            setActiveTab("completed");
+            setCurrentPage(1);
+          }}
           className={cn(
-            "rounded-full px-4 py-1.5 text-xs font-semibold transition-colors",
+            "rounded-full px-3.5 py-1 text-xs font-semibold transition-all",
             activeTab === "completed"
-              ? "bg-primary text-primary-foreground shadow-xs"
+              ? "bg-[#7A1F3D] text-white shadow-xs"
               : "bg-surface text-muted-foreground hover:bg-muted border border-border/70"
           )}
         >
-          Completed ({counts.completed})
+          Completed ({tabCounts.completed})
         </button>
         <button
           type="button"
           role="tab"
-          aria-selected={activeTab === "refunded"}
-          onClick={() => setActiveTab("refunded")}
+          aria-selected={activeTab === "processing"}
+          onClick={() => {
+            setActiveTab("processing");
+            setCurrentPage(1);
+          }}
           className={cn(
-            "rounded-full px-4 py-1.5 text-xs font-semibold transition-colors",
-            activeTab === "refunded"
-              ? "bg-primary text-primary-foreground shadow-xs"
+            "rounded-full px-3.5 py-1 text-xs font-semibold transition-all",
+            activeTab === "processing"
+              ? "bg-[#7A1F3D] text-white shadow-xs"
               : "bg-surface text-muted-foreground hover:bg-muted border border-border/70"
           )}
         >
-          Cancelled / Refunded ({counts.refunded})
+          Active / Processing ({tabCounts.processing})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "failed"}
+          onClick={() => {
+            setActiveTab("failed");
+            setCurrentPage(1);
+          }}
+          className={cn(
+            "rounded-full px-3.5 py-1 text-xs font-semibold transition-all",
+            activeTab === "failed"
+              ? "bg-[#7A1F3D] text-white shadow-xs"
+              : "bg-surface text-muted-foreground hover:bg-muted border border-border/70"
+          )}
+        >
+          Failed ({tabCounts.failed})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "cancelled"}
+          onClick={() => {
+            setActiveTab("cancelled");
+            setCurrentPage(1);
+          }}
+          className={cn(
+            "rounded-full px-3.5 py-1 text-xs font-semibold transition-all",
+            activeTab === "cancelled"
+              ? "bg-[#7A1F3D] text-white shadow-xs"
+              : "bg-surface text-muted-foreground hover:bg-muted border border-border/70"
+          )}
+        >
+          Cancelled ({tabCounts.cancelled})
         </button>
       </div>
 
-      {/* 3. Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search by order reference, service name, or beneficiary phone..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="h-10 rounded-xl bg-surface pl-10 text-xs sm:text-sm border-border/80"
-        />
+      {/* 4. Secondary Filter Bar (Search, Category, Date, Reset) */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
+        {/* Search */}
+        <div className="relative sm:col-span-6 lg:col-span-6">
+          <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search by order reference, service name, or beneficiary phone..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="h-10 rounded-xl bg-card pl-10 text-xs sm:text-sm border-border/80"
+          />
+        </div>
+
+        {/* Category Filter */}
+        <div className="sm:col-span-3 lg:col-span-3">
+          <select
+            value={categoryFilter}
+            onChange={(e) => {
+              setCategoryFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            aria-label="Filter by service category"
+            className="h-10 w-full rounded-xl border border-border/80 bg-card px-3 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
+          >
+            <option value="all">All Service Categories</option>
+            <option value="airtime">Airtime Top-ups</option>
+            <option value="data">Mobile Data</option>
+            <option value="numbers_otp">SMS Verification (OTP)</option>
+            <option value="numbers_rent">Virtual Number Rental</option>
+            <option value="vpn">WireGuard VPN</option>
+            <option value="social">Social Media Services</option>
+          </select>
+        </div>
+
+        {/* Date Filter */}
+        <div className="sm:col-span-3 lg:col-span-3 flex items-center gap-2">
+          <select
+            value={dateFilter}
+            onChange={(e) => {
+              setDateFilter(e.target.value as DateFilter);
+              setCurrentPage(1);
+            }}
+            aria-label="Filter by date range"
+            className="h-10 w-full rounded-xl border border-border/80 bg-card px-3 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
+          >
+            <option value="all">All Time</option>
+            <option value="today">Today</option>
+            <option value="7days">Last 7 Days</option>
+            <option value="30days">Last 30 Days</option>
+          </select>
+
+          {hasActiveFilters && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={resetFilters}
+              className="h-10 px-2.5 text-xs text-muted-foreground hover:text-foreground shrink-0"
+              title="Reset all filters"
+            >
+              <RotateCcw className="size-3.5 mr-1" />
+              <span>Reset</span>
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* 4. Orders Table (Desktop) / Cards (Mobile) */}
+      {/* 5. Orders Table / Empty State */}
       {filteredOrders.length === 0 ? (
-        <Card className="rounded-2xl border-border/70 p-12 text-center shadow-xs">
-          <CardContent className="flex flex-col items-center justify-center p-0">
-            <div className="flex size-14 items-center justify-center rounded-2xl border border-border/70 bg-muted/40 text-muted-foreground">
-              <Package className="size-7 stroke-[1.5]" />
-            </div>
-            <h3 className="mt-4 text-sm font-bold text-foreground">
-              No orders found
-            </h3>
-            <p className="mt-1 max-w-sm text-xs text-muted-foreground leading-relaxed">
-              When you purchase airtime, mobile data, or virtual verification numbers, fulfillment receipts will appear here.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="rounded-2xl border border-border/70 bg-card py-16 px-4 text-center">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-muted/60 text-muted-foreground">
+            <ShoppingBag className="size-6" />
+          </div>
+          <h3 className="mt-4 text-base font-bold text-foreground">
+            {hasActiveFilters ? "No matching orders" : "No orders yet"}
+          </h3>
+          <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
+            {hasActiveFilters
+              ? "No digital service orders match your active search or filter criteria. Try clearing filters."
+              : "Your digital service purchases will appear here once you place an order."}
+          </p>
+          <div className="mt-6 flex justify-center gap-2">
+            {hasActiveFilters ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={resetFilters}
+                className="h-9 rounded-xl text-xs font-semibold"
+              >
+                Clear Filters
+              </Button>
+            ) : (
+              <Button
+                asChild
+                size="sm"
+                className="h-9 rounded-xl bg-[#7A1F3D] px-4 text-xs font-bold text-white hover:bg-[#681a34]"
+              >
+                <Link href={ROUTES.SERVICES}>Explore Services</Link>
+              </Button>
+            )}
+          </div>
+        </div>
       ) : (
-        <>
-          {/* Desktop Table View (>= md) */}
-          <div className="hidden md:block overflow-hidden rounded-2xl border border-border/80 bg-card shadow-xs">
+        <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-none">
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="border-b border-border/70 bg-muted/30 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              <thead className="border-b border-border/70 bg-muted/30 text-muted-foreground font-semibold">
                 <tr>
-                  <th className="px-5 py-3.5">Reference</th>
-                  <th className="px-4 py-3.5">Service Details</th>
-                  <th className="px-4 py-3.5">Beneficiary</th>
-                  <th className="px-4 py-3.5">Amount</th>
-                  <th className="px-4 py-3.5">Status</th>
-                  <th className="px-4 py-3.5">Date</th>
-                  <th className="px-5 py-3.5 text-right">Receipt</th>
+                  <th scope="col" className="py-3.5 pl-4 pr-3">
+                    Order
+                  </th>
+                  <th scope="col" className="px-3 py-3.5">
+                    Service
+                  </th>
+                  <th scope="col" className="px-3 py-3.5">
+                    Recipient
+                  </th>
+                  <th scope="col" className="px-3 py-3.5 text-right">
+                    Amount
+                  </th>
+                  <th scope="col" className="px-3 py-3.5 text-center">
+                    Status
+                  </th>
+                  <th scope="col" className="px-3 py-3.5">
+                    Date
+                  </th>
+                  <th scope="col" className="py-3.5 pl-3 pr-4 text-right">
+                    Action
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/50 text-foreground">
-                {filteredOrders.map((order) => {
-                  const isCopied = copiedRefId === order.reference;
-                  return (
-                    <tr
-                      key={order.id}
-                      onClick={() => setSelectedOrder(order)}
-                      className="cursor-pointer hover:bg-muted/30 transition-colors"
-                    >
-                      {/* Reference with copy */}
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono font-bold text-primary">
-                            {order.reference}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={(e) => copyRef(order.reference, e)}
-                            className="text-muted-foreground hover:text-foreground"
-                            aria-label={`Copy reference ${order.reference}`}
-                          >
-                            {isCopied ? (
-                              <Check className="size-3 text-emerald-500" />
-                            ) : (
-                              <Copy className="size-3" />
-                            )}
-                          </button>
-                        </div>
-                      </td>
-
-                      {/* Service Name */}
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-2.5">
-                          <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
-                            {getServiceIcon(order.category)}
-                          </div>
-                          <div>
-                            <p className="font-bold text-foreground">
-                              {order.service_name}
-                            </p>
-                            <span className="text-[10px] uppercase font-semibold text-muted-foreground">
-                              {order.category.replace(/_/g, " ")}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Beneficiary */}
-                      <td className="px-4 py-4">
-                        <span className="font-mono text-muted-foreground">
-                          {order.beneficiary}
+              <tbody className="divide-y divide-border/60">
+                {paginatedOrders.map((order) => (
+                  <tr
+                    key={order.id}
+                    onClick={() => setSelectedOrder(order)}
+                    className="cursor-pointer transition-colors hover:bg-muted/40"
+                  >
+                    {/* Order Reference */}
+                    <td className="py-3.5 pl-4 pr-3 font-mono">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-[#7A1F3D] dark:text-rose-400">
+                          {order.reference}
                         </span>
-                      </td>
-
-                      {/* Amount */}
-                      <td className="px-4 py-4">
-                        <span className="font-mono font-bold text-foreground">
-                          {formatCurrency(order.amount, order.currency)}
-                        </span>
-                      </td>
-
-                      {/* Status */}
-                      <td className="px-4 py-4">
-                        {getStatusBadge(order.status)}
-                      </td>
-
-                      {/* Date */}
-                      <td className="px-4 py-4 text-muted-foreground text-[11px]">
-                        {formatDate(order.created_at)}
-                      </td>
-
-                      {/* Action */}
-                      <td className="px-5 py-4 text-right">
                         <button
                           type="button"
+                          onClick={(e) => copyRef(order.reference, e)}
+                          className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                          title="Copy order reference"
+                        >
+                          {copiedRefId === order.reference ? (
+                            <Check className="size-3 text-emerald-600" />
+                          ) : (
+                            <Copy className="size-3" />
+                          )}
+                        </button>
+                      </div>
+                    </td>
+
+                    {/* Service */}
+                    <td className="px-3 py-3.5">
+                      <div className="flex items-center gap-2">
+                        <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-[#7A1F3D]/10 text-[#7A1F3D] dark:bg-[#7A1F3D]/20">
+                          {getServiceCategoryIcon(order.category, "size-3.5")}
+                        </div>
+                        <span className="font-medium text-foreground line-clamp-1 max-w-[200px]">
+                          {order.service_name}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Recipient */}
+                    <td className="px-3 py-3.5 font-mono text-muted-foreground">
+                      <span className="line-clamp-1 max-w-[150px]">{order.beneficiary}</span>
+                    </td>
+
+                    {/* Amount */}
+                    <td className="px-3 py-3.5 text-right font-bold text-foreground">
+                      {formatCurrency(order.amount, order.currency)}
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-3 py-3.5 text-center">
+                      {getOrderStatusBadge(order.status)}
+                    </td>
+
+                    {/* Date */}
+                    <td className="px-3 py-3.5 text-muted-foreground whitespace-nowrap">
+                      {formatDate(order.created_at)}
+                    </td>
+
+                    {/* Action */}
+                    <td className="py-3.5 pl-3 pr-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedOrder(order);
                           }}
-                          aria-label={`View Receipt for ${order.reference}`}
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                          className="h-7 px-2 text-xs font-semibold text-foreground hover:bg-muted"
                         >
-                          <span>Details</span>
-                          <ChevronRight className="size-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                          <Eye className="size-3.5 mr-1 text-muted-foreground" />
+                          <span>View Details</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setReceiptOrder(order);
+                          }}
+                          className="h-7 px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+                          title="View Receipt"
+                        >
+                          <FileText className="size-3.5" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
 
-          {/* Mobile Card View (< md) */}
-          <div className="space-y-3 md:hidden">
-            {filteredOrders.map((order) => (
-              <Card
+          {/* Mobile Card List View */}
+          <div className="divide-y divide-border/60 md:hidden">
+            {paginatedOrders.map((order) => (
+              <div
                 key={order.id}
                 onClick={() => setSelectedOrder(order)}
-                className="cursor-pointer rounded-2xl border-border/80 p-4 shadow-xs hover:border-primary/40 transition-all"
+                className="p-4 transition-colors hover:bg-muted/40 cursor-pointer space-y-3"
               >
-                <CardContent className="p-0 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        {getServiceIcon(order.category)}
-                      </div>
-                      <span className="font-mono text-xs font-bold text-primary">
-                        {order.reference}
-                      </span>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#7A1F3D]/10 text-[#7A1F3D]">
+                      {getServiceCategoryIcon(order.category, "size-4")}
                     </div>
-                    {getStatusBadge(order.status)}
+                    <div>
+                      <div className="font-semibold text-xs text-foreground line-clamp-1">
+                        {order.service_name}
+                      </div>
+                      <div className="font-mono text-[11px] text-muted-foreground">
+                        {order.beneficiary}
+                      </div>
+                    </div>
                   </div>
-
-                  <div>
-                    <h3 className="text-xs font-bold text-foreground sm:text-sm">
-                      {order.service_name}
-                    </h3>
-                    <p className="font-mono text-[11px] text-muted-foreground mt-0.5">
-                      Target: {order.beneficiary}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-between border-t border-border/50 pt-2.5 text-xs">
-                    <span className="text-[11px] text-muted-foreground">
-                      {formatDate(order.created_at)}
-                    </span>
-                    <span className="font-mono font-bold text-foreground">
+                  <div className="text-right">
+                    <div className="font-bold text-xs text-foreground">
                       {formatCurrency(order.amount, order.currency)}
-                    </span>
+                    </div>
+                    <div className="mt-1">{getOrderStatusBadge(order.status)}</div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-border/40">
+                  <span className="font-mono">{order.reference}</span>
+                  <div className="flex items-center gap-2">
+                    <span>{formatDate(order.created_at)}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setReceiptOrder(order);
+                      }}
+                      className="h-6 px-1.5 text-[11px]"
+                    >
+                      <Receipt className="size-3 mr-1" />
+                      Receipt
+                    </Button>
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
-        </>
+
+          {/* 6. Pagination Footer */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-border/70 bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
+            <div>
+              Showing{" "}
+              <span className="font-medium text-foreground">
+                {totalItems === 0 ? 0 : startIndex + 1}
+              </span>{" "}
+              to{" "}
+              <span className="font-medium text-foreground">
+                {Math.min(startIndex + perPage, totalItems)}
+              </span>{" "}
+              of <span className="font-medium text-foreground">{totalItems}</span> orders
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span>Rows:</span>
+                <select
+                  value={perPage}
+                  onChange={(e) => {
+                    setPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="rounded-md border border-border/80 bg-card px-2 py-0.5 text-xs text-foreground"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={safeCurrentPage <= 1}
+                  className="size-8 p-0 rounded-lg border-border/80"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft className="size-4" />
+                </Button>
+                <span className="px-2 text-xs font-medium text-foreground">
+                  {safeCurrentPage} / {totalPages}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safeCurrentPage >= totalPages}
+                  className="size-8 p-0 rounded-lg border-border/80"
+                  aria-label="Next page"
+                >
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* 5. Order Receipt Modal */}
-      <OrderReceiptModal
+      {/* 7. Dedicated Order Detail Modal */}
+      <OrderDetailModal
         order={selectedOrder}
         open={Boolean(selectedOrder)}
         onOpenChange={(open) => !open && setSelectedOrder(null)}
+        onViewReceipt={(order) => setReceiptOrder(order)}
+      />
+
+      {/* 8. Printable Order Receipt Modal */}
+      <OrderReceiptModal
+        order={receiptOrder}
+        open={Boolean(receiptOrder)}
+        onOpenChange={(open) => !open && setReceiptOrder(null)}
       />
     </div>
   );

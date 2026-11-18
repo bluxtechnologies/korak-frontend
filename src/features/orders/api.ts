@@ -4,6 +4,7 @@
  */
 import { api } from "@/lib/api";
 import { unwrapApiResponse } from "@/lib/api/errors";
+import { customerApi } from "@/lib/api/customer";
 import type { ApiResponse } from "@/lib/api/types";
 
 export type OrderStatus =
@@ -11,7 +12,9 @@ export type OrderStatus =
   | "processing"
   | "completed"
   | "refunded"
-  | "cancelled";
+  | "cancelled"
+  | "failed"
+  | "pending";
 
 export type OrderCategory =
   | "data"
@@ -43,7 +46,34 @@ export interface OrderRecord {
   currency: string;
   status: OrderStatus;
   created_at: string;
+  fee?: number; // minor units (0 by default)
+  payment_method?: string; // "KORAK Wallet" by default
+  provider?: string;
+  package_details?: string;
+  completed_at?: string;
+  failure_reason?: string;
   credentials?: OrderCredentials;
+}
+
+export interface OrderStats {
+  total: number;
+  completed: number;
+  processing: number;
+  failed: number;
+}
+
+export function calculateOrderStats(orders: OrderRecord[]): OrderStats {
+  const safe = orders || [];
+  return {
+    total: safe.length,
+    completed: safe.filter((o) => o.status === "completed").length,
+    processing: safe.filter(
+      (o) => o.status === "processing" || o.status === "active" || o.status === "pending"
+    ).length,
+    failed: safe.filter(
+      (o) => o.status === "failed" || o.status === "cancelled" || o.status === "refunded"
+    ).length,
+  };
 }
 
 export interface OrdersQueryParams {
@@ -190,16 +220,65 @@ export const MOCK_ORDER_RECORDS: OrderRecord[] = [
       notes: "2,000 post likes delivered within 25 minutes.",
     },
   },
+  {
+    id: "ord_10",
+    reference: "ORD-84919712",
+    category: "airtime",
+    service_name: "9mobile ₦1,000 Airtime VTU",
+    beneficiary: "08091234567",
+    amount: 100000, // ₦1,000.00
+    currency: "NGN",
+    status: "failed",
+    created_at: "2026-11-14T09:12:00Z",
+    failure_reason: "Telecom network gateway timed out. Debited amount refunded to wallet.",
+    credentials: {
+      notes: "Failed during carrier handoff. Automatic refund completed.",
+    },
+  },
 ];
 
+/**
+ * Fetches user orders from `/api/v1/orders` or Doc 25 `/api/v1/bills/history`.
+ * Cleanly returns empty list when no orders exist without falling back to mock fixtures.
+ */
 export async function getOrders(params?: OrdersQueryParams): Promise<OrderRecord[]> {
   try {
-    const response = await api.get<ApiResponse<OrderRecord[]>>("/api/v1/orders", {
+    const response = await api.get<ApiResponse<OrderRecord[]> | { data: OrderRecord[] }>("/api/v1/orders", {
       params: params as Record<string, string | number | boolean>,
     });
-    return unwrapApiResponse(response);
+    if ("data" in response && Array.isArray((response as { data: OrderRecord[] }).data)) {
+      return (response as { data: OrderRecord[] }).data;
+    }
+    return unwrapApiResponse(response as ApiResponse<OrderRecord[]>);
   } catch {
-    return MOCK_ORDER_RECORDS;
+    try {
+      // Connect to Doc 25 bills history endpoint (/api/v1/bills/history)
+      const history = await customerApi.getBillHistory({
+        status: params?.status,
+        category: params?.category,
+        page: params?.page,
+      });
+
+      return (history.data || []).map((bill) => ({
+        id: bill.id,
+        reference: bill.reference,
+        category: (bill.category as OrderCategory) || "data",
+        service_name: bill.service_name,
+        beneficiary: bill.customer_identifier,
+        amount: bill.amount,
+        currency: "NGN",
+        status:
+          bill.status === "completed"
+            ? "completed"
+            : bill.status === "failed"
+            ? "cancelled"
+            : "processing",
+        created_at: bill.created_at,
+      }));
+    } catch {
+      // Return empty list for accounts with no orders — NEVER mock fixtures
+      return [];
+    }
   }
 }
 

@@ -90,7 +90,7 @@ describe("Transactions API (F15)", () => {
   });
 
   describe("getTransactions", () => {
-    it("calls /api/v1/transactions with formatted parameters", async () => {
+    it("calls /api/v1/wallet/transactions with formatted parameters", async () => {
       const mockResponse = {
         data: MOCK_TRANSACTION_RECORDS.slice(0, 2),
         meta: { current_page: 1, per_page: 2, total: 2, last_page: 1 },
@@ -98,17 +98,17 @@ describe("Transactions API (F15)", () => {
       vi.mocked(api.get).mockResolvedValueOnce(mockResponse);
 
       const res = await getTransactions({ page: 1, search: "test" });
-      expect(api.get).toHaveBeenCalledWith("/api/v1/transactions", {
+      expect(api.get).toHaveBeenCalledWith("/api/v1/wallet/transactions", {
         params: { page: 1, search: "test" },
       });
       expect(res).toEqual(mockResponse);
     });
 
-    it("falls back to mock data in test/dev mode when api fails", async () => {
-      vi.mocked(api.get).mockRejectedValueOnce(new Error("Network Error"));
+    it("returns clean empty paginated response when api fails", async () => {
+      vi.mocked(api.get).mockRejectedValue(new Error("Network Error"));
       const res = await getTransactions({ search: "Bank Transfer" });
-      expect(res.data.length).toBeGreaterThan(0);
-      expect(res.data[0].description).toContain("Bank Transfer");
+      expect(res.data).toEqual([]);
+      expect(res.meta.total).toBe(0);
     });
   });
 
@@ -121,14 +121,13 @@ describe("Transactions API (F15)", () => {
       });
 
       const res = await getTransactionById("txn_01");
-      expect(api.get).toHaveBeenCalledWith("/api/v1/transactions/txn_01");
+      expect(api.get).toHaveBeenCalledWith("/api/v1/wallet/transactions/txn_01");
       expect(res).toEqual(mockRecord);
     });
 
-    it("falls back to mock record lookup when api fails", async () => {
-      vi.mocked(api.get).mockRejectedValueOnce(new Error("404 Not Found"));
-      const res = await getTransactionById("TXN-20261114-0012");
-      expect(res.id).toBe("txn_01");
+    it("throws error when transaction is not found", async () => {
+      vi.mocked(api.get).mockRejectedValue(new Error("404 Not Found"));
+      await expect(getTransactionById("TXN-UNKNOWN")).rejects.toThrow("404 Not Found");
     });
   });
 });

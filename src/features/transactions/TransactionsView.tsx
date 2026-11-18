@@ -1,21 +1,31 @@
 "use client";
 
 import * as React from "react";
-import { Info, RefreshCw } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import Link from "next/link";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  History,
+  Plus,
+  RefreshCw,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FilterPanel, type FilterDefinition, type FilterValues } from "@/components/shared/FilterPanel";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { ROUTES } from "@/config/navigation";
+import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { ApiPaginatedResponse, PaginationMeta } from "@/lib/api/types";
 import {
+  calculateTransactionMetrics,
   getTransactions,
   type TransactionQueryParams,
   type TransactionRecord,
 } from "./api";
 import { TransactionDetailModal } from "./TransactionDetailModal";
+import { TransactionReceiptModal } from "./TransactionReceiptModal";
 import { TransactionsTable } from "./TransactionsTable";
 
 export interface TransactionsViewProps {
@@ -50,7 +60,7 @@ const FILTER_DEFINITIONS: FilterDefinition[] = [
 /**
  * TransactionsView (F15.1 & F15.2).
  * Complete customer ledger history view with search, filter, sort, pagination,
- * and immutable transaction detail inspection.
+ * financial overview metrics, and immutable transaction detail/receipt inspection.
  */
 export function TransactionsView({
   initialData,
@@ -78,10 +88,27 @@ export function TransactionsView({
   const [currentPage, setCurrentPage] = React.useState(1);
   const [perPage, setPerPage] = React.useState(15);
 
-  // Detail Modal state
+  // Modals state
   const [selectedTransaction, setSelectedTransaction] =
     React.useState<TransactionRecord | null>(null);
+  const [receiptTransaction, setReceiptTransaction] =
+    React.useState<TransactionRecord | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+
+  // Financial summary metrics calculated from loaded records
+  const metrics = React.useMemo(
+    () => calculateTransactionMetrics(transactions),
+    [transactions]
+  );
+
+  // Direction tab counts
+  const directionCounts = React.useMemo(() => {
+    return {
+      all: transactions.length,
+      credit: transactions.filter((t) => t.direction === "credit").length,
+      debit: transactions.filter((t) => t.direction === "debit").length,
+    };
+  }, [transactions]);
 
   // Active filter calculation
   const hasActiveFilters = Boolean(
@@ -150,6 +177,14 @@ export function TransactionsView({
     setCurrentPage(1);
   };
 
+  const handleDirectionTabChange = (direction: "" | "credit" | "debit") => {
+    setFilterValues((prev) => ({
+      ...prev,
+      direction: direction === "" ? undefined : direction,
+    }));
+    setCurrentPage(1);
+  };
+
   const handleResetFilters = () => {
     setSearch("");
     setFilterValues({});
@@ -188,21 +223,156 @@ export function TransactionsView({
 
   const content = (
     <div className={cn("space-y-6", className)} data-testid="transactions-view">
-      {/* Wallet Funding Notice (Roadmap F15.3 ⛔) */}
-      <Alert className="border-border bg-muted/40">
-        <Info className="h-4 w-4 text-muted-foreground" />
-        <AlertTitle className="text-xs font-semibold">
-          Append-Only Financial Ledger (F15)
-        </AlertTitle>
-        <AlertDescription className="text-xs text-muted-foreground">
-          Every balance modification is strictly recorded as an immutable
-          ledger row. Note that online self-service wallet funding is currently
-          pending payment gateway integration (Doc 14).
-        </AlertDescription>
-      </Alert>
+      {/* 1. Page Header (When rendered standalone) */}
+      {!showHeader && (
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              Transactions
+            </h1>
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+              Track your wallet activity, payments and financial history. Immutable audit ledger of all balance credits, debits, and adjustments.
+            </p>
+          </div>
 
-      {/* Search & Filter Panel (F6.2) */}
-      <Card className="border-border shadow-none">
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleRetry}
+              disabled={isLoading}
+              className="h-9 gap-1.5 rounded-xl border-border/80 text-xs font-semibold shadow-none"
+            >
+              <RefreshCw
+                className={`size-3.5 ${isLoading ? "animate-spin" : ""}`}
+              />
+              <span>Refresh</span>
+            </Button>
+
+            <Button
+              asChild
+              size="sm"
+              className="h-9 gap-1.5 rounded-xl bg-[#7A1F3D] text-white text-xs font-bold shadow-xs hover:bg-[#681a34]"
+            >
+              <Link href={ROUTES.WALLET}>
+                <Plus className="size-3.5" />
+                <span>+ Fund Wallet</span>
+              </Link>
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Compact Financial Overview Metrics */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {/* Total Money In */}
+        <div className="rounded-xl border border-border/70 bg-card p-3.5 shadow-none transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+              Total Money In
+            </span>
+            <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <ArrowDownLeft className="size-3.5" />
+            </div>
+          </div>
+          <div className="mt-2 text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 sm:text-2xl">
+            +{formatCurrency(metrics.totalMoneyIn, "NGN")}
+          </div>
+          <div className="mt-0.5 text-[11px] text-muted-foreground">
+            Wallet deposits & refunds
+          </div>
+        </div>
+
+        {/* Total Money Out */}
+        <div className="rounded-xl border border-border/70 bg-card p-3.5 shadow-none transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Total Money Out
+            </span>
+            <div className="flex size-7 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+              <ArrowUpRight className="size-3.5" />
+            </div>
+          </div>
+          <div className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+            -{formatCurrency(metrics.totalMoneyOut, "NGN")}
+          </div>
+          <div className="mt-0.5 text-[11px] text-muted-foreground">
+            Service orders & payments
+          </div>
+        </div>
+
+        {/* Total Transactions */}
+        <div className="rounded-xl border border-border/70 bg-card p-3.5 shadow-none transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Total Transactions
+            </span>
+            <div className="flex size-7 items-center justify-center rounded-lg bg-[#7A1F3D]/10 text-[#7A1F3D] dark:bg-[#7A1F3D]/20">
+              <History className="size-3.5" />
+            </div>
+          </div>
+          <div className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+            {metrics.totalCount}
+          </div>
+          <div className="mt-0.5 text-[11px] text-muted-foreground">
+            Recorded ledger entries
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Direction Segmented Filter Tabs */}
+      <div
+        role="tablist"
+        aria-label="Transaction direction filter"
+        className="flex flex-wrap items-center gap-1.5 border-b border-border/70 pb-3"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={!filterValues.direction}
+          onClick={() => handleDirectionTabChange("")}
+          className={cn(
+            "rounded-full px-3.5 py-1 text-xs font-semibold transition-all",
+            !filterValues.direction
+              ? "bg-[#7A1F3D] text-white shadow-xs"
+              : "bg-surface text-muted-foreground hover:bg-muted border border-border/70"
+          )}
+        >
+          All ({directionCounts.all})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={filterValues.direction === "credit"}
+          onClick={() => handleDirectionTabChange("credit")}
+          className={cn(
+            "rounded-full px-3.5 py-1 text-xs font-semibold transition-all",
+            filterValues.direction === "credit"
+              ? "bg-[#7A1F3D] text-white shadow-xs"
+              : "bg-surface text-muted-foreground hover:bg-muted border border-border/70"
+          )}
+        >
+          Money In (+{directionCounts.credit})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={filterValues.direction === "debit"}
+          onClick={() => handleDirectionTabChange("debit")}
+          className={cn(
+            "rounded-full px-3.5 py-1 text-xs font-semibold transition-all",
+            filterValues.direction === "debit"
+              ? "bg-[#7A1F3D] text-white shadow-xs"
+              : "bg-surface text-muted-foreground hover:bg-muted border border-border/70"
+          )}
+        >
+          Money Out (-{directionCounts.debit})
+        </button>
+      </div>
+
+      {/* 4. Search & Filter Panel */}
+      <Card className="border-border/70 shadow-none">
         <CardContent className="p-4 sm:p-5">
           <FilterPanel
             search={search}
@@ -216,7 +386,7 @@ export function TransactionsView({
         </CardContent>
       </Card>
 
-      {/* Transactions Table (F15.1) */}
+      {/* 5. Transactions Table */}
       <TransactionsTable
         transactions={transactions}
         pagination={pagination}
@@ -232,11 +402,19 @@ export function TransactionsView({
         hasActiveFilters={hasActiveFilters}
       />
 
-      {/* Transaction Detail Modal (F15.2) */}
+      {/* 6. Transaction Detail Modal */}
       <TransactionDetailModal
         transaction={selectedTransaction}
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
+        onViewReceipt={(tx) => setReceiptTransaction(tx)}
+      />
+
+      {/* 7. Printable Transaction Receipt Modal */}
+      <TransactionReceiptModal
+        transaction={receiptTransaction}
+        open={Boolean(receiptTransaction)}
+        onOpenChange={(open) => !open && setReceiptTransaction(null)}
       />
     </div>
   );
@@ -246,7 +424,7 @@ export function TransactionsView({
       <PageContainer>
         <PageHeader
           title="Transaction History"
-          description="Immutable audit ledger of all balance credits, debits, and adjustments."
+          description="Track your wallet activity, payments and financial history."
           action={
             <Button
               variant="outline"

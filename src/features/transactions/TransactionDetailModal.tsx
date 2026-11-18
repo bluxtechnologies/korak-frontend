@@ -15,6 +15,7 @@ export interface TransactionDetailModalProps {
   transaction: TransactionRecord | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onViewReceipt?: (transaction: TransactionRecord) => void;
 }
 
 /**
@@ -25,6 +26,7 @@ export function TransactionDetailModal({
   transaction,
   open,
   onOpenChange,
+  onViewReceipt,
 }: TransactionDetailModalProps) {
   if (!transaction) return null;
 
@@ -46,6 +48,11 @@ export function TransactionDetailModal({
         <TransactionDetailCard
           transaction={transaction}
           className="border-0 shadow-none p-0"
+          onViewReceipt={() => {
+            onOpenChange(false);
+            onViewReceipt?.(transaction);
+          }}
+          onClose={() => onOpenChange(false)}
         />
       </DialogContent>
     </Dialog>

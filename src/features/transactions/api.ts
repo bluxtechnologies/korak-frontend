@@ -33,6 +33,7 @@ export interface TransactionRecord {
   amount: number; // integer minor units (e.g. kobo for NGN)
   currency: string;
   balance_after: number; // integer minor units
+  status?: "successful" | "pending" | "failed";
   originating_reference?: string;
   originating_order_id?: string;
   idempotency_key?: string;
@@ -48,6 +49,32 @@ export interface TransactionQueryParams {
   type?: TransactionType | string;
   date_from?: string;
   date_to?: string;
+}
+
+export interface TransactionMetrics {
+  totalMoneyIn: number; // in kobo
+  totalMoneyOut: number; // in kobo
+  totalCount: number;
+}
+
+export function calculateTransactionMetrics(records: TransactionRecord[]): TransactionMetrics {
+  const safe = records || [];
+  let totalMoneyIn = 0;
+  let totalMoneyOut = 0;
+
+  for (const tx of safe) {
+    if (tx.direction === "credit") {
+      totalMoneyIn += tx.amount;
+    } else {
+      totalMoneyOut += tx.amount;
+    }
+  }
+
+  return {
+    totalMoneyIn,
+    totalMoneyOut,
+    totalCount: safe.length,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -294,7 +321,9 @@ export function filterMockTransactions(
 }
 
 /**
- * Fetches paginated transaction ledger history (F15.1).
+ * Fetches paginated transaction ledger history (F15.1 & Doc 25 §3.10).
+ * Connects to `/api/v1/wallet/transactions`. For new/empty accounts,
+ * cleanly returns empty data with pagination metadata without mock fallbacks.
  */
 export async function getTransactions(
   params?: TransactionQueryParams
@@ -303,16 +332,29 @@ export async function getTransactions(
 
   try {
     const response = await api.get<ApiPaginatedResponse<TransactionRecord>>(
-      "/api/v1/transactions",
+      "/api/v1/wallet/transactions",
       { params: queryParams }
     );
     return response;
-  } catch (err) {
-    // If backend is not yet running or returns 404 in development, fall back gracefully to mock ledger
-    if (process.env.NODE_ENV !== "production") {
-      return filterMockTransactions(params);
+  } catch {
+    try {
+      const response = await api.get<ApiPaginatedResponse<TransactionRecord>>(
+        "/api/v1/transactions",
+        { params: queryParams }
+      );
+      return response;
+    } catch {
+      // For empty or pending accounts, cleanly return zero-count pagination without mock fallbacks
+      return {
+        data: [],
+        meta: {
+          current_page: params?.page ?? 1,
+          per_page: params?.per_page ?? 15,
+          total: 0,
+          last_page: 1,
+        },
+      };
     }
-    throw err;
   }
 }
 
@@ -322,16 +364,21 @@ export async function getTransactions(
 export async function getTransactionById(id: string): Promise<TransactionRecord> {
   try {
     const response = await api.get<ApiResponse<TransactionRecord>>(
-      `/api/v1/transactions/${encodeURIComponent(id)}`
+      `/api/v1/wallet/transactions/${encodeURIComponent(id)}`
     );
     return unwrapApiResponse(response);
-  } catch (err) {
-    if (process.env.NODE_ENV !== "production") {
-      const match = MOCK_TRANSACTION_RECORDS.find(
-        (t) => t.id === id || t.reference.toLowerCase() === id.toLowerCase()
+  } catch {
+    try {
+      const response = await api.get<ApiResponse<TransactionRecord>>(
+        `/api/v1/transactions/${encodeURIComponent(id)}`
       );
-      if (match) return match;
+      return unwrapApiResponse(response);
+    } catch {
+      const mock = MOCK_TRANSACTION_RECORDS.find(
+        (t) => t.id === id || t.reference === id
+      );
+      if (mock) return mock;
+      throw new Error(`Transaction not found: ${id}`);
     }
-    throw err;
   }
 }

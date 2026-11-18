@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
+import { PageContainer } from "@/components/layout/PageContainer";
 import { getOrders } from "@/features/orders/api";
 import { OrdersView } from "@/features/orders/OrdersView";
 
 export const metadata: Metadata = {
-  title: "Orders & Fulfillment | Korak Digitals",
+  title: "Orders | Korak Digitals",
   description:
-    "Review your active telecom data, airtime top-ups, rented virtual phone numbers, OTP verifications, and digital service deliveries.",
+    "View and manage your digital service purchases, airtime, mobile data, and SMS verification orders.",
 };
 
 export default async function OrdersPage() {
@@ -14,8 +15,8 @@ export default async function OrdersPage() {
   const orders = await getOrders();
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <PageContainer>
       <OrdersView initialOrders={orders} />
-    </div>
+    </PageContainer>
   );
 }

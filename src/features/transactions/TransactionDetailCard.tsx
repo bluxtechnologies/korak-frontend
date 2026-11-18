@@ -21,6 +21,8 @@ export interface TransactionDetailCardProps {
   transaction: TransactionRecord;
   className?: string;
   showBackLink?: boolean;
+  onViewReceipt?: () => void;
+  onClose?: () => void;
 }
 
 export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
@@ -49,6 +51,8 @@ export function TransactionDetailCard({
   transaction,
   className,
   showBackLink = false,
+  onViewReceipt,
+  onClose,
 }: TransactionDetailCardProps) {
   const [copied, setCopied] = React.useState(false);
 
@@ -221,13 +225,46 @@ export function TransactionDetailCard({
         </div>
       </CardContent>
 
-      {showBackLink && (
-        <CardFooter className="border-t border-border pt-4">
-          <Button variant="outline" asChild size="sm">
-            <Link href="/transactions">Back to Transactions</Link>
-          </Button>
-        </CardFooter>
-      )}
+      <CardFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between border-t border-border pt-4">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          asChild
+          className="h-9 gap-1.5 rounded-xl border-border/80 text-xs font-medium"
+        >
+          <Link href="/support">Need Help? Contact Support</Link>
+        </Button>
+
+        <div className="flex items-center gap-2">
+          {onViewReceipt && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onViewReceipt}
+              className="h-9 rounded-xl border-border/80 text-xs font-semibold"
+            >
+              View Receipt
+            </Button>
+          )}
+          {onClose && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={onClose}
+              className="h-9 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+            >
+              Close
+            </Button>
+          )}
+          {showBackLink && (
+            <Button variant="outline" asChild size="sm">
+              <Link href="/transactions">Back to Transactions</Link>
+            </Button>
+          )}
+        </div>
+      </CardFooter>
     </Card>
   );
 }
