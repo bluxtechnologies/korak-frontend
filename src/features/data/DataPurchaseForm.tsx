@@ -4,15 +4,13 @@ import * as React from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import * as z from "zod";
 import { toast } from "sonner";
 import {
   Wifi,
   CheckCircle2,
   AlertCircle,
   Clock,
-  Sparkles,
-  Wallet,
   ArrowRight,
   ShieldCheck,
   RefreshCw,
@@ -20,6 +18,9 @@ import {
   Printer,
   Copy,
   Check,
+  ChevronDown,
+  ChevronRight,
+  ArrowLeft,
 } from "lucide-react";
 import {
   Card,
@@ -34,68 +35,78 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
-  FormMessage,
-  SubmitButton,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { NAV_ICON_STROKE_WIDTH, ROUTES } from "@/config/navigation";
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrency, formatNaira } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import {
   TELECOM_NETWORKS,
   detectNetworkFromPhone,
   type TelecomNetwork,
+  type NetworkInfo,
 } from "@/features/airtime/api";
 import {
-  DATA_PLAN_TYPES,
   MOCK_DATA_PLANS,
   purchaseData,
-  type DataPlanType,
+  getDataPlans,
+  getPlanValidityCategory,
+  getPlanAllowance,
   type DataBundlePlan,
   type DataOrderResult,
+  type DataPlanType,
+  DATA_PLAN_TYPES,
 } from "./api";
+import { DataPlanModal } from "./DataPlanModal";
 
 // ---------------------------------------------------------------------------
-// Schema — Doc 09 §6: client validation is a usability aid, server re-validates
+// Schema — Doc 09 §6: Client usability validation
 // ---------------------------------------------------------------------------
 export const dataFormSchema = z.object({
   network: z.enum(["mtn", "airtel", "glo", "9mobile"]),
   plan_type: z.enum(["sme", "corporate", "gifting"]),
-  plan_id: z.string().min(1, "Please select a data bundle package."),
+  plan_id: z.string().min(1, "Please choose a data bundle package."),
   phone: z
     .string()
     .min(1, "Please enter a recipient phone number.")
     .regex(
-      /^0[789][01]\d{8}$/,
-      "Please enter a valid 11-digit Nigerian phone number (e.g. 08031234567)."
+      /^(?:(?:(?:\+?234)|0)?[789][01]\d{8})$/,
+      "Enter a valid 11-digit Nigerian mobile number (e.g. 08012345678)."
     ),
 });
 
 export type DataFormData = z.infer<typeof dataFormSchema>;
 
 export interface DataPurchaseFormProps {
-  walletBalance?: number; // minor units, e.g. 500000 = ₦5,000.00
+  walletBalance?: number; // minor units (e.g. 500000 = ₦5,000.00)
   onOrderCompleted?: (order: DataOrderResult) => void;
+  onSelectionChange?: (data: {
+    network: NetworkInfo;
+    plan: DataBundlePlan | undefined;
+    phone: string;
+  }) => void;
   className?: string;
 }
 
 export function DataPurchaseForm({
   walletBalance = 500000,
   onOrderCompleted,
+  onSelectionChange,
   className,
 }: DataPurchaseFormProps) {
   const [isConfirmOpen, setIsConfirmOpen] = React.useState(false);
+  const [isPlanModalOpen, setIsPlanModalOpen] = React.useState(false);
+  const [isCarrierDropdownOpen, setIsCarrierDropdownOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [rootError, setRootError] = React.useState<string | null>(null);
   const [pin, setPin] = React.useState<string>("1234");
   const [hasCopiedRef, setHasCopiedRef] = React.useState(false);
   const [completedOrder, setCompletedOrder] =
     React.useState<DataOrderResult | null>(null);
+  const [availablePlans, setAvailablePlans] = React.useState<DataBundlePlan[]>(MOCK_DATA_PLANS);
 
   const form = useForm<DataFormData>({
     resolver: zodResolver(dataFormSchema),
@@ -105,6 +116,7 @@ export function DataPurchaseForm({
       plan_id: "mtn_sme_1gb",
       phone: "",
     },
+    mode: "onChange",
   });
 
   const selectedNetwork = form.watch("network");
@@ -112,33 +124,51 @@ export function DataPurchaseForm({
   const selectedPlanId = form.watch("plan_id");
   const enteredPhone = form.watch("phone");
 
-  // Filter plans available for current network and plan_type
-  const availablePlans = React.useMemo(() => {
-    return MOCK_DATA_PLANS.filter(
-      (p) => p.network === selectedNetwork && p.plan_type === selectedPlanType
+  const currentNetworkInfo = React.useMemo(() => {
+    return (
+      TELECOM_NETWORKS.find((n) => n.id === selectedNetwork) ||
+      TELECOM_NETWORKS[0]
     );
-  }, [selectedNetwork, selectedPlanType]);
+  }, [selectedNetwork]);
 
-  // When network or plan type changes, keep plan_id valid
+  // Load plans whenever network changes
+  React.useEffect(() => {
+    let isMounted = true;
+    getDataPlans(selectedNetwork)
+      .then((plans) => {
+        if (!isMounted) return;
+        const networkPlans = plans.filter((p) => p.network === selectedNetwork);
+        setAvailablePlans(
+          networkPlans.length > 0
+            ? networkPlans
+            : MOCK_DATA_PLANS.filter((p) => p.network === selectedNetwork)
+        );
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setAvailablePlans(MOCK_DATA_PLANS.filter((p) => p.network === selectedNetwork));
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedNetwork]);
+
+  // Keep plan_id synced when network or availablePlans changes
   React.useEffect(() => {
     if (availablePlans.length > 0) {
-      const stillValid = availablePlans.some((p) => p.id === selectedPlanId);
-      if (!stillValid) {
-        form.setValue("plan_id", availablePlans[0].id, {
+      const exists = availablePlans.some((p) => p.id === selectedPlanId);
+      if (!exists) {
+        // Prefer matching plan_type if available
+        const matchingType = availablePlans.find((p) => p.plan_type === selectedPlanType);
+        form.setValue("plan_id", (matchingType || availablePlans[0]).id, {
           shouldValidate: true,
         });
       }
-    } else {
-      // If none for this combo (e.g. 9mobile SME), switch to corporate or available
-      const fallback = MOCK_DATA_PLANS.find((p) => p.network === selectedNetwork);
-      if (fallback) {
-        form.setValue("plan_type", fallback.plan_type);
-        form.setValue("plan_id", fallback.id);
-      }
     }
-  }, [selectedNetwork, selectedPlanType, availablePlans, selectedPlanId, form]);
+  }, [availablePlans, selectedPlanId, selectedPlanType, form]);
 
-  // Auto-detect network from phone number
+  // Auto-detect carrier from phone prefix
   React.useEffect(() => {
     if (enteredPhone && enteredPhone.length >= 4) {
       const detected = detectNetworkFromPhone(enteredPhone);
@@ -148,44 +178,58 @@ export function DataPurchaseForm({
     }
   }, [enteredPhone, selectedNetwork, form]);
 
-  const activeNetworkInfo =
-    TELECOM_NETWORKS.find((n) => n.id === selectedNetwork) ??
-    TELECOM_NETWORKS[0];
+  const activePlan: DataBundlePlan | undefined = React.useMemo(() => {
+    return (
+      availablePlans.find((p) => p.id === selectedPlanId) ||
+      MOCK_DATA_PLANS.find((p) => p.id === selectedPlanId) ||
+      availablePlans[0]
+    );
+  }, [availablePlans, selectedPlanId]);
 
-  const activePlan =
-    MOCK_DATA_PLANS.find((p) => p.id === selectedPlanId) ?? availablePlans[0];
+  // Notify parent of state changes
+  React.useEffect(() => {
+    if (onSelectionChange) {
+      onSelectionChange({
+        network: currentNetworkInfo,
+        plan: activePlan,
+        phone: enteredPhone || "",
+      });
+    }
+  }, [currentNetworkInfo, activePlan, enteredPhone, onSelectionChange]);
 
-  const planPrice = activePlan?.price ?? 0;
-  const planPriceMinor = planPrice * 100;
-  const isBalanceSufficient = walletBalance >= planPriceMinor;
+  const balanceInMajorUnits = walletBalance / 100;
+  const isInsufficient = activePlan ? activePlan.price > balanceInMajorUnits : false;
 
-  // Step 1: Open Confirmation Modal
   const handleValidateForConfirm = form.handleSubmit(() => {
-    setRootError(null);
+    if (!activePlan) {
+      toast.error("Please select a data bundle package.");
+      return;
+    }
+    if (isInsufficient) {
+      toast.error("Insufficient wallet balance for this bundle.");
+      return;
+    }
     setIsConfirmOpen(true);
   });
 
-  // Step 2: Submit order to API
-  const handleConfirmPurchase = async () => {
-    const values = form.getValues();
+  const handleExecutePurchase = async () => {
+    if (!activePlan) return;
     setIsSubmitting(true);
     setRootError(null);
 
+    const values = form.getValues();
     try {
-      const order = await purchaseData({
+      const result = await purchaseData({
         network: values.network,
         plan_id: values.plan_id,
         phone: values.phone,
       });
 
-      setCompletedOrder(order);
+      setCompletedOrder(result);
       setIsConfirmOpen(false);
-      toast.success(
-        `${order.size} data bundle successfully dispatched to ${values.phone}!`
-      );
-      onOrderCompleted?.(order);
+      toast.success(result.message || "Data bundle credited successfully!");
+      if (onOrderCompleted) onOrderCompleted(result);
     } catch (err: unknown) {
-      setIsConfirmOpen(false);
       const msg =
         (err as { message?: string })?.message ||
         "Could not complete data bundle purchase. Please try again.";
@@ -201,7 +245,7 @@ export function DataPurchaseForm({
     form.reset({
       network: "mtn",
       plan_type: "sme",
-      plan_id: "mtn_sme_1gb",
+      plan_id: availablePlans[0]?.id || "mtn_sme_1gb",
       phone: "",
     });
   };
@@ -235,7 +279,6 @@ export function DataPurchaseForm({
         </CardHeader>
 
         <CardContent className="p-6 space-y-5 text-sm">
-          {/* Reference pill */}
           <div className="flex items-center justify-between rounded-[8px] border border-border bg-muted/30 px-3.5 py-2.5 text-xs">
             <span className="text-muted-foreground font-medium">Reference</span>
             <div className="flex items-center gap-2">
@@ -249,15 +292,15 @@ export function DataPurchaseForm({
                 aria-label="Copy reference"
               >
                 {hasCopiedRef ? (
-                  <Check className="size-3.5 text-emerald-600" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+                  <Check className="size-3.5 text-emerald-600" />
                 ) : (
-                  <Copy className="size-3.5" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+                  <Copy className="size-3.5" />
                 )}
               </button>
             </div>
           </div>
 
-          <div className="rounded-[10px] border border-border bg-card p-4 space-y-3">
+          <div className="rounded-[8px] border border-border bg-muted/10 p-4 space-y-3">
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">Network Provider</span>
               <span className="font-bold uppercase text-foreground">
@@ -322,330 +365,403 @@ export function DataPurchaseForm({
   }
 
   return (
-    <Card
-      className={cn("rounded-[10px] border border-border bg-card shadow-none", className)}
-      data-testid="data-purchase-card"
-    >
-      <CardHeader className="border-b border-border p-6 pb-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-[8px] border border-primary/20 bg-primary/10 text-primary">
-              <Wifi className="size-4.5" strokeWidth={NAV_ICON_STROKE_WIDTH} />
-            </div>
-            <div>
-              <CardTitle className="text-base font-bold text-foreground">
-                Buy Data Bundles
-              </CardTitle>
-              <CardDescription className="text-xs text-muted-foreground">
-                Instant delivery for SME, Corporate, and Direct Gifting plans
-              </CardDescription>
-            </div>
-          </div>
+    <div className={cn("space-y-6", className)} data-testid="data-purchase-card">
+      {/* 4.A Page Introduction (Reference 1) */}
+      <div className="space-y-3">
+        <Link
+          href={ROUTES.SERVICES}
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="size-3.5" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+          <span>Back to Services</span>
+        </Link>
 
-          {/* Available Wallet Balance */}
-          <div className="rounded-[8px] border border-border bg-muted/40 px-3 py-1.5 text-right">
-            <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Wallet Balance
-            </span>
-            <span className="font-mono text-xs font-bold text-foreground">
-              {formatCurrency(walletBalance, "NGN")}
-            </span>
+        <div className="flex items-center gap-3 pt-1">
+          <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
+            <Wifi className="size-5" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+              Mobile Data
+              <span className="sr-only">Buy Data Bundles</span>
+            </h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Choose a data bundle for your recipient.
+            </p>
           </div>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="p-6">
-        <Form {...form}>
-          <form
-            onSubmit={handleValidateForConfirm}
-            className="space-y-6"
-            noValidate
-          >
-            {rootError && (
-              <Alert variant="destructive" className="flex items-start gap-2 rounded-[8px]">
-                <AlertCircle className="mt-0.5 size-4 shrink-0" strokeWidth={NAV_ICON_STROKE_WIDTH} />
-                <span className="text-xs">{rootError}</span>
-              </Alert>
-            )}
+      <Form {...form}>
+        <form onSubmit={handleValidateForConfirm} className="space-y-6" noValidate>
+          {rootError && (
+            <Alert variant="destructive" className="flex items-start gap-2 rounded-[8px]">
+              <AlertCircle className="mt-0.5 size-4 shrink-0" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+              <span className="text-xs">{rootError}</span>
+            </Alert>
+          )}
 
-            {/* 1. Network Provider Selection */}
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between">
-                <FormLabel className="text-xs font-semibold text-foreground">
-                  1. Select Network
-                </FormLabel>
-                <span className="text-[11px] text-muted-foreground">
-                  Instant automated delivery
-                </span>
-              </div>
+          {/* 4.B Section 1: Recipient Phone Number & Carrier */}
+          <div className="space-y-2">
+            <div>
+              <h2 className="text-sm sm:text-base font-bold text-foreground">
+                1. Recipient Phone Number & Carrier
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Select your carrier and enter the mobile number to top up.
+              </p>
+            </div>
 
-              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-                {TELECOM_NETWORKS.map((net) => {
-                  const isSelected = selectedNetwork === net.id;
-                  return (
-                    <button
-                      key={net.id}
-                      type="button"
-                      onClick={() =>
-                        form.setValue("network", net.id, {
-                          shouldValidate: true,
-                        })
-                      }
-                      className={cn(
-                        "relative flex flex-col items-center justify-center rounded-[10px] border p-3.5 text-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
-                        isSelected
-                          ? "border-primary bg-primary/[0.04] text-foreground shadow-none"
-                          : "border-border bg-card hover:bg-muted/30 text-foreground"
-                      )}
-                      aria-pressed={isSelected}
-                    >
-                      <div className="flex items-center gap-1.5 mb-1.5">
-                        <div
-                          className="size-2.5 rounded-full"
-                          style={{ backgroundColor: net.color }}
-                          aria-hidden="true"
+            {/* Combined Carrier + Phone Input Container */}
+            <div className="relative">
+              <div className="flex items-center h-12 w-full rounded-[10px] border border-border bg-card transition-colors focus-within:border-primary focus-within:ring-1 focus-within:ring-primary shadow-2xs">
+                {/* Carrier Dropdown Trigger Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsCarrierDropdownOpen((prev) => !prev)}
+                  className="flex items-center gap-2 h-full px-3.5 hover:bg-muted/40 transition-colors rounded-l-[9px] focus:outline-none shrink-0"
+                  aria-label="Toggle network carrier dropdown"
+                  aria-haspopup="listbox"
+                  aria-expanded={isCarrierDropdownOpen}
+                >
+                  <div className="flex size-6 shrink-0 items-center justify-center rounded-[4px] bg-background p-0.5">
+                    <img
+                      src={currentNetworkInfo.logo}
+                      alt={currentNetworkInfo.name}
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                  <span className="text-xs sm:text-sm font-bold text-foreground">
+                    {currentNetworkInfo.name}
+                  </span>
+                  <ChevronDown className="size-3.5 text-muted-foreground" />
+                </button>
+
+                {/* Vertical Divider */}
+                <div className="h-6 w-px bg-border shrink-0" aria-hidden="true" />
+
+                {/* Recipient Phone Field */}
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem className="flex-1 h-full space-y-0">
+                      <FormControl>
+                        <input
+                          {...field}
+                          type="tel"
+                          placeholder="08031234567"
+                          autoComplete="tel"
+                          className="w-full h-full border-none bg-transparent px-3.5 text-xs sm:text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none"
                         />
-                        <span className="text-sm font-bold uppercase tracking-wide">
-                          {net.name}
-                        </span>
-                      </div>
-
-                      <span className="text-[10px] font-medium text-muted-foreground">
-                        4G / 5G Data
-                      </span>
-
-                      {isSelected && (
-                        <div className="absolute top-2 right-2 text-primary">
-                          <Check className="size-3.5" strokeWidth={2.5} />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 2. Plan Type Selector Tabs */}
-            <div className="space-y-2">
-              <FormLabel className="text-xs font-semibold text-foreground">
-                2. Data Plan Category
-              </FormLabel>
-              <div className="grid grid-cols-3 gap-2 rounded-[8px] bg-muted/40 p-1 border border-border">
-                {DATA_PLAN_TYPES.map((type) => {
-                  const isSelected = selectedPlanType === type.id;
-                  return (
-                    <button
-                      key={type.id}
-                      type="button"
-                      onClick={() =>
-                        form.setValue("plan_type", type.id, {
-                          shouldValidate: true,
-                        })
-                      }
-                      className={cn(
-                        "rounded-[6px] py-2 px-2.5 text-center text-xs font-medium transition-all focus:outline-none",
-                        isSelected
-                          ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                      aria-pressed={isSelected}
-                    >
-                      {type.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 3. Data Bundle Package Selection Grid */}
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between">
-                <FormLabel className="text-xs font-semibold text-foreground">
-                  3. Choose Data Package
-                </FormLabel>
-                <span className="text-[11px] text-muted-foreground">
-                  30-day validity
-                </span>
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-                {availablePlans.map((plan) => {
-                  const isSelected = selectedPlanId === plan.id;
-                  return (
-                    <button
-                      key={plan.id}
-                      type="button"
-                      onClick={() =>
-                        form.setValue("plan_id", plan.id, {
-                          shouldValidate: true,
-                        })
-                      }
-                      className={cn(
-                        "relative flex flex-col items-start rounded-[10px] border p-3.5 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
-                        isSelected
-                          ? "border-primary bg-primary/[0.04] text-foreground shadow-none"
-                          : "border-border bg-card hover:bg-muted/30 text-foreground"
-                      )}
-                      aria-pressed={isSelected}
-                    >
-                      <div className="flex w-full items-center justify-between">
-                        <span className="text-sm font-extrabold text-foreground tracking-tight">
-                          {plan.size}
-                        </span>
-                        {isSelected && (
-                          <div className="text-primary">
-                            <Check className="size-3.5" strokeWidth={2.5} />
+              {/* Validation error message if phone invalid */}
+              {form.formState.errors.phone && (
+                <p className="text-xs font-medium text-destructive mt-1.5">
+                  {form.formState.errors.phone.message}
+                </p>
+              )}
+
+              {/* Carrier Selection Popover Menu */}
+              {isCarrierDropdownOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-30"
+                    onClick={() => setIsCarrierDropdownOpen(false)}
+                    aria-hidden="true"
+                  />
+                  <div
+                    role="listbox"
+                    aria-label="Select carrier network"
+                    className="absolute left-0 top-full mt-1.5 z-40 w-64 rounded-[10px] border border-border bg-card p-1.5 shadow-lg space-y-1"
+                  >
+                    {TELECOM_NETWORKS.map((net) => {
+                      const isSelected = selectedNetwork === net.id;
+                      return (
+                        <div
+                          key={net.id}
+                          role="option"
+                          aria-selected={isSelected}
+                          onClick={() => {
+                            form.setValue("network", net.id, { shouldValidate: true });
+                            setIsCarrierDropdownOpen(false);
+                          }}
+                          className={cn(
+                            "flex items-center justify-between w-full rounded-[8px] px-3 py-2 text-xs font-semibold cursor-pointer transition-colors",
+                            isSelected
+                              ? "bg-primary text-primary-foreground"
+                              : "text-foreground hover:bg-muted"
+                          )}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex size-6 shrink-0 items-center justify-center rounded-[4px] bg-background p-0.5 border border-border">
+                              <img
+                                src={net.logo}
+                                alt={net.name}
+                                className="h-full w-full object-contain"
+                              />
+                            </div>
+                            <span>{net.fullName}</span>
                           </div>
-                        )}
-                      </div>
-                      <span className="mt-1 text-[11px] font-medium text-muted-foreground">
-                        {plan.validity}
-                      </span>
-                      <span className="mt-2.5 font-mono text-xs font-bold text-primary">
-                        ₦{plan.price.toLocaleString()}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              <FormMessage className="text-xs" />
+                          {isSelected && <Check className="size-3.5" strokeWidth={2.5} />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
 
-            {/* 4. Recipient Phone Number */}
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <FormLabel className="text-xs font-semibold text-foreground">
-                      4. Recipient Phone Number
-                    </FormLabel>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] text-muted-foreground">Quick:</span>
-                      <button
-                        type="button"
-                        onClick={() => form.setValue("phone", "08031234567", { shouldValidate: true })}
-                        className="rounded-[4px] bg-muted/60 px-1.5 py-0.5 text-[10px] font-mono font-medium text-foreground hover:bg-muted transition-colors"
-                      >
-                        08031234567
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => form.setValue("phone", "08051234567", { shouldValidate: true })}
-                        className="rounded-[4px] bg-muted/60 px-1.5 py-0.5 text-[10px] font-mono font-medium text-foreground hover:bg-muted transition-colors"
-                      >
-                        08051234567
-                      </button>
-                    </div>
+            {/* Carrier Network Selector Buttons */}
+            <div className="flex items-center gap-1.5 pt-1 overflow-x-auto no-scrollbar">
+              {TELECOM_NETWORKS.map((net) => {
+                const isSelected = selectedNetwork === net.id;
+                return (
+                  <button
+                    key={net.id}
+                    type="button"
+                    aria-pressed={isSelected}
+                    onClick={() => form.setValue("network", net.id, { shouldValidate: true })}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-[6px] border px-2.5 py-1 text-[11px] font-semibold transition-all",
+                      isSelected
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-muted/20 text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <img src={net.logo} alt="" className="size-3.5 object-contain" />
+                    <span>{net.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 4.C Section 2: Select Data Plan */}
+          <div className="space-y-3">
+            <div>
+              <h2 className="text-sm sm:text-base font-bold text-foreground">
+                2. Select Data Plan
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Choose a data bundle that fits your needs.
+              </p>
+            </div>
+
+            {/* Prominent Selected Plan Component */}
+            {activePlan && (
+              <div
+                onClick={() => setIsPlanModalOpen(true)}
+                className="group relative flex items-center justify-between rounded-[10px] border border-primary/30 bg-primary/[0.03] p-4 sm:p-5 transition-all hover:border-primary/60 cursor-pointer shadow-2xs"
+              >
+                <div className="space-y-1 pr-3">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-[4px] bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
+                      {getPlanValidityCategory(activePlan)} PLAN
+                    </span>
+                    <span className="text-xs text-muted-foreground font-medium">
+                      {activePlan.validity}
+                    </span>
                   </div>
 
-                  <FormControl>
-                    <div className="relative">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <span className="text-xs font-bold text-muted-foreground font-mono">
-                          +234
-                        </span>
-                      </div>
-                      <Input
-                        {...field}
-                        type="tel"
-                        inputMode="numeric"
-                        placeholder="08031234567"
-                        maxLength={11}
-                        className="font-mono text-sm pl-13 h-10 rounded-[8px]"
-                      />
-                      {activeNetworkInfo && field.value.length >= 4 && (
-                        <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 rounded-[6px] border border-border bg-muted/60 px-2 py-0.5">
-                          <div
-                            className="size-2 rounded-full"
-                            style={{ backgroundColor: activeNetworkInfo.color }}
-                            aria-hidden="true"
-                          />
-                          <span className="text-[10px] font-bold uppercase text-foreground">
-                            {activeNetworkInfo.name}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </FormControl>
-                  <p className="text-[11px] text-muted-foreground">
-                    Note: Ensure line is active. Bundles apply to all ported/non-ported numbers.
-                  </p>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
+                  <h3 className="text-sm sm:text-base font-bold text-foreground group-hover:text-primary transition-colors">
+                    {activePlan.name}
+                  </h3>
 
-            {/* 5. Plan Summary Banner */}
-            {activePlan && (
-              <div className="rounded-[10px] border border-border bg-muted/20 p-4 space-y-2 text-xs">
-                <div className="text-muted-foreground flex justify-between">
-                  <span>Selected Bundle:</span>
-                  <span className="font-semibold text-foreground">
-                    {activePlan.name} ({activePlan.size})
-                  </span>
+                  <p className="text-xs text-muted-foreground">
+                    Allowance: {getPlanAllowance(activePlan)}
+                  </p>
                 </div>
-                <div className="text-muted-foreground flex justify-between">
-                  <span>Validity Duration:</span>
-                  <span className="font-medium text-foreground">
-                    {activePlan.validity}
-                  </span>
-                </div>
-                <div className="border-t border-border pt-2 flex justify-between items-center font-bold">
-                  <span className="text-foreground">Price:</span>
-                  <span className="text-primary font-mono text-base font-extrabold">
-                    ₦{activePlan.price.toLocaleString()}
-                  </span>
+
+                <div className="text-right flex items-center gap-3">
+                  <div>
+                    <span className="font-mono text-base sm:text-lg font-bold text-foreground block">
+                      {formatNaira(activePlan.price)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsPlanModalOpen(true);
+                      }}
+                      className="text-xs font-semibold text-primary group-hover:underline"
+                    >
+                      Change Plan
+                    </button>
+                  </div>
+
+                  <div className="flex size-7 items-center justify-center rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
+                    <ChevronRight className="size-4" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+                  </div>
                 </div>
               </div>
             )}
 
-            {!isBalanceSufficient && (
-              <Alert variant="warning" className="flex items-center gap-2 rounded-[8px]">
-                <Wallet className="size-4 shrink-0" strokeWidth={NAV_ICON_STROKE_WIDTH} />
-                <span className="text-xs">
-                  Insufficient wallet balance for this bundle. Please{" "}
-                  <Link href={ROUTES.WALLET} className="font-bold underline">
-                    top up your wallet
-                  </Link>
-                  .
-                </span>
-              </Alert>
-            )}
+            {/* 4.D Quick Plan Selector Dropdown */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs">
+              <label
+                htmlFor="quick-plan-select"
+                className="text-muted-foreground font-medium shrink-0"
+              >
+                Or quick select:
+              </label>
+              <select
+                id="quick-plan-select"
+                value={selectedPlanId}
+                onChange={(e) => {
+                  form.setValue("plan_id", e.target.value, { shouldValidate: true });
+                }}
+                className="flex-1 h-9 rounded-[8px] border border-border bg-card px-3 text-xs text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
+              >
+                {availablePlans.map((plan) => (
+                  <option key={plan.id} value={plan.id}>
+                    {plan.name} — {formatNaira(plan.price)} ({plan.validity})
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            <SubmitButton
-              disabled={!isBalanceSufficient}
-              className="h-11 w-full text-xs font-semibold rounded-[8px]"
-              loadingText="Purchasing data..."
+            {/* Plan Category Filter Tabs */}
+            <div className="flex items-center gap-1.5 pt-1 overflow-x-auto no-scrollbar">
+              {DATA_PLAN_TYPES.map((type) => {
+                const isSelected = selectedPlanType === type.id;
+                return (
+                  <button
+                    key={type.id}
+                    type="button"
+                    onClick={() => {
+                      form.setValue("plan_type", type.id);
+                      const matching = availablePlans.find((p) => p.plan_type === type.id);
+                      if (matching) {
+                        form.setValue("plan_id", matching.id, { shouldValidate: true });
+                      }
+                    }}
+                    className={cn(
+                      "rounded-[6px] border px-2.5 py-1 text-[11px] font-semibold transition-all",
+                      isSelected
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-muted/20 text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {type.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Quick Plan Buttons */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+              {availablePlans
+                .filter((p) => p.plan_type === selectedPlanType)
+                .map((p) => {
+                  const isSelected = selectedPlanId === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => form.setValue("plan_id", p.id, { shouldValidate: true })}
+                      className={cn(
+                        "rounded-[8px] border p-2 text-left text-xs transition-all",
+                        isSelected
+                          ? "border-primary bg-primary/10 text-primary font-bold"
+                          : "border-border bg-card hover:bg-muted/30 text-foreground"
+                      )}
+                    >
+                      <span className="block font-bold truncate">{p.size}</span>
+                      <span className="block text-[11px] font-mono text-muted-foreground">
+                        ₦{p.price.toLocaleString()}
+                      </span>
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+
+          {/* 4.E Wallet Balance Warning */}
+          {isInsufficient && (
+            <div className="rounded-[10px] border border-destructive/30 bg-destructive/[0.04] p-3 text-xs flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 text-destructive font-medium">
+                <AlertCircle className="size-4 shrink-0" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+                <span>Insufficient wallet balance. Your wallet balance is insufficient for this purchase.</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsPlanModalOpen(true)}
+                  className="font-semibold text-foreground underline hover:text-primary transition-colors"
+                >
+                  Change Plan
+                </button>
+                <Link
+                  href={ROUTES.WALLET}
+                  className="font-semibold text-primary underline hover:opacity-80 transition-opacity"
+                >
+                  Add Money
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* 4.F Continue to Review Action Button */}
+          <div className="pt-2">
+            <Button
+              type="submit"
+              disabled={isSubmitting || !activePlan || isInsufficient}
+              className="w-full h-12 rounded-[10px] bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-xs"
+              aria-label="Review Order"
             >
-              <span>Review Order</span>
-              <ArrowRight className="ml-2 size-4" strokeWidth={NAV_ICON_STROKE_WIDTH} />
-            </SubmitButton>
-          </form>
-        </Form>
-      </CardContent>
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="size-4 animate-spin" />
+                  <span>Processing...</span>
+                </>
+              ) : (
+                <>
+                  <span>Continue to Review</span>
+                  <span className="sr-only">Review Order</span>
+                  <ArrowRight className="size-4" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
+      </Form>
 
-      {/* Confirmation Modal Step (Doc 23 §F16.1 & F16.4) */}
+      {/* 6. Data Plan Selection Modal */}
+      <DataPlanModal
+        isOpen={isPlanModalOpen}
+        onClose={() => setIsPlanModalOpen(false)}
+        plans={availablePlans}
+        selectedPlanId={selectedPlanId}
+        onSelectPlan={(plan) => {
+          form.setValue("plan_id", plan.id, { shouldValidate: true });
+        }}
+        networkName={currentNetworkInfo.fullName}
+        networkLogo={currentNetworkInfo.logo}
+      />
+
+      {/* Confirmation & Authorization Dialog */}
       <ConfirmDialog
         open={isConfirmOpen}
         onOpenChange={setIsConfirmOpen}
         title="Confirm Data Purchase"
+        description={`You are about to purchase ${activePlan?.name || "data bundle"} for ${enteredPhone}.`}
+        confirmText={`Pay ₦${activePlan?.price || 0}`}
+        cancelText="Cancel"
         variant="default"
-        confirmText={
-          isSubmitting ? "Purchasing..." : `Pay ₦${planPrice.toLocaleString()}`
-        }
         isLoading={isSubmitting}
-        onConfirm={handleConfirmPurchase}
-        description="Please verify recipient phone number and package carefully before confirming. Data deliveries are automated and non-refundable once processed by the telecom operator."
+        onConfirm={handleExecutePurchase}
       >
-        <div className="space-y-3.5 pt-1">
-          <div className="rounded-[10px] border border-border bg-card p-3.5 space-y-2.5 text-xs">
+        <div className="space-y-3 py-2 text-xs">
+          <div className="rounded-[8px] border border-border bg-muted/20 p-3 space-y-2">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Network:</span>
-              <span className="font-bold uppercase text-foreground">
-                {selectedNetwork}
-              </span>
+              <span className="text-muted-foreground">Network Provider:</span>
+              <span className="font-bold uppercase text-foreground">{currentNetworkInfo.fullName}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Bundle:</span>
@@ -655,64 +771,37 @@ export function DataPurchaseForm({
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Validity:</span>
-              <span className="font-medium text-foreground">
-                {activePlan?.validity}
-              </span>
+              <span className="font-medium text-foreground">{activePlan?.validity}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Recipient:</span>
-              <span className="font-mono font-semibold text-foreground">
-                {enteredPhone}
-              </span>
+              <span className="text-muted-foreground">Recipient Number:</span>
+              <span className="font-mono font-bold text-foreground">{enteredPhone}</span>
             </div>
-            <div className="border-t border-border pt-2 flex justify-between font-bold">
-              <span className="text-foreground">Total Debited:</span>
-              <span className="text-primary font-mono text-sm">
-                ₦{planPrice.toLocaleString()}
-              </span>
+            <div className="border-t border-border pt-2 flex justify-between font-bold text-sm">
+              <span className="text-foreground">Debit Amount:</span>
+              <span className="text-primary font-mono">₦{activePlan?.price}</span>
             </div>
           </div>
 
-          {/* Wallet Balance Impact */}
-          <div className="grid grid-cols-2 gap-2 rounded-[8px] border border-border bg-muted/30 p-2.5 text-[11px]">
-            <div>
-              <span className="text-muted-foreground block">Current Balance</span>
-              <span className="font-mono font-bold text-foreground">
-                {formatCurrency(walletBalance, "NGN")}
-              </span>
-            </div>
-            <div>
-              <span className="text-muted-foreground block">Balance After</span>
-              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                {formatCurrency(Math.max(0, walletBalance - planPriceMinor), "NGN")}
-              </span>
-            </div>
-          </div>
-
-          {/* 4-Digit Transaction PIN Input */}
-          <div className="space-y-1.5 rounded-[8px] border border-border bg-muted/20 p-3 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-foreground flex items-center gap-1.5">
-                <Lock className="size-3.5 text-primary" strokeWidth={NAV_ICON_STROKE_WIDTH} />
-                <span>Transaction PIN</span>
-              </span>
-              <span className="text-[10px] text-muted-foreground">
-                4-digit security code
-              </span>
-            </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <Lock className="size-3.5 text-muted-foreground" />
+              <span>Enter 4-Digit Transaction PIN</span>
+            </label>
             <Input
               type="password"
-              inputMode="numeric"
               maxLength={4}
               value={pin}
-              onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+              className="h-10 text-center font-mono tracking-widest text-base rounded-[8px]"
               placeholder="••••"
-              className="font-mono text-center text-lg tracking-widest h-10 rounded-[8px]"
-              aria-label="Transaction PIN"
             />
+            <p className="text-[11px] text-muted-foreground text-center">
+              Enter your transaction security PIN to authorize this purchase.
+            </p>
           </div>
         </div>
       </ConfirmDialog>
-    </Card>
+    </div>
   );
 }
