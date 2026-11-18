@@ -4,8 +4,8 @@ import { connection } from "next/server";
 import { serverApi } from "@/lib/api/server";
 import { unwrapApiResponse } from "@/lib/api/errors";
 import { ApiClientError } from "@/lib/api/client";
-import type { ApiResponse } from "@/lib/api/types";
-import { type AuthUser, MOCK_AUTH_USER } from "./api";
+import type { ApiResponse, CustomerProfile } from "@/lib/api/types";
+import { type AuthUser, MOCK_AUTH_USER, resolveRealName } from "./api";
 import { ROUTES } from "@/config/navigation";
 
 function isPublicAuthPath(pathname: string): boolean {
@@ -71,7 +71,31 @@ export async function requireAuthUser(intendedPath?: string): Promise<AuthUser> 
 
   try {
     const raw = await serverApi.get<ApiResponse<AuthUser>>("/api/v1/auth/me");
-    return unwrapApiResponse(raw);
+    const user = unwrapApiResponse(raw);
+
+    // If user's name is missing or identical to username, query /api/v1/profile to resolve real user name
+    const resolved = resolveRealName(user);
+    if (!resolved || (user.username && resolved.toLowerCase() === user.username.toLowerCase())) {
+      try {
+        const profileRaw = await serverApi.get<ApiResponse<CustomerProfile>>("/api/v1/profile");
+        const profile = unwrapApiResponse(profileRaw);
+        if (profile) {
+          user.first_name = profile.first_name ?? user.first_name;
+          user.last_name = profile.last_name ?? user.last_name;
+          user.full_name = profile.full_name ?? user.full_name;
+          const profileResolved = resolveRealName(profile);
+          if (profileResolved) {
+            user.name = profileResolved;
+          }
+        }
+      } catch {
+        // Non-blocking: retain existing session user if profile call fails
+      }
+    } else {
+      user.name = resolved;
+    }
+
+    return user;
   } catch (error) {
     if (isNextRedirectError(error)) {
       throw error;

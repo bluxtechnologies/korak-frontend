@@ -19,7 +19,17 @@ export interface LoginPayload {
 
 export interface RegisterPayload {
   name: string;
-  username: string;
+  /**
+   * @backend-handoff
+   * The registration form collects `phone_number` (not `username`).
+   * The API must accept `phone_number` as a unique identifier for the user.
+   * Endpoint: POST /auth/register
+   * Expected field: `phone_number` (string, E.164 or local format with country code)
+   * The backend should NOT require a `username` field on registration —
+   * if a username is auto-generated server-side, that is fine, but the
+   * client will not send one.
+   */
+  phone_number: string;
   email: string;
   password: string;
   password_confirmation: string;
@@ -33,6 +43,77 @@ export interface AuthUser {
   email: string;
   email_verified_at: string | null;
   created_at: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  full_name?: string | null;
+}
+
+/**
+ * Resolves the customer's actual display name (real user name, NOT username).
+ *
+ * Checks in order:
+ * 1. full_name (if not identical to username)
+ * 2. Combined [first_name, last_name] (if not identical to username)
+ * 3. first_name (if not identical to username)
+ * 4. name (if not identical to username)
+ * 5. fallbackName (if provided and not identical to username)
+ * 6. Only if no actual name exists anywhere does it return username or fallback
+ */
+export function resolveRealName(
+  user?: {
+    name?: string | null;
+    username?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+    full_name?: string | null;
+  } | null,
+  fallbackName?: string
+): string {
+  if (!user) return fallbackName || "";
+
+  const username = user.username?.trim();
+
+  // 1. full_name
+  if (user.full_name?.trim()) {
+    const fullName = user.full_name.trim();
+    if (!username || fullName.toLowerCase() !== username.toLowerCase()) {
+      return fullName;
+    }
+  }
+
+  // 2. Combined first_name and last_name
+  const first = user.first_name?.trim();
+  const last = user.last_name?.trim();
+  const combined = [first, last].filter(Boolean).join(" ");
+  if (combined) {
+    if (!username || combined.toLowerCase() !== username.toLowerCase()) {
+      return combined;
+    }
+  }
+
+  // 3. first_name
+  if (first && (!username || first.toLowerCase() !== username.toLowerCase())) {
+    return first;
+  }
+
+  // 4. name
+  if (user.name?.trim()) {
+    const name = user.name.trim();
+    if (!username || name.toLowerCase() !== username.toLowerCase()) {
+      return name;
+    }
+  }
+
+  // 5. fallbackName if provided and distinct from username
+  if (fallbackName?.trim()) {
+    const fallback = fallbackName.trim();
+    if (!username || fallback.toLowerCase() !== username.toLowerCase()) {
+      return fallback;
+    }
+  }
+
+  // 6. Last resort
+  return fallbackName || user.name || username || "";
 }
 
 export const MOCK_AUTH_USER: AuthUser = {
@@ -124,8 +205,9 @@ export async function login(
 
   const rawUser = unwrapped?.user;
   const user: AuthUser = (rawUser && typeof rawUser === "object" ? rawUser : unwrapped) as unknown as AuthUser;
-  if (user && !user.name) {
-    user.name = user.username;
+  if (user) {
+    const resolved = resolveRealName(user);
+    user.name = resolved || user.name || user.username;
   }
 
   return {
@@ -148,7 +230,7 @@ export async function register(
     "/api/v1/auth/register",
     {
       name: payload.name,
-      username: payload.username,
+      phone_number: payload.phone_number,
       email: payload.email,
       password: payload.password,
       password_confirmation: payload.password_confirmation,
@@ -160,7 +242,7 @@ export async function register(
   try {
     // Automatically log in to establish the session cookie and handle device verification
     return await login({
-      login: payload.username || payload.email,
+      login: payload.phone_number || payload.email,
       password: payload.password,
     });
   } catch {
@@ -189,7 +271,10 @@ export async function register(
 export async function getMe(): Promise<AuthUser> {
   const raw = await api.get<ApiResponse<AuthUser>>("/api/v1/auth/me");
   const user = unwrapApiResponse(raw);
-  if (!user.name) {
+  const resolved = resolveRealName(user);
+  if (resolved) {
+    user.name = resolved;
+  } else if (!user.name) {
     user.name = user.username;
   }
   return user;

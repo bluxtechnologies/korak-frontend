@@ -5,6 +5,7 @@
 import { api } from "@/lib/api";
 import { unwrapApiResponse } from "@/lib/api/errors";
 import type { ApiResponse } from "@/lib/api/types";
+import { resolveRealName } from "@/features/auth/api";
 
 // ---------------------------------------------------------------------------
 // Types & Interfaces (F13)
@@ -86,11 +87,17 @@ export async function getProfile(): Promise<UserProfile> {
     unwrapped?.user && typeof unwrapped.user === "object"
       ? unwrapped.user
       : unwrapped
-  ) as unknown as Partial<UserProfile>;
+  ) as unknown as Partial<UserProfile> & {
+    first_name?: string | null;
+    last_name?: string | null;
+    full_name?: string | null;
+  };
+
+  const resolvedName = resolveRealName(rawProfile);
 
   return {
     id: String(rawProfile?.id ?? ""),
-    name: rawProfile?.name || rawProfile?.username || "",
+    name: resolvedName || rawProfile?.name || rawProfile?.username || "",
     username: rawProfile?.username || "",
     email: rawProfile?.email || "",
     phone: rawProfile?.phone ?? "",

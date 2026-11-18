@@ -3,7 +3,17 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { OverviewView } from "./OverviewView";
 import * as overviewApi from "./api";
+import { customerApi } from "@/lib/api/customer";
 import { ApiClientError } from "@/lib/api/client";
+
+vi.mock("@/lib/api/customer", () => ({
+  customerApi: {
+    getProfile: vi.fn().mockResolvedValue(null),
+    getWallet: vi.fn(),
+    getTransactions: vi.fn(),
+    getBillHistory: vi.fn(),
+  },
+}));
 
 vi.mock("./api", async (importOriginal) => {
   const actual = await importOriginal<typeof overviewApi>();
@@ -83,5 +93,47 @@ describe("OverviewView (F12)", () => {
     });
 
     expect(screen.getByText("No transactions yet")).toBeInTheDocument();
+  });
+
+  it("displays real customer name dynamically in the greeting banner instead of username", () => {
+    const dataWithUser: overviewApi.OverviewData = {
+      ...overviewApi.MOCK_OVERVIEW_DATA,
+      user: {
+        name: "Obaseki Collins",
+        first_name: "Obaseki",
+        last_name: "Collins",
+        full_name: "Obaseki Collins",
+        username: "victoriousking35",
+      },
+    };
+
+    render(<OverviewView initialData={dataWithUser} />);
+
+    // Verify real name is displayed, and raw username is not displayed in the greeting
+    expect(screen.getByText(/Obaseki Collins/)).toBeInTheDocument();
+    expect(screen.queryByText(/victoriousking35/)).not.toBeInTheDocument();
+  });
+
+  it("dynamically resolves real name from customer profile if user data is initially missing or equals username", async () => {
+    vi.mocked(customerApi.getProfile).mockResolvedValueOnce({
+      id: "usr_01",
+      username: "victoriousking35",
+      first_name: "Obaseki",
+      last_name: "Collins",
+      full_name: "Obaseki Collins",
+      phone: "08012345678",
+      email: "victoriousking35@gmail.com",
+      email_verified_at: "2026-11-01T00:00:00Z",
+      has_virtual_account: true,
+      virtual_account: null,
+      created_at: "2026-11-01T00:00:00Z",
+    });
+
+    render(<OverviewView initialData={overviewApi.MOCK_EMPTY_OVERVIEW_DATA} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Obaseki Collins/)).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/victoriousking35/)).not.toBeInTheDocument();
   });
 });

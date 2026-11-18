@@ -4,6 +4,8 @@ import * as React from "react";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { getSafeErrorMessage } from "@/lib/api/errors";
 import { useAuthUser } from "@/components/layout/DashboardShell";
+import { resolveRealName } from "@/features/auth/api";
+import { customerApi } from "@/lib/api/customer";
 import { WalletSummaryCard } from "./WalletSummaryCard";
 import { NeedHelpCard } from "./NeedHelpCard";
 import { QuickServiceShortcuts } from "./QuickServiceShortcuts";
@@ -40,7 +42,7 @@ function getGreeting(): string {
  */
 export function OverviewView({
   initialData,
-  enableFallbackMock = true,
+  enableFallbackMock = false,
 }: OverviewViewProps) {
   const [data, setData] = React.useState<OverviewData | null>(
     initialData ?? null
@@ -49,29 +51,48 @@ export function OverviewView({
   const [error, setError] = React.useState<unknown | null>(null);
   const [isRetrying, setIsRetrying] = React.useState<boolean>(false);
 
-  // Safely extract authenticated customer name for greeting banner
-  let userFirstName = "there";
+  // Safely extract authenticated customer name for greeting banner, strictly prioritizing real user name over username
+  let initialCustomerName = "";
+  let currentUsername = "";
   try {
     const currentUser = useAuthUser();
-    if (currentUser?.name) {
-      userFirstName = currentUser.name.trim().split(/\s+/)[0];
-    } else if (currentUser?.username) {
-      userFirstName = currentUser.username;
+    currentUsername = currentUser?.username?.trim() || "";
+    const resolved = resolveRealName(currentUser);
+    if (resolved && (!currentUsername || resolved.toLowerCase() !== currentUsername.toLowerCase())) {
+      initialCustomerName = resolved;
     }
   } catch {
-    userFirstName = "there";
+    initialCustomerName = "";
   }
+
+  const [customerName, setCustomerName] = React.useState<string>(() => {
+    if (initialCustomerName) return initialCustomerName;
+    if (initialData?.user) {
+      const resolved = resolveRealName(initialData.user);
+      if (resolved && (!initialData.user.username || resolved.toLowerCase() !== initialData.user.username.toLowerCase())) {
+        return resolved;
+      }
+    }
+    return "";
+  });
 
   const greeting = getGreeting();
 
+  // 1. Fetch overview aggregated data
   React.useEffect(() => {
     let ignore = false;
 
     if (!initialData) {
       getOverviewData()
         .then((response) => {
-          if (!ignore) {
+          if (!ignore && response) {
             setData(response);
+            if (response.user) {
+              const resolved = resolveRealName(response.user);
+              if (resolved && (!response.user.username || resolved.toLowerCase() !== response.user.username.toLowerCase())) {
+                setCustomerName(resolved);
+              }
+            }
             setIsLoading(false);
           }
         })
@@ -95,6 +116,31 @@ export function OverviewView({
       ignore = true;
     };
   }, [initialData, enableFallbackMock]);
+
+  // 2. Dynamically fetch profile if real customer name (first/last/full name) is not yet resolved
+  React.useEffect(() => {
+    let ignore = false;
+
+    if (!initialCustomerName || (currentUsername && initialCustomerName.toLowerCase() === currentUsername.toLowerCase())) {
+      customerApi
+        .getProfile()
+        .then((profile) => {
+          if (!ignore && profile) {
+            const resolved = resolveRealName(profile);
+            if (resolved && (!profile.username || resolved.toLowerCase() !== profile.username.toLowerCase())) {
+              setCustomerName(resolved);
+            }
+          }
+        })
+        .catch(() => {
+          // Non-blocking: fail gracefully if offline or unauthenticated
+        });
+    }
+
+    return () => {
+      ignore = true;
+    };
+  }, [initialCustomerName, currentUsername]);
 
   const handleRetry = () => {
     setIsRetrying(true);
@@ -145,6 +191,8 @@ export function OverviewView({
     return null;
   }
 
+  const displayName = customerName.trim() || "there";
+
   return (
     <div
       className="mx-auto max-w-7xl space-y-6 sm:space-y-8"
@@ -154,7 +202,7 @@ export function OverviewView({
       <div className="space-y-1">
         <h1 className="text-foreground flex items-center gap-1.5 text-xl font-semibold tracking-tight sm:text-2xl">
           <span>
-            {greeting}, {userFirstName}
+            {greeting}, {displayName}
           </span>
           <span aria-hidden="true">👋</span>
         </h1>
