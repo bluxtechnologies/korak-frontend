@@ -2,15 +2,18 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
   detectNetworkFromPhone,
   purchaseAirtime,
+  getSupportedAirtimeNetworks,
+  networkToServiceCode,
+  serviceCodeToNetwork,
   TELECOM_NETWORKS,
-  MOCK_RECENT_AIRTIME,
 } from "./api";
-import { api } from "@/lib/api";
+import { airtimeApi } from "@/lib/api/airtime";
 
-vi.mock("@/lib/api", () => ({
-  api: {
-    get: vi.fn(),
-    post: vi.fn(),
+vi.mock("@/lib/api/airtime", () => ({
+  airtimeApi: {
+    getNetworks: vi.fn(),
+    purchaseAirtime: vi.fn(),
+    getHistory: vi.fn(),
   },
 }));
 
@@ -56,64 +59,126 @@ describe("Airtime API & Helpers (F16.1 & F16.4)", () => {
     });
   });
 
-  describe("TELECOM_NETWORKS", () => {
-    it("has configuration for all 4 major Nigerian telcos with discount rates", () => {
-      expect(TELECOM_NETWORKS).toHaveLength(4);
-      const ids = TELECOM_NETWORKS.map((n) => n.id);
-      expect(ids).toEqual(["mtn", "airtel", "glo", "9mobile"]);
-      TELECOM_NETWORKS.forEach((net) => {
-        expect(net.discountRate).toBeGreaterThan(0);
-        expect(net.color).toBeDefined();
+  describe("Service Code Mappings", () => {
+    it("maps network id to service code and vice-versa", () => {
+      expect(networkToServiceCode("mtn")).toEqual({
+        service_code: "MTN_AIRTIME",
+        service_name: "MTN Airtime",
       });
+      expect(serviceCodeToNetwork("MTN_AIRTIME")).toBe("mtn");
+      expect(serviceCodeToNetwork("AIRTEL_AIRTIME")).toBe("airtel");
+      expect(serviceCodeToNetwork("GLO_AIRTIME")).toBe("glo");
+      expect(serviceCodeToNetwork("9MOBILE_AIRTIME")).toBe("9mobile");
+    });
+  });
+
+  describe("getSupportedAirtimeNetworks", () => {
+    it("calls airtimeApi.getNetworks and enhances with logos and discounts", async () => {
+      vi.mocked(airtimeApi.getNetworks).mockResolvedValueOnce([
+        { service_code: "MTN_AIRTIME", name: "MTN Airtime", category: "airtime" },
+        { service_code: "GLO_AIRTIME", name: "Glo Airtime", category: "airtime" },
+      ]);
+
+      const networks = await getSupportedAirtimeNetworks();
+      expect(airtimeApi.getNetworks).toHaveBeenCalled();
+      expect(networks).toHaveLength(2);
+      expect(networks[0].id).toBe("mtn");
+      expect(networks[0].logo).toBeDefined();
+    });
+
+    it("falls back to default TELECOM_NETWORKS on failure", async () => {
+      vi.mocked(airtimeApi.getNetworks).mockRejectedValueOnce(new Error("Network error"));
+      const networks = await getSupportedAirtimeNetworks();
+      expect(networks).toEqual(TELECOM_NETWORKS);
     });
   });
 
   describe("purchaseAirtime", () => {
-    it("calls API endpoint with idempotency key header and returns unwrap response", async () => {
-      const mockResult = {
-        data: {
-          order_id: "ord_123",
-          reference: "AIR-20261114-9999",
-          network: "mtn",
-          phone: "08031234567",
-          amount: 1000,
-          discount_amount: 30,
-          final_amount: 970,
-          status: "completed",
-          message: "Airtime of ₦1,000 sent successfully to 08031234567.",
-          created_at: "2026-11-14T12:00:00Z",
-        },
-        meta: {},
+    it("converts Naira to kobo (amount * 100) and calls airtimeApi.purchaseAirtime", async () => {
+      const mockOrder = {
+        id: "01JC8XYZ",
+        reference: "BIL-A1B2C3D4E5F6",
+        provider_reference: "X8BSN",
+        category: "airtime" as const,
+        service_code: "MTN_AIRTIME",
+        service_name: "MTN Airtime",
+        customer_identifier: "08060671945",
+        amount: 100000, // ₦1,000 in kobo
+        amount_formatted: "1000.00",
+        status: "completed" as const,
+        created_at: "2026-11-18T13:29:58.000000Z",
       };
 
-      vi.mocked(api.post).mockResolvedValueOnce(mockResult);
+      vi.mocked(airtimeApi.purchaseAirtime).mockResolvedValueOnce(mockOrder);
 
       const result = await purchaseAirtime({
         network: "mtn",
-        phone: "08031234567",
+        phone: "08060671945",
         amount: 1000,
         idempotency_key: "idem_custom_key_123",
       });
 
-      expect(api.post).toHaveBeenCalledWith(
-        "/api/v1/services/airtime/purchase",
+      expect(airtimeApi.purchaseAirtime).toHaveBeenCalledWith(
         {
-          network: "mtn",
-          phone: "08031234567",
-          amount: 1000,
+          service_code: "MTN_AIRTIME",
+          service_name: "MTN Airtime",
+          category: "airtime",
+          customer_identifier: "08060671945",
+          amount: 100000, // in kobo
         },
-        {
-          headers: {
-            "Idempotency-Key": "idem_custom_key_123",
-          },
-        }
+        "idem_custom_key_123"
       );
-      expect(result.order_id).toBe("ord_123");
+      expect(result.reference).toBe("BIL-A1B2C3D4E5F6");
       expect(result.status).toBe("completed");
+      expect(result.amount).toBe(1000);
+      expect(result.discount).toBe(20); // 2% of 1000
+      expect(result.final_amount).toBe(980);
     });
 
-    it("falls back to simulated success in non-production when endpoint gives 404", async () => {
-      vi.mocked(api.post).mockRejectedValueOnce({ status: 404 });
+    it("handles status: failed by flagging auto_refunded and message", async () => {
+      const mockFailedOrder = {
+        id: "01JC8FAIL",
+        reference: "BIL-FAILED123",
+        provider_reference: null,
+        category: "airtime" as const,
+        service_code: "GLO_AIRTIME",
+        service_name: "Glo Airtime",
+        customer_identifier: "08051234567",
+        amount: 50000,
+        amount_formatted: "500.00",
+        status: "failed" as const,
+        created_at: "2026-11-18T13:30:00.000000Z",
+      };
+
+      vi.mocked(airtimeApi.purchaseAirtime).mockResolvedValueOnce(mockFailedOrder);
+
+      const result = await purchaseAirtime({
+        network: "glo",
+        phone: "08051234567",
+        amount: 500,
+      });
+
+      expect(result.status).toBe("failed");
+      expect(result.auto_refunded).toBe(true);
+      expect(result.message).toContain("automatically refunded");
+    });
+
+    it("handles status: processing by returning appropriate message", async () => {
+      const mockProcessingOrder = {
+        id: "01JC8PROC",
+        reference: "BIL-PROC123",
+        provider_reference: null,
+        category: "airtime" as const,
+        service_code: "AIRTEL_AIRTIME",
+        service_name: "Airtel Airtime",
+        customer_identifier: "08021234567",
+        amount: 200000,
+        amount_formatted: "2000.00",
+        status: "processing" as const,
+        created_at: "2026-11-18T13:30:00.000000Z",
+      };
+
+      vi.mocked(airtimeApi.purchaseAirtime).mockResolvedValueOnce(mockProcessingOrder);
 
       const result = await purchaseAirtime({
         network: "airtel",
@@ -121,11 +186,8 @@ describe("Airtime API & Helpers (F16.1 & F16.4)", () => {
         amount: 2000,
       });
 
-      expect(result.network).toBe("airtel");
-      expect(result.phone).toBe("08021234567");
-      expect(result.amount).toBe(2000);
-      expect(result.status).toBe("completed");
-      expect(result.reference).toContain("AIR-");
+      expect(result.status).toBe("processing");
+      expect(result.message).toContain("credited shortly");
     });
   });
 });

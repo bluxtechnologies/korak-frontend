@@ -33,7 +33,7 @@ export function DataOrderSummary({
   return (
     <Card
       className={cn(
-        "rounded-[12px] border border-border bg-card p-5 sm:p-6 shadow-none space-y-5 sticky top-20",
+        "rounded-[10px] border border-border bg-card p-5 sm:p-6 shadow-none space-y-5 sticky top-20",
         className
       )}
       data-testid="data-order-summary"

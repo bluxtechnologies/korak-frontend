@@ -3,3 +3,5 @@ export * from "./client";
 export * from "./errors";
 export * from "./events";
 export * from "./customer";
+export * from "./airtime";
+export * from "./data";

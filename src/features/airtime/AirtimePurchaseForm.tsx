@@ -16,6 +16,7 @@ import {
   Copy,
   Printer,
   Lock,
+  Clock,
 } from "lucide-react";
 import {
   Form,
@@ -41,6 +42,8 @@ import {
   QUICK_AIRTIME_AMOUNTS,
   detectNetworkFromPhone,
   purchaseAirtime,
+  getSupportedAirtimeNetworks,
+  type NetworkInfo,
   type AirtimeOrderResult,
 } from "./api";
 
@@ -65,24 +68,38 @@ export const airtimeFormSchema = z.object({
 export type AirtimeFormData = z.infer<typeof airtimeFormSchema>;
 
 export interface AirtimePurchaseFormProps {
-  walletBalance?: number; // minor units (e.g. 500000 = ₦5,000.00)
+  walletBalance?: number; // minor units (e.g. 0 = ₦0.00)
   onOrderCompleted?: (order: AirtimeOrderResult) => void;
   className?: string;
 }
 
 export function AirtimePurchaseForm({
-  walletBalance = 500000,
+  walletBalance = 0,
   onOrderCompleted,
   className,
 }: AirtimePurchaseFormProps) {
+  const [networks, setNetworks] =
+    React.useState<NetworkInfo[]>(TELECOM_NETWORKS);
   const [isConfirmOpen, setIsConfirmOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [rootError, setRootError] = React.useState<string | null>(null);
-  const [pin, setPin] = React.useState<string>("1234");
+  const [pin, setPin] = React.useState<string>("");
   const [hasCopiedRef, setHasCopiedRef] = React.useState(false);
   const [customAmountInput, setCustomAmountInput] = React.useState<string>("500");
   const [completedOrder, setCompletedOrder] =
     React.useState<AirtimeOrderResult | null>(null);
+
+  React.useEffect(() => {
+    let ignore = false;
+    getSupportedAirtimeNetworks().then((loaded) => {
+      if (!ignore && loaded && loaded.length > 0) {
+        setNetworks(loaded);
+      }
+    });
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const form = useForm<AirtimeFormData>({
     resolver: zodResolver(airtimeFormSchema),
@@ -109,7 +126,8 @@ export function AirtimePurchaseForm({
   }, [enteredPhone, selectedNetwork, form]);
 
   const activeNetworkInfo =
-    TELECOM_NETWORKS.find((n) => n.id === selectedNetwork) ??
+    networks.find((n) => n.id === selectedNetwork) ??
+    networks[0] ??
     TELECOM_NETWORKS[0];
 
   const discountAmount = Math.round(
@@ -156,21 +174,48 @@ export function AirtimePurchaseForm({
         network: values.network,
         phone: values.phone,
         amount: values.amount,
+        service_code: activeNetworkInfo.service_code,
+        service_name: activeNetworkInfo.fullName,
       });
 
       setCompletedOrder(order);
       setIsConfirmOpen(false);
-      toast.success(
-        `₦${values.amount.toLocaleString()} airtime sent to ${values.phone}!`
-      );
+
+      if (order.status === "failed") {
+        toast.error(
+          "Airtime recharge could not be delivered by the network. Your wallet has been automatically refunded."
+        );
+      } else if (order.status === "processing") {
+        toast.info(
+          "Airtime request is processing with the network provider. Your line will be credited shortly."
+        );
+      } else {
+        toast.success(
+          `₦${values.amount.toLocaleString()} airtime sent to ${values.phone}!`
+        );
+      }
       onOrderCompleted?.(order);
     } catch (err: unknown) {
       setIsConfirmOpen(false);
-      const msg =
-        (err as { message?: string })?.message ||
-        "Could not complete airtime purchase. Please try again.";
-      setRootError(msg);
-      toast.error(msg);
+      const errObj = err as {
+        code?: string;
+        message?: string;
+        response?: { data?: { code?: string; message?: string } };
+      };
+      const code = errObj?.code || errObj?.response?.data?.code;
+      if (code === "insufficient_balance") {
+        const msg =
+          "Insufficient wallet balance for this purchase. Please deposit funds into your wallet.";
+        setRootError(msg);
+        toast.error(msg);
+      } else {
+        const msg =
+          errObj?.message ||
+          errObj?.response?.data?.message ||
+          "Could not complete airtime purchase. Please try again.";
+        setRootError(msg);
+        toast.error(msg);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -197,6 +242,9 @@ export function AirtimePurchaseForm({
 
   // Render Completed / Success Receipt State
   if (completedOrder) {
+    const isFailed = completedOrder.status === "failed";
+    const isProcessing = completedOrder.status === "processing";
+
     return (
       <div
         className={cn(
@@ -206,16 +254,79 @@ export function AirtimePurchaseForm({
         data-testid="airtime-success-card"
       >
         <div className="text-center space-y-2">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2 className="size-6" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+          <div
+            className={cn(
+              "mx-auto flex size-12 items-center justify-center rounded-[10px]",
+              isFailed
+                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                : isProcessing
+                ? "bg-primary/10 text-primary"
+                : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+            )}
+          >
+            {isFailed ? (
+              <AlertCircle
+                className="size-6"
+                strokeWidth={NAV_ICON_STROKE_WIDTH}
+              />
+            ) : isProcessing ? (
+              <Clock
+                className="size-6"
+                strokeWidth={NAV_ICON_STROKE_WIDTH}
+              />
+            ) : (
+              <CheckCircle2
+                className="size-6"
+                strokeWidth={NAV_ICON_STROKE_WIDTH}
+              />
+            )}
           </div>
           <h2 className="text-xl font-bold text-foreground">
-            Airtime Purchase Successful
+            {isFailed
+              ? "Recharge Failed (Auto-Refunded)"
+              : isProcessing
+              ? "Recharge Processing"
+              : "Airtime Purchase Successful"}
           </h2>
           <p className="text-xs text-muted-foreground">
-            Direct telecom carrier delivery completed
+            {isFailed
+              ? "Your wallet has been automatically credited back."
+              : isProcessing
+              ? "Request submitted to telecom network carrier."
+              : "Direct telecom carrier delivery completed"}
           </p>
         </div>
+
+        {/* Status Callout Banner */}
+        {isFailed && (
+          <div
+            className="flex items-start gap-2.5 rounded-[10px] border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-800 dark:text-amber-300"
+            data-testid="airtime-auto-refund-alert"
+          >
+            <AlertCircle
+              className="mt-0.5 size-4 shrink-0"
+              strokeWidth={NAV_ICON_STROKE_WIDTH}
+            />
+            <span>
+              Airtime recharge could not be delivered by the network. Your wallet has been automatically refunded.
+            </span>
+          </div>
+        )}
+
+        {isProcessing && (
+          <div
+            className="flex items-start gap-2.5 rounded-[10px] border border-primary/20 bg-primary/5 p-3.5 text-xs text-foreground"
+            data-testid="airtime-processing-alert"
+          >
+            <Clock
+              className="mt-0.5 size-4 shrink-0 text-primary"
+              strokeWidth={NAV_ICON_STROKE_WIDTH}
+            />
+            <span>
+              Airtime request is processing with the network provider. Your line will be credited shortly.
+            </span>
+          </div>
+        )}
 
         {/* Reference pill */}
         <div className="flex items-center justify-between rounded-[10px] border border-border bg-muted/30 px-4 py-3 text-xs">
@@ -231,9 +342,15 @@ export function AirtimePurchaseForm({
               aria-label="Copy reference"
             >
               {hasCopiedRef ? (
-                <Check className="size-3.5 text-emerald-600" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+                <Check
+                  className="size-3.5 text-emerald-600"
+                  strokeWidth={NAV_ICON_STROKE_WIDTH}
+                />
               ) : (
-                <Copy className="size-3.5" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+                <Copy
+                  className="size-3.5"
+                  strokeWidth={NAV_ICON_STROKE_WIDTH}
+                />
               )}
             </button>
           </div>
@@ -259,7 +376,7 @@ export function AirtimePurchaseForm({
               ₦{completedOrder.amount.toLocaleString()}.00
             </span>
           </div>
-          {completedOrder.discount > 0 && (
+          {completedOrder.discount > 0 && !isFailed && (
             <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
               <span>Cashback Savings</span>
               <span className="font-mono font-semibold">
@@ -268,8 +385,15 @@ export function AirtimePurchaseForm({
             </div>
           )}
           <div className="border-t border-border/80 pt-2.5 flex justify-between text-sm font-bold">
-            <span className="text-foreground">Total Debited</span>
-            <span className="text-primary font-mono">
+            <span className="text-foreground">
+              {isFailed ? "Wallet Refunded" : "Total Debited"}
+            </span>
+            <span
+              className={cn(
+                "font-mono",
+                isFailed ? "text-amber-600 dark:text-amber-400" : "text-primary"
+              )}
+            >
               ₦{completedOrder.final_amount.toLocaleString()}.00
             </span>
           </div>
@@ -372,7 +496,7 @@ export function AirtimePurchaseForm({
                             align="start"
                             className="w-56 p-1.5 rounded-[10px] border-border bg-card shadow-lg"
                           >
-                            {TELECOM_NETWORKS.map((net) => (
+                            {networks.map((net) => (
                               <DropdownMenuItem
                                 key={net.id}
                                 onClick={() =>

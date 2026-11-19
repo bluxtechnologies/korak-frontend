@@ -3,6 +3,8 @@ import type {
   ApiResponse,
   ApiPaginatedResponse,
   Wallet,
+  DedicatedVirtualAccount,
+  DedicatedAccountMeta,
   LedgerEntry,
   FundingRecord,
   BillCategory,
@@ -89,6 +91,20 @@ export const customerApi = {
     return res.data.data;
   },
 
+  getDedicatedAccount: async (): Promise<{ account: DedicatedVirtualAccount | null; meta: DedicatedAccountMeta }> => {
+    const res = await apiClient.get<ApiResponse<DedicatedVirtualAccount | null, DedicatedAccountMeta>>("/api/v1/wallet/dedicated-account");
+    return { account: res.data.data, meta: res.data.meta };
+  },
+
+  generateDedicatedAccount: async (payload?: {
+    phone?: string;
+    first_name?: string;
+    last_name?: string;
+  }): Promise<{ account: DedicatedVirtualAccount; meta: DedicatedAccountMeta }> => {
+    const res = await apiClient.post<ApiResponse<DedicatedVirtualAccount, DedicatedAccountMeta>>("/api/v1/wallet/dedicated-account", payload);
+    return { account: res.data.data, meta: res.data.meta };
+  },
+
   initiateFunding: async (payload: {
     amount: number; // in kobo
     redirect_url?: string;
@@ -147,7 +163,13 @@ export const customerApi = {
     return res.data.data;
   },
 
-  updateProfile: async (payload: { username?: string; email?: string }): Promise<CustomerProfile> => {
+  updateProfile: async (payload: {
+    username?: string;
+    email?: string;
+    first_name?: string;
+    last_name?: string;
+    phone?: string;
+  }): Promise<CustomerProfile> => {
     const res = await apiClient.patch<ApiResponse<CustomerProfile>>("/api/v1/profile", payload);
     return res.data.data;
   },

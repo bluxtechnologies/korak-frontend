@@ -71,6 +71,25 @@ export interface LedgerEntry {
 
 export type FundingStatus = "pending" | "success" | "failed" | "reversed";
 
+export interface DedicatedVirtualAccount {
+  id: string; // ULID
+  provider: string; // "finitypay"
+  account_reference: string;
+  bank_name: string; // e.g. "Wema Bank"
+  bank_code: string | null; // e.g. "035"
+  account_number: string; // e.g. "7892341201"
+  account_name: string; // e.g. "COFINANCE / John Doe"
+  status: "active" | "suspended";
+  created_at: string;
+}
+
+export interface DedicatedAccountMeta {
+  has_account: boolean;
+  requires_phone?: boolean;
+  already_existed?: boolean;
+  created?: boolean;
+}
+
 export interface FundingRecord {
   id: string; // ULID
   reference: string;
@@ -109,6 +128,8 @@ export interface DataBundlePackage {
   code: string; // e.g. "112381"
   name: string; // e.g. "MTN 1GB Data Plan (30 Days)"
   amount: number; // In Naira
+  size?: string;
+  validity?: string;
 }
 
 export interface CustomerValidationResult {
@@ -160,11 +181,26 @@ export interface CustomerNotification {
 // ==========================================
 // Profile & Security (Doc 25 §2)
 // ==========================================
+export interface DedicatedVirtualAccountSummary {
+  bank_name: string;
+  bank_code: string | null;
+  account_number: string;
+  account_name: string;
+  status: string;
+  created_at: string | null;
+}
+
 export interface CustomerProfile {
   id: string; // ULID
   username: string;
+  first_name: string | null;
+  last_name: string | null;
+  full_name: string | null;
+  phone: string | null;
   email: string;
   email_verified_at: string | null;
+  has_virtual_account: boolean;
+  virtual_account: DedicatedVirtualAccountSummary | null;
   created_at: string;
 }
 

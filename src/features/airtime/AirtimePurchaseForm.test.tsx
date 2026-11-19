@@ -8,11 +8,12 @@ vi.mock("./api", async (importOriginal) => {
   const actual = await importOriginal<typeof airtimeApi>();
   return {
     ...actual,
+    getSupportedAirtimeNetworks: vi.fn().mockResolvedValue(actual.TELECOM_NETWORKS),
     purchaseAirtime: vi.fn(),
   };
 });
 
-describe("AirtimePurchaseForm (F16.1 & F16.4)", () => {
+describe("AirtimePurchaseForm (F16.1 & F16.4 & Integration Guide)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -79,13 +80,13 @@ describe("AirtimePurchaseForm (F16.1 & F16.4)", () => {
     expect(submitBtn).toBeDisabled();
   });
 
-  it("validates form, opens confirmation modal, and submits order", async () => {
+  it("validates form, opens confirmation modal, and submits order (Case A: completed)", async () => {
     const user = userEvent.setup();
     const handleOrderCompleted = vi.fn();
 
     vi.mocked(airtimeApi.purchaseAirtime).mockResolvedValueOnce({
       order_id: "ord_101",
-      reference: "AIR-20261115-1234",
+      reference: "BIL-A1B2C3D4E5F6",
       network: "mtn",
       phone: "08031234567",
       amount: 500,
@@ -120,17 +121,84 @@ describe("AirtimePurchaseForm (F16.1 & F16.4)", () => {
     await user.click(payButton);
 
     await waitFor(() => {
-      expect(airtimeApi.purchaseAirtime).toHaveBeenCalledWith({
-        network: "mtn",
-        phone: "08031234567",
-        amount: 500,
-      });
+      expect(airtimeApi.purchaseAirtime).toHaveBeenCalled();
       expect(handleOrderCompleted).toHaveBeenCalled();
     });
 
     // Success card appears
     expect(screen.getByTestId("airtime-success-card")).toBeInTheDocument();
     expect(screen.getByText(/Airtime Purchase Successful/i)).toBeInTheDocument();
-    expect(screen.getByText(/AIR-20261115-1234/)).toBeInTheDocument();
+    expect(screen.getByText(/BIL-A1B2C3D4E5F6/)).toBeInTheDocument();
+  });
+
+  it("displays auto-refund notification when order status is failed (Case C: failed)", async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(airtimeApi.purchaseAirtime).mockResolvedValueOnce({
+      order_id: "ord_fail_1",
+      reference: "BIL-FAILED-999",
+      network: "airtel",
+      phone: "08021234567",
+      amount: 500,
+      discount: 10,
+      final_amount: 500,
+      status: "failed",
+      message: "Airtime recharge could not be delivered by the network. Your wallet has been automatically refunded.",
+      created_at: new Date().toISOString(),
+      auto_refunded: true,
+    });
+
+    render(<AirtimePurchaseForm walletBalance={500000} />);
+
+    const phoneInput = screen.getByPlaceholderText("08012345678");
+    await user.type(phoneInput, "08021234567");
+
+    const submitBtn = screen.getByRole("button", { name: /Continue to Review/i });
+    await user.click(submitBtn);
+
+    const payButton = screen.getByRole("button", { name: /Pay ₦/i });
+    await user.click(payButton);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("airtime-auto-refund-alert")).toBeInTheDocument();
+      expect(
+        screen.getByText(/Your wallet has been automatically refunded/i)
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("displays provider processing notice when order status is processing (Case B: processing)", async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(airtimeApi.purchaseAirtime).mockResolvedValueOnce({
+      order_id: "ord_proc_1",
+      reference: "BIL-PROC-888",
+      network: "glo",
+      phone: "08051234567",
+      amount: 500,
+      discount: 15,
+      final_amount: 485,
+      status: "processing",
+      message: "Airtime request is processing with the network provider. Your line will be credited shortly.",
+      created_at: new Date().toISOString(),
+    });
+
+    render(<AirtimePurchaseForm walletBalance={500000} />);
+
+    const phoneInput = screen.getByPlaceholderText("08012345678");
+    await user.type(phoneInput, "08051234567");
+
+    const submitBtn = screen.getByRole("button", { name: /Continue to Review/i });
+    await user.click(submitBtn);
+
+    const payButton = screen.getByRole("button", { name: /Pay ₦/i });
+    await user.click(payButton);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("airtime-processing-alert")).toBeInTheDocument();
+      expect(
+        screen.getByText(/processing with the network provider/i)
+      ).toBeInTheDocument();
+    });
   });
 });

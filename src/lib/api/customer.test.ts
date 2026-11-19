@@ -206,6 +206,64 @@ describe("customerApi (Doc 25 Customer Endpoints Client)", () => {
       expect(result).toEqual(mockWallet);
     });
 
+    it("getDedicatedAccount fetches dedicated virtual account details", async () => {
+      const mockAccount = {
+        id: "01JCDEDICATEDACCULID01",
+        provider: "finitypay",
+        account_reference: "va_6a37e664f130f",
+        bank_name: "Wema Bank",
+        bank_code: "035",
+        account_number: "7892341201",
+        account_name: "COFINANCE / John Doe",
+        status: "active" as const,
+        created_at: "2026-11-18T00:30:00Z",
+      };
+      const mockMeta = { has_account: true, requires_phone: false };
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { data: mockAccount, meta: mockMeta },
+        status: 200,
+        headers: new Headers(),
+      });
+
+      const result = await customerApi.getDedicatedAccount();
+      expect(apiClient.get).toHaveBeenCalledWith(
+        "/api/v1/wallet/dedicated-account"
+      );
+      expect(result).toEqual({ account: mockAccount, meta: mockMeta });
+    });
+
+    it("generateDedicatedAccount creates a dedicated account via post", async () => {
+      const mockAccount = {
+        id: "01JCDEDICATEDACCULID01",
+        provider: "finitypay",
+        account_reference: "va_6a37e664f130f",
+        bank_name: "Wema Bank",
+        bank_code: "035",
+        account_number: "7892341201",
+        account_name: "COFINANCE / John Doe",
+        status: "active" as const,
+        created_at: "2026-11-18T00:30:00Z",
+      };
+      const mockMeta = { has_account: true, created: true };
+      vi.mocked(apiClient.post).mockResolvedValueOnce({
+        data: { data: mockAccount, meta: mockMeta },
+        status: 201,
+        headers: new Headers(),
+      });
+
+      const payload = {
+        phone: "08012345678",
+        first_name: "John",
+        last_name: "Doe",
+      };
+      const result = await customerApi.generateDedicatedAccount(payload);
+      expect(apiClient.post).toHaveBeenCalledWith(
+        "/api/v1/wallet/dedicated-account",
+        payload
+      );
+      expect(result).toEqual({ account: mockAccount, meta: mockMeta });
+    });
+
     it("initiateFunding sends funding initiation request", async () => {
       const mockFunding = {
         id: "01JCEXAMPLEFUNDINGULID01",
@@ -384,12 +442,18 @@ describe("customerApi (Doc 25 Customer Endpoints Client)", () => {
       expect(result).toEqual(mockProfile);
     });
 
-    it("updateProfile sends profile update patch", async () => {
+    it("updateProfile sends profile update patch with full profile fields", async () => {
       const updated = {
         id: "01JCCUSTOMERULID01",
         username: "newusername",
+        first_name: "John",
+        last_name: "Doe",
+        full_name: "John Doe",
+        phone: "08012345678",
         email: "newemail@example.com",
         email_verified_at: null,
+        has_virtual_account: true,
+        virtual_account: null,
         created_at: "2026-11-14T09:30:00Z",
       };
       vi.mocked(apiClient.patch).mockResolvedValueOnce({
@@ -398,12 +462,14 @@ describe("customerApi (Doc 25 Customer Endpoints Client)", () => {
         headers: new Headers(),
       });
 
-      const result = await customerApi.updateProfile({
+      const payload = {
         username: "newusername",
-      });
-      expect(apiClient.patch).toHaveBeenCalledWith("/api/v1/profile", {
-        username: "newusername",
-      });
+        first_name: "John",
+        last_name: "Doe",
+        phone: "08012345678",
+      };
+      const result = await customerApi.updateProfile(payload);
+      expect(apiClient.patch).toHaveBeenCalledWith("/api/v1/profile", payload);
       expect(result).toEqual(updated);
     });
 

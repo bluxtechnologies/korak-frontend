@@ -1,12 +1,19 @@
 /**
  * Data Bundle Purchase API service and types (F16.2 & F16.4).
  * Adheres to docs/14-wallet-and-payments.md, docs/06-api-standards.md,
- * and docs/09-frontend-standards.md.
+ * docs/09-frontend-standards.md, and the Frontend Integration Guide.
  */
-import { api } from "@/lib/api";
-import { unwrapApiResponse } from "@/lib/api/errors";
-import type { ApiResponse } from "@/lib/api/types";
-import { type TelecomNetwork, TELECOM_NETWORKS } from "@/features/airtime/api";
+import {
+  dataApi,
+  type DataOrder,
+  type DataService,
+} from "@/lib/api/data";
+import type { DataBundlePackage } from "@/lib/api/types";
+import {
+  type TelecomNetwork,
+  TELECOM_NETWORKS,
+  type NetworkInfo,
+} from "@/features/airtime/api";
 
 export type DataPlanType = "sme" | "corporate" | "gifting";
 
@@ -72,6 +79,103 @@ export const DATA_PLAN_TYPES: { id: DataPlanType; label: string; description: st
     description: "Standard direct network gifting for all phone types",
   },
 ];
+
+export function networkToDataServiceCode(network: TelecomNetwork): {
+  service_code: string;
+  service_name: string;
+} {
+  switch (network) {
+    case "mtn":
+      return { service_code: "MTN_DATA", service_name: "MTN Data" };
+    case "airtel":
+      return { service_code: "AIRTEL_DATA", service_name: "Airtel Data" };
+    case "glo":
+      return { service_code: "GLO_DATA", service_name: "Glo Data" };
+    case "9mobile":
+      return { service_code: "9MOBILE_DATA", service_name: "9mobile Data" };
+  }
+}
+
+export function serviceCodeToDataNetwork(code: string): TelecomNetwork {
+  const upper = code.toUpperCase();
+  if (upper.includes("MTN")) return "mtn";
+  if (upper.includes("AIRTEL")) return "airtel";
+  if (upper.includes("GLO")) return "glo";
+  if (upper.includes("9MOBILE") || upper.includes("ETISALAT")) return "9mobile";
+  return "mtn";
+}
+
+/**
+ * Fetch supported data providers from GET /api/v1/bills/services?category=data.
+ * Enhances backend services with frontend branding and fallback defaults.
+ */
+export async function getSupportedDataNetworks(): Promise<NetworkInfo[]> {
+  try {
+    const services = await dataApi.getNetworks();
+    if (!services || services.length === 0) {
+      return TELECOM_NETWORKS;
+    }
+    return services.map((srv: DataService) => {
+      const netId = serviceCodeToDataNetwork(srv.service_code);
+      const staticInfo =
+        TELECOM_NETWORKS.find((n) => n.id === netId) || TELECOM_NETWORKS[0];
+      return {
+        ...staticInfo,
+        id: netId,
+        service_code: srv.service_code,
+        name: srv.name.replace(/data/i, "").trim() || staticInfo.name,
+        fullName: srv.name,
+      };
+    });
+  } catch {
+    return TELECOM_NETWORKS;
+  }
+}
+
+export function extractSizeFromName(name: string): string {
+  const match = name.match(/(\d+(?:\.\d+)?)\s*(GB|MB|TB)/i);
+  return match ? `${match[1]} ${match[2].toUpperCase()}` : "1.0 GB";
+}
+
+export function extractValidityFromName(name: string): string {
+  const match = name.match(/(\d+\s*(?:days?|months?|weeks?|hours?)|daily|weekly|monthly)/i);
+  if (match) return match[1];
+  const lower = name.toLowerCase();
+  if (lower.includes("daily") || lower.includes("1 day")) return "1 day";
+  if (lower.includes("weekly") || lower.includes("7 day")) return "7 days";
+  return "30 Days";
+}
+
+export function extractPlanTypeFromName(name: string): DataPlanType {
+  const lower = name.toLowerCase();
+  if (lower.includes("sme")) return "sme";
+  if (lower.includes("cg") || lower.includes("corporate")) return "corporate";
+  return "gifting";
+}
+
+export function parseBundlePackageToPlan(
+  pkg: DataBundlePackage,
+  network: TelecomNetwork
+): DataBundlePlan {
+  const size = pkg.size || extractSizeFromName(pkg.name);
+  const validity = pkg.validity || extractValidityFromName(pkg.name);
+  const plan_type = extractPlanTypeFromName(pkg.name);
+
+  const plan: DataBundlePlan = {
+    id: pkg.code,
+    network,
+    plan_type,
+    name: pkg.name,
+    size,
+    validity,
+    price: pkg.amount,
+    currency: "NGN",
+    allowance: `${size} total`,
+  };
+
+  plan.validity_category = getPlanValidityCategory(plan);
+  return plan;
+}
 
 export const MOCK_DATA_PLANS: DataBundlePlan[] = [
   // MTN Reference Plans (Daily, Weekly, Monthly)
@@ -171,6 +275,10 @@ export interface DataPurchasePayload {
   plan_id: string;
   phone: string;
   idempotency_key?: string;
+  service_code?: string;
+  service_name?: string;
+  amount?: number; // in Naira major units
+  package_name?: string;
 }
 
 export interface DataOrderResult {
@@ -184,27 +292,51 @@ export interface DataOrderResult {
   status: "pending" | "processing" | "completed" | "failed";
   message: string;
   created_at: string;
+  auto_refunded?: boolean;
 }
 
 /**
  * Retrieves available data bundle packages filtered by network and plan type.
+ * Queries GET /api/v1/bills/data-bundles?service_code={service_code} via dataApi.
  */
 export async function getDataPlans(
   network?: TelecomNetwork,
   planType?: DataPlanType
 ): Promise<DataBundlePlan[]> {
   try {
-    const params = new URLSearchParams();
-    if (network) params.set("network", network);
-    if (planType) params.set("plan_type", planType);
-    const query = params.toString() ? `?${params.toString()}` : "";
-
-    const raw = await api.get<ApiResponse<DataBundlePlan[]>>(
-      `/api/v1/services/data/plans${query}`
-    );
-    return unwrapApiResponse(raw);
+    if (network) {
+      const { service_code } = networkToDataServiceCode(network);
+      const bundles = await dataApi.getDataBundles(service_code);
+      if (bundles && bundles.length > 0) {
+        const mapped = bundles.map((b) => parseBundlePackageToPlan(b, network));
+        if (planType) {
+          return mapped.filter((p) => p.plan_type === planType);
+        }
+        return mapped;
+      }
+    } else {
+      const services = await dataApi.getNetworks();
+      if (services && services.length > 0) {
+        const bundleArrays = await Promise.all(
+          services.map(async (srv) => {
+            const net = serviceCodeToDataNetwork(srv.service_code);
+            const bundles = await dataApi.getDataBundles(srv.service_code);
+            return bundles.map((b) => parseBundlePackageToPlan(b, net));
+          })
+        );
+        const flat = bundleArrays.flat();
+        if (flat.length > 0) {
+          return planType ? flat.filter((p) => p.plan_type === planType) : flat;
+        }
+      }
+    }
+    // Fallback filter over mock plans in dev/test/offline
+    return MOCK_DATA_PLANS.filter((p) => {
+      if (network && p.network !== network) return false;
+      if (planType && p.plan_type !== planType) return false;
+      return true;
+    });
   } catch {
-    // Fallback filter over mock plans in dev/test
     return MOCK_DATA_PLANS.filter((p) => {
       if (network && p.network !== network) return false;
       if (planType && p.plan_type !== planType) return false;
@@ -215,48 +347,103 @@ export async function getDataPlans(
 
 /**
  * Purchases a data bundle with idempotency key handling (F16.2 & F16.4).
+ * Calls POST /api/v1/bills/pay with minor units (integer kobo).
  */
 export async function purchaseData(
   payload: DataPurchasePayload
 ): Promise<DataOrderResult> {
+  const { service_code, service_name } =
+    payload.service_code && payload.service_name
+      ? { service_code: payload.service_code, service_name: payload.service_name }
+      : networkToDataServiceCode(payload.network);
+
+  const matchingPlan = MOCK_DATA_PLANS.find((p) => p.id === payload.plan_id);
+  const priceNaira = payload.amount ?? matchingPlan?.price ?? 320;
+  const amountKobo = Math.round(priceNaira * 100);
+
   const idempotencyKey =
     payload.idempotency_key ||
-    `idem_data_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `idem_data_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`);
 
   try {
-    const raw = await api.post<ApiResponse<DataOrderResult>>(
-      "/api/v1/services/data/purchase",
+    const order: DataOrder = await dataApi.purchaseData(
       {
-        network: payload.network,
-        plan_id: payload.plan_id,
-        phone: payload.phone,
+        service_code,
+        service_name,
+        category: "data",
+        package_code: payload.plan_id,
+        customer_identifier: payload.phone.trim(),
+        amount: amountKobo,
       },
-      {
-        headers: {
-          "Idempotency-Key": idempotencyKey,
-        },
-      }
+      idempotencyKey
     );
-    return unwrapApiResponse(raw);
+
+    const netInfo =
+      TELECOM_NETWORKS.find((n) => n.id === payload.network) ??
+      TELECOM_NETWORKS[0];
+    const planName = payload.package_name || matchingPlan?.name || `${netInfo.name} Data Plan`;
+    const planSize = matchingPlan?.size || "Data Bundle";
+    const resolvedAmount = order.amount ? Math.round(order.amount / 100) : priceNaira;
+
+    let message = "";
+    if (order.status === "completed") {
+      message = `${planName} (${planSize}) successfully credited to ${payload.phone.trim()}.`;
+    } else if (order.status === "processing") {
+      message =
+        "Data bundle request is processing with the network provider. Your line will be credited shortly.";
+    } else if (order.status === "failed") {
+      message =
+        "Data bundle delivery could not be completed by the network. Your wallet has been automatically refunded.";
+    } else {
+      message = `Data bundle order is ${order.status}.`;
+    }
+
+    return {
+      order_id: order.id,
+      reference: order.reference,
+      network: payload.network,
+      plan_name: planName,
+      size: planSize,
+      phone: payload.phone.trim(),
+      amount: resolvedAmount,
+      status: order.status,
+      message,
+      created_at: order.created_at,
+      auto_refunded: order.status === "failed",
+    };
   } catch (error: unknown) {
+    const err = error as {
+      code?: string;
+      response?: { data?: { code?: string; message?: string }; status?: number };
+      status?: number;
+    };
+    if (
+      err?.code === "insufficient_balance" ||
+      err?.response?.data?.code === "insufficient_balance" ||
+      err?.response?.status === 422 ||
+      err?.status === 422
+    ) {
+      throw error;
+    }
+
     if (
       process.env.NODE_ENV !== "production" ||
-      (error as { status?: number })?.status === 404
+      err?.status === 404 ||
+      err?.response?.status === 404
     ) {
-      const plan =
-        MOCK_DATA_PLANS.find((p) => p.id === payload.plan_id) ??
-        MOCK_DATA_PLANS[0];
-
+      const plan = matchingPlan ?? MOCK_DATA_PLANS[0];
       return {
         order_id: `ord_${Date.now()}`,
         reference: `DAT-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(1000 + Math.random() * 9000)}`,
         network: payload.network,
         plan_name: plan.name,
         size: plan.size,
-        phone: payload.phone,
+        phone: payload.phone.trim(),
         amount: plan.price,
         status: "completed",
-        message: `${plan.name} (${plan.size}) successfully credited to ${payload.phone}.`,
+        message: `${plan.name} (${plan.size}) successfully credited to ${payload.phone.trim()}.`,
         created_at: new Date().toISOString(),
       };
     }

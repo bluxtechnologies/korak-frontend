@@ -1,16 +1,15 @@
 /**
  * Airtime Purchase API service and types (F16.1 & F16.4).
  * Adheres to docs/14-wallet-and-payments.md, docs/06-api-standards.md,
- * and docs/09-frontend-standards.md.
+ * docs/09-frontend-standards.md, and the Frontend Integration Guide.
  */
-import { api } from "@/lib/api";
-import { unwrapApiResponse } from "@/lib/api/errors";
-import type { ApiResponse } from "@/lib/api/types";
+import { airtimeApi, type AirtimeOrder, type AirtimeService } from "@/lib/api/airtime";
 
 export type TelecomNetwork = "mtn" | "airtel" | "glo" | "9mobile";
 
 export interface NetworkInfo {
   id: TelecomNetwork;
+  service_code: string;
   name: string;
   fullName: string;
   logo: string;
@@ -23,6 +22,7 @@ export interface NetworkInfo {
 export const TELECOM_NETWORKS: NetworkInfo[] = [
   {
     id: "mtn",
+    service_code: "MTN_AIRTIME",
     name: "MTN",
     fullName: "MTN Nigeria",
     logo: "/vtu-logos/mtn-seeklogo.svg",
@@ -33,6 +33,7 @@ export const TELECOM_NETWORKS: NetworkInfo[] = [
   },
   {
     id: "airtel",
+    service_code: "AIRTEL_AIRTIME",
     name: "Airtel",
     fullName: "Airtel Nigeria",
     logo: "/vtu-logos/airtel.svg",
@@ -43,6 +44,7 @@ export const TELECOM_NETWORKS: NetworkInfo[] = [
   },
   {
     id: "glo",
+    service_code: "GLO_AIRTIME",
     name: "Glo",
     fullName: "Glo Nigeria",
     logo: "/vtu-logos/glo-limited-seeklogo.svg",
@@ -53,6 +55,7 @@ export const TELECOM_NETWORKS: NetworkInfo[] = [
   },
   {
     id: "9mobile",
+    service_code: "9MOBILE_AIRTIME",
     name: "9mobile",
     fullName: "9mobile Nigeria",
     logo: "/vtu-logos/9mobile-seeklogo.svg",
@@ -64,6 +67,58 @@ export const TELECOM_NETWORKS: NetworkInfo[] = [
 ];
 
 export const QUICK_AIRTIME_AMOUNTS = [100, 200, 500, 1000, 2000, 5000];
+
+export function networkToServiceCode(network: TelecomNetwork): {
+  service_code: string;
+  service_name: string;
+} {
+  switch (network) {
+    case "mtn":
+      return { service_code: "MTN_AIRTIME", service_name: "MTN Airtime" };
+    case "airtel":
+      return { service_code: "AIRTEL_AIRTIME", service_name: "Airtel Airtime" };
+    case "glo":
+      return { service_code: "GLO_AIRTIME", service_name: "Glo Airtime" };
+    case "9mobile":
+      return { service_code: "9MOBILE_AIRTIME", service_name: "9mobile Airtime" };
+  }
+}
+
+export function serviceCodeToNetwork(code: string): TelecomNetwork {
+  const upper = code.toUpperCase();
+  if (upper.includes("MTN")) return "mtn";
+  if (upper.includes("AIRTEL")) return "airtel";
+  if (upper.includes("GLO")) return "glo";
+  if (upper.includes("9MOBILE") || upper.includes("ETISALAT")) return "9mobile";
+  return "mtn";
+}
+
+/**
+ * Fetch supported airtime providers from GET /api/v1/bills/services?category=airtime.
+ * Enhances backend services with frontend branding and fallback defaults.
+ */
+export async function getSupportedAirtimeNetworks(): Promise<NetworkInfo[]> {
+  try {
+    const services = await airtimeApi.getNetworks();
+    if (!services || services.length === 0) {
+      return TELECOM_NETWORKS;
+    }
+    return services.map((srv: AirtimeService) => {
+      const netId = serviceCodeToNetwork(srv.service_code);
+      const staticInfo =
+        TELECOM_NETWORKS.find((n) => n.id === netId) || TELECOM_NETWORKS[0];
+      return {
+        ...staticInfo,
+        id: netId,
+        service_code: srv.service_code,
+        name: srv.name.replace(/airtime/i, "").trim() || staticInfo.name,
+        fullName: srv.name,
+      };
+    });
+  } catch {
+    return TELECOM_NETWORKS;
+  }
+}
 
 /**
  * Automatically detects the telecom network from a 11-digit Nigerian phone number.
@@ -139,6 +194,8 @@ export interface AirtimePurchasePayload {
   phone: string;
   amount: number; // in Naira major units, e.g. 1000
   idempotency_key?: string;
+  service_code?: string;
+  service_name?: string;
 }
 
 export interface AirtimeOrderResult {
@@ -152,33 +209,70 @@ export interface AirtimeOrderResult {
   status: "pending" | "processing" | "completed" | "failed";
   message: string;
   created_at: string;
+  auto_refunded?: boolean;
 }
 
 /**
  * Purchases airtime with strict server-side validation and idempotency handling (F16.1 & F16.4).
+ * Debits the customer's wallet and delivers airtime to the recipient phone number.
+ * Conforms to POST /api/v1/bills/pay with minor units (kobo).
  */
 export async function purchaseAirtime(
   payload: AirtimePurchasePayload
 ): Promise<AirtimeOrderResult> {
+  const { service_code, service_name } =
+    payload.service_code && payload.service_name
+      ? { service_code: payload.service_code, service_name: payload.service_name }
+      : networkToServiceCode(payload.network);
+
+  // Convert Naira to kobo (integer)
+  const amountKobo = Math.round(payload.amount * 100);
   const idempotencyKey =
     payload.idempotency_key ||
-    `idem_airtime_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `idem_airtime_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`);
 
   try {
-    const raw = await api.post<ApiResponse<AirtimeOrderResult>>(
-      "/api/v1/services/airtime/purchase",
+    const order: AirtimeOrder = await airtimeApi.purchaseAirtime(
       {
-        network: payload.network,
-        phone: payload.phone,
-        amount: payload.amount,
+        service_code,
+        service_name,
+        category: "airtime",
+        customer_identifier: payload.phone.trim(),
+        amount: amountKobo,
       },
-      {
-        headers: {
-          "Idempotency-Key": idempotencyKey,
-        },
-      }
+      idempotencyKey
     );
-    return unwrapApiResponse(raw);
+
+    const netInfo =
+      TELECOM_NETWORKS.find((n) => n.id === payload.network) ??
+      TELECOM_NETWORKS[0];
+    const discount = Math.round(payload.amount * netInfo.discountRate);
+    const finalAmount = payload.amount - discount;
+
+    let message = `Airtime of ₦${payload.amount.toLocaleString()} successfully credited to ${payload.phone}.`;
+    if (order.status === "processing") {
+      message =
+        "Airtime request is processing with the network provider. Your line will be credited shortly.";
+    } else if (order.status === "failed") {
+      message =
+        "Airtime recharge could not be delivered by the network. Your wallet has been automatically refunded.";
+    }
+
+    return {
+      order_id: order.id || order.reference,
+      reference: order.reference,
+      network: payload.network,
+      phone: payload.phone,
+      amount: payload.amount,
+      discount,
+      final_amount: finalAmount,
+      status: order.status,
+      message,
+      created_at: order.created_at || new Date().toISOString(),
+      auto_refunded: order.status === "failed",
+    };
   } catch (error: unknown) {
     // In development or when backend endpoint is not yet mounted,
     // provide realistic simulated success for instant UI testing
@@ -194,7 +288,7 @@ export async function purchaseAirtime(
 
       return {
         order_id: `ord_${Date.now()}`,
-        reference: `AIR-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(1000 + Math.random() * 9000)}`,
+        reference: `BIL-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(1000 + Math.random() * 9000)}`,
         network: payload.network,
         phone: payload.phone,
         amount: payload.amount,
@@ -222,7 +316,7 @@ export interface RecentAirtimeItem {
 export const MOCK_RECENT_AIRTIME: RecentAirtimeItem[] = [
   {
     id: "air_01",
-    reference: "AIR-20261114-4912",
+    reference: "BIL-20261114-4912",
     network: "mtn",
     phone: "08031234567",
     amount: 1000,
@@ -231,7 +325,7 @@ export const MOCK_RECENT_AIRTIME: RecentAirtimeItem[] = [
   },
   {
     id: "air_02",
-    reference: "AIR-20261113-8821",
+    reference: "BIL-20261113-8821",
     network: "airtel",
     phone: "08029876543",
     amount: 2500,
@@ -240,7 +334,7 @@ export const MOCK_RECENT_AIRTIME: RecentAirtimeItem[] = [
   },
   {
     id: "air_03",
-    reference: "AIR-20261111-3019",
+    reference: "BIL-20261111-3019",
     network: "glo",
     phone: "08055554433",
     amount: 500,

@@ -7,14 +7,14 @@ import { NAV_ICON_STROKE_WIDTH, ROUTES } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 import { AirtimePurchaseForm } from "./AirtimePurchaseForm";
 import type { AirtimeOrderResult } from "./api";
-import { getOverviewData, type OverviewData, MOCK_OVERVIEW_DATA } from "@/features/overview/api";
+import { getOverviewData, type OverviewData } from "@/features/overview/api";
 
 export interface AirtimeViewProps {
   className?: string;
 }
 
 export function AirtimeView({ className }: AirtimeViewProps) {
-  const [walletBalance, setWalletBalance] = React.useState<number>(500000); // ₦5,000 default
+  const [walletBalance, setWalletBalance] = React.useState<number>(0);
 
   React.useEffect(() => {
     getOverviewData()
@@ -24,8 +24,7 @@ export function AirtimeView({ className }: AirtimeViewProps) {
         }
       })
       .catch(() => {
-        // Fallback to mock balance
-        setWalletBalance(MOCK_OVERVIEW_DATA.wallet.balance);
+        setWalletBalance(0);
       });
   }, []);
 
