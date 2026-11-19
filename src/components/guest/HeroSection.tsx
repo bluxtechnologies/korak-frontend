@@ -3,6 +3,12 @@
 import * as React from "react";
 import { CheckCircle2, ShieldCheck, Zap } from "lucide-react";
 import { HeroActions } from "@/components/landing/HeroActions";
+import {
+  FloatingTopUpCard,
+  FloatingDataBundleCard,
+  FloatingVirtualNumberCard,
+  FloatingWalletFundingCard,
+} from "@/components/landing/HeroFloatingStats";
 import { cn } from "@/lib/utils";
 
 export interface HeroSectionProps {
@@ -16,40 +22,21 @@ export interface HeroSectionProps {
   secondaryCtaHref?: string;
 }
 
-export interface ValuePill {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  detail: string;
-}
-
-const DEFAULT_VALUE_PILLS: ValuePill[] = [
-  {
-    icon: Zap,
-    label: "Instant Delivery",
-    detail: "Automated telecom recharges",
-  },
-  {
-    icon: ShieldCheck,
-    label: "Bank-Grade Security",
-    detail: "Encrypted wallet & sessions",
-  },
-  {
-    icon: CheckCircle2,
-    label: "Unified Balance",
-    detail: "Airtime, data, numbers & eSIM",
-  },
-];
-
 /**
- * HeroSection (Phase 02 — Atmospheric Refinement)
+ * HeroSection (Phase 02 — Atmospheric Refinement & Relatable Floating Proof)
  *
  * Minimal Editorial SaaS + Premium Fintech hero section:
  * 1. Warm soft foundation (#FAF9F8) replacing stark plain white.
  * 2. Subtle, fine 40px grid background with radial edge fade.
  * 3. Multi-layered ambient burgundy radial glow for atmospheric depth (z-0 stacking).
- * 4. Purposeful staggered entrance animations for all content layers.
- * 5. Dominant, confident headline typography with generous whitespace.
- * 6. Elegant trust highlights providing SaaS credibility without oversized mockups.
+ * 4. 4 Corner Floating Service Cards strictly aligned to KORAK branding & real services:
+ *    - Top-Left: MTN Airtime Recharge (₦2,000 Delivered)
+ *    - Top-Right: Airtel 10GB Data Package (Active)
+ *    - Bottom-Left: Virtual Number for SMS OTP (Verified)
+ *    - Bottom-Right: Instant Wallet Funding (+₦15,000.00 Credited)
+ * 5. Purposeful staggered entrance animations for all content layers.
+ * 6. Dominant, confident headline typography with generous whitespace.
+ * 7. Clean, streamlined trust strip without layout collision.
  */
 export function HeroSection({
   className,
@@ -67,7 +54,7 @@ export function HeroSection({
     <section
       aria-labelledby="hero-heading"
       className={cn(
-        "relative overflow-hidden bg-[#FAF9F8] dark:bg-[#09090b] pt-20 pb-24 sm:pt-28 sm:pb-32 lg:pt-36 lg:pb-40 text-center transition-colors",
+        "relative overflow-hidden bg-[#FAF9F8] dark:bg-[#09090b] pt-20 pb-24 sm:pt-28 sm:pb-32 lg:pt-36 lg:pb-40 text-center transition-colors min-h-[660px]",
         className
       )}
     >
@@ -112,6 +99,31 @@ export function HeroSection({
       </div>
 
       {/* =========================================================================
+          FLOATING SERVICE PROOF CORNERS (Relatable to KORAK's Core Products)
+          ========================================================================= */}
+      <div className="pointer-events-none absolute inset-0 z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* 1. Top-Left: Mobile Airtime Recharge */}
+        <div className="hidden lg:flex pointer-events-auto absolute left-4 xl:left-8 2xl:left-12 top-16 lg:top-24">
+          <FloatingTopUpCard />
+        </div>
+
+        {/* 2. Top-Right: Cellular Data Package */}
+        <div className="hidden lg:flex pointer-events-auto absolute right-4 xl:right-8 2xl:right-12 top-16 lg:top-24">
+          <FloatingDataBundleCard />
+        </div>
+
+        {/* 3. Bottom-Left: Virtual Verification Number */}
+        <div className="hidden lg:flex pointer-events-auto absolute left-4 xl:left-8 2xl:left-12 bottom-14 lg:bottom-20">
+          <FloatingVirtualNumberCard />
+        </div>
+
+        {/* 4. Bottom-Right: Instant Wallet Funding */}
+        <div className="hidden lg:flex pointer-events-auto absolute right-4 xl:right-8 2xl:right-12 bottom-14 lg:bottom-20">
+          <FloatingWalletFundingCard />
+        </div>
+      </div>
+
+      {/* =========================================================================
           HERO CONTENT CONTAINER (Stacking Context: z-10)
           ========================================================================= */}
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -145,7 +157,7 @@ export function HeroSection({
         </p>
 
         {/* 4. Call-To-Action Actions (Staggered Entrance: Delay 350ms) */}
-        <div className="hero-animate-ctas mb-14 sm:mb-20 flex justify-center">
+        <div className="hero-animate-ctas mb-10 sm:mb-14 flex justify-center">
           <HeroActions
             primaryText={primaryCtaText}
             primaryHref={primaryCtaHref}
@@ -154,31 +166,22 @@ export function HeroSection({
           />
         </div>
 
-        {/* 5. Sleek Trust Highlights (Staggered Entrance: Delay 450ms) */}
-        <div className="hero-animate-trust max-w-3xl mx-auto pt-4 border-t border-border/60">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 text-left">
-            {DEFAULT_VALUE_PILLS.map((item, idx) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={idx}
-                  className="flex items-center gap-3 rounded-xl border border-border/70 bg-white/80 dark:bg-card/80 p-3 sm:p-3.5 backdrop-blur-xs transition-all hover:border-primary/40 hover:bg-white dark:hover:bg-card shadow-2xs"
-                >
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Icon className="size-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-foreground truncate">
-                      {item.label}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground truncate">
-                      {item.detail}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        {/* 5. Streamlined Trust Strip (Eliminating Bottom Collisions) */}
+        <div className="hero-animate-trust flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs text-muted-foreground select-none">
+          <span className="flex items-center gap-1.5 font-medium">
+            <Zap className="size-3.5 text-primary" />
+            <span>Instant Automated Dispatch</span>
+          </span>
+          <span className="hidden sm:inline text-border/80">•</span>
+          <span className="flex items-center gap-1.5 font-medium">
+            <ShieldCheck className="size-3.5 text-primary" />
+            <span>Bank-Grade Encryption</span>
+          </span>
+          <span className="hidden sm:inline text-border/80">•</span>
+          <span className="flex items-center gap-1.5 font-medium">
+            <CheckCircle2 className="size-3.5 text-primary" />
+            <span>Unified Digital Wallet</span>
+          </span>
         </div>
       </div>
     </section>

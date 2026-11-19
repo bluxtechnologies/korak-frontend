@@ -42,6 +42,38 @@ export function WalletAccountDetailsCard({
   const [explicitHasAccount, setExplicitHasAccount] =
     React.useState<boolean | null>(null);
 
+  // Sync state if initialAccountDetails prop updates or arrives
+  React.useEffect(() => {
+    if (initialAccountDetails) {
+      setGeneratedAccount(initialAccountDetails);
+      setExplicitHasAccount(true);
+    }
+  }, [initialAccountDetails]);
+
+  // Client-side self-healing check if no account details provided yet
+  React.useEffect(() => {
+    let ignore = false;
+    if (
+      !initialAccountDetails &&
+      !generatedAccount &&
+      typeof customerApi?.getDedicatedAccount === "function"
+    ) {
+      customerApi
+        .getDedicatedAccount()
+        .then((res) => {
+          if (!ignore && res?.account) {
+            setGeneratedAccount(res.account);
+            setExplicitHasAccount(true);
+            onGenerateSuccess?.(res.account);
+          }
+        })
+        .catch(() => {});
+    }
+    return () => {
+      ignore = true;
+    };
+  }, [initialAccountDetails, generatedAccount, onGenerateSuccess]);
+
   const account = generatedAccount ?? initialAccountDetails ?? null;
   const hasAccount =
     explicitHasAccount ?? (initialHasAccount ?? Boolean(initialAccountDetails));
@@ -259,10 +291,6 @@ export function WalletAccountDetailsCard({
             </>
           )}
         </Button>
-
-        <p className="text-[10px] text-muted-foreground text-center">
-          ⚡ 100% automated credit • No manual receipt upload required
-        </p>
       </div>
     </Card>
   );

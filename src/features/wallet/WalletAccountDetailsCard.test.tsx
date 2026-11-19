@@ -7,6 +7,7 @@ import { customerApi } from "@/lib/api/customer";
 vi.mock("@/lib/api/customer", () => ({
   customerApi: {
     generateDedicatedAccount: vi.fn(),
+    getDedicatedAccount: vi.fn().mockResolvedValue({ account: null, meta: { has_account: false } }),
   },
 }));
 

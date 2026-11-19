@@ -22,7 +22,8 @@ import { ROUTES, NAV_ICON_STROKE_WIDTH } from "@/config/navigation";
 import { formatCurrency, maskCurrency, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { TransactionDetailModal } from "@/features/transactions/TransactionDetailModal";
-import type { TransactionRecord } from "@/features/transactions/api";
+import type { TransactionRecord, TransactionDirection } from "@/features/transactions/api";
+import { customerApi } from "@/lib/api/customer";
 import { WalletAccountDetailsCard } from "./WalletAccountDetailsCard";
 import { FundWalletModal } from "./FundWalletModal";
 import type { WalletPageData } from "./api";
@@ -33,12 +34,88 @@ export interface WalletViewProps {
 }
 
 export function WalletView({ initialData, className }: WalletViewProps) {
-  const [data] = React.useState<WalletPageData>(initialData);
+  const [data, setData] = React.useState<WalletPageData>(initialData);
   const [isMasked, setIsMasked] = React.useState(false);
   const [activeFilter, setActiveFilter] = React.useState<"all" | "in" | "out">("all");
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedTx, setSelectedTx] = React.useState<TransactionRecord | null>(null);
   const [isFundModalOpen, setIsFundModalOpen] = React.useState(false);
+
+  // Sync state if initialData prop updates from server revalidation
+  React.useEffect(() => {
+    if (initialData) {
+      setData(initialData);
+    }
+  }, [initialData]);
+
+  // Client-side hydration: refresh wallet, dedicated account, and recent transactions
+  // where browser session cookies (korak_session, XSRF-TOKEN) are guaranteed
+  React.useEffect(() => {
+    let ignore = false;
+
+    Promise.allSettled([
+      customerApi.getWallet(),
+      customerApi.getDedicatedAccount(),
+      customerApi.getTransactions({ per_page: 15 }),
+    ])
+      .then(([walletRes, accountRes, txRes]) => {
+        if (ignore) return;
+
+        const wallet = walletRes.status === "fulfilled" ? walletRes.value : null;
+        const account =
+          accountRes.status === "fulfilled" ? accountRes.value.account : null;
+        const txs = txRes.status === "fulfilled" ? txRes.value.data : null;
+
+        setData((prev) => {
+          const updated = { ...prev };
+          if (wallet) {
+            updated.wallet = {
+              balance: wallet.balance,
+              currency: wallet.currency || "NGN",
+              ledger_count:
+                txRes.status === "fulfilled"
+                  ? txRes.value.meta.total
+                  : prev.wallet.ledger_count,
+              updated_at: wallet.updated_at || new Date().toISOString(),
+            };
+          }
+          if (account) {
+            updated.account_details = {
+              account_name: account.account_name,
+              account_number: account.account_number,
+              bank_name: account.bank_name,
+              currency: "NGN",
+              assigned_at: account.created_at,
+            };
+          }
+          if (txs) {
+            updated.transactions = txs.map((t) => ({
+              id: t.id,
+              reference: t.reference,
+              wallet_id: wallet?.id ?? prev.wallet.ledger_count.toString(),
+              direction: t.direction as TransactionDirection,
+              type:
+                t.type === "funding"
+                  ? "wallet_funding"
+                  : t.type === "refund"
+                  ? "order_refund"
+                  : "order_payment",
+              description: t.description,
+              amount: t.amount,
+              currency: t.currency,
+              balance_after: t.balance_after,
+              created_at: t.created_at,
+            }));
+          }
+          return updated;
+        });
+      })
+      .catch(() => {});
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const toggleMask = () => setIsMasked((prev) => !prev);
 
@@ -445,6 +522,19 @@ export function WalletView({ initialData, className }: WalletViewProps) {
           <WalletAccountDetailsCard
             id="wallet-account-details"
             accountDetails={data.account_details}
+            hasAccount={Boolean(data.account_details)}
+            onGenerateSuccess={(newAccount) => {
+              setData((prev) => ({
+                ...prev,
+                account_details: {
+                  account_name: newAccount.account_name,
+                  account_number: newAccount.account_number,
+                  bank_name: newAccount.bank_name,
+                  currency: "NGN",
+                  assigned_at: newAccount.created_at,
+                },
+              }));
+            }}
           />
 
           {/* E. Quick Actions Card */}

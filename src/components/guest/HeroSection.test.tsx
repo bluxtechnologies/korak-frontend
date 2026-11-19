@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { HeroSection } from "./HeroSection";
 
-describe("HeroSection (Phase 02 — Atmospheric Refinement)", () => {
+describe("HeroSection (Phase 02 — Atmospheric Refinement & Relatable Floating Proof)", () => {
   it("renders a single h1 heading with the headline", () => {
     render(<HeroSection />);
     const headings = screen.getAllByRole("heading", { level: 1 });
@@ -49,10 +49,34 @@ describe("HeroSection (Phase 02 — Atmospheric Refinement)", () => {
     expect(screen.getByTestId("hero-ambient-glow")).toBeInTheDocument();
   });
 
-  it("renders the value proposition trust highlights", () => {
+  it("renders the streamlined trust strip", () => {
     render(<HeroSection />);
-    expect(screen.getByText("Instant Delivery")).toBeInTheDocument();
-    expect(screen.getByText("Bank-Grade Security")).toBeInTheDocument();
-    expect(screen.getByText("Unified Balance")).toBeInTheDocument();
+    expect(screen.getByText("Instant Automated Dispatch")).toBeInTheDocument();
+    expect(screen.getByText("Bank-Grade Encryption")).toBeInTheDocument();
+    expect(screen.getByText("Unified Digital Wallet")).toBeInTheDocument();
+  });
+
+  it("renders the four corner floating service cards authentic to KORAK", () => {
+    render(<HeroSection />);
+
+    // 1. Top-Left: Airtime Recharge
+    expect(screen.getByText("₦2,000 Airtime")).toBeInTheDocument();
+    expect(screen.getByText("MTN · 0803 *** 4567")).toBeInTheDocument();
+    expect(screen.getByText("Delivered")).toBeInTheDocument();
+
+    // 2. Top-Right: Cellular Data Package
+    expect(screen.getByText("10GB Data Bundle")).toBeInTheDocument();
+    expect(screen.getByText("Airtel SME · Corporate Plan")).toBeInTheDocument();
+    expect(screen.getByText("Active")).toBeInTheDocument();
+
+    // 3. Bottom-Left: Virtual Number
+    expect(screen.getByText("Virtual Number")).toBeInTheDocument();
+    expect(screen.getByText("WhatsApp Verification · US (+1)")).toBeInTheDocument();
+    expect(screen.getByText("Verified")).toBeInTheDocument();
+
+    // 4. Bottom-Right: Instant Wallet Funding
+    expect(screen.getByText("+₦15,000.00")).toBeInTheDocument();
+    expect(screen.getByText("Instant Wallet Credit · Paga")).toBeInTheDocument();
+    expect(screen.getByText("Credited")).toBeInTheDocument();
   });
 });

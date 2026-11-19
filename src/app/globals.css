@@ -474,6 +474,59 @@ body {
   animation: hero-ambient-drift 20s ease-in-out infinite;
 }
 
+/* Floating Card Keyframes & Classes */
+@keyframes float-gentle-1 {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes float-gentle-2 {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(8px);
+  }
+}
+
+@keyframes float-gentle-3 {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes float-gentle-4 {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(7px);
+  }
+}
+
+.animate-float-1 {
+  animation: float-gentle-1 6s ease-in-out infinite;
+}
+
+.animate-float-2 {
+  animation: float-gentle-2 7s ease-in-out infinite 0.8s;
+}
+
+.animate-float-3 {
+  animation: float-gentle-3 8s ease-in-out infinite 1.5s;
+}
+
+.animate-float-4 {
+  animation: float-gentle-4 7.5s ease-in-out infinite 0.5s;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
