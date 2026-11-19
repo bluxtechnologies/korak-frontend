@@ -22,10 +22,13 @@ describe("DataPurchaseForm (F16.2 & F16.4)", () => {
 
     expect(screen.getByTestId("data-purchase-card")).toBeInTheDocument();
     expect(screen.getByText("Buy Data Bundles")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /MTN/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Airtel/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Glo/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /9mobile/i })).toBeInTheDocument();
+
+    // Carrier dropdown button inside input container
+    const carrierDropdown = screen.getByRole("button", {
+      name: /Toggle network carrier dropdown/i,
+    });
+    expect(carrierDropdown).toBeInTheDocument();
+    expect(carrierDropdown).toHaveTextContent(/MTN/i);
 
     // Prominent selected plan card with Change Plan action
     expect(screen.getByRole("button", { name: /Change Plan/i })).toBeInTheDocument();
@@ -67,8 +70,10 @@ describe("DataPurchaseForm (F16.2 & F16.4)", () => {
     // Type Glo prefix 0805
     await user.type(phoneInput, "08051234567");
 
-    const gloButton = screen.getByRole("button", { name: /Glo/i });
-    expect(gloButton).toHaveAttribute("aria-pressed", "true");
+    const carrierDropdown = screen.getByRole("button", {
+      name: /Toggle network carrier dropdown/i,
+    });
+    expect(carrierDropdown).toHaveTextContent(/Glo/i);
   });
 
   it("disables order review if wallet balance is insufficient", async () => {

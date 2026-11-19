@@ -660,30 +660,6 @@ export function DataPurchaseForm({
                 </>
               )}
             </div>
-
-            {/* Carrier Network Selector Buttons */}
-            <div className="flex items-center gap-1.5 pt-1 overflow-x-auto no-scrollbar">
-              {networks.map((net) => {
-                const isSelected = selectedNetwork === net.id;
-                return (
-                  <button
-                    key={net.id}
-                    type="button"
-                    aria-pressed={isSelected}
-                    onClick={() => form.setValue("network", net.id, { shouldValidate: true })}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-[6px] border px-2.5 py-1 text-[11px] font-semibold transition-all",
-                      isSelected
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-muted/20 text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    <img src={net.logo} alt="" className="size-3.5 object-contain" />
-                    <span>{net.name}</span>
-                  </button>
-                );
-              })}
-            </div>
           </div>
 
           {/* 4.C Section 2: Select Data Plan */}
