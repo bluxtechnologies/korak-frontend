@@ -7,7 +7,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import {
-  Wifi,
   CheckCircle2,
   AlertCircle,
   Clock,
@@ -21,6 +20,7 @@ import {
   ChevronDown,
   ChevronRight,
   ArrowLeft,
+  Wifi,
 } from "lucide-react";
 import {
   Card,
@@ -510,31 +510,7 @@ export function DataPurchaseForm({
 
   return (
     <div className={cn("space-y-6", className)} data-testid="data-purchase-card">
-      {/* 4.A Page Introduction (Reference 1) */}
-      <div className="space-y-3">
-        <Link
-          href={ROUTES.SERVICES}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="size-3.5" strokeWidth={NAV_ICON_STROKE_WIDTH} />
-          <span>Back to Services</span>
-        </Link>
-
-        <div className="flex items-center gap-3 pt-1">
-          <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
-            <Wifi className="size-5" strokeWidth={NAV_ICON_STROKE_WIDTH} />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-              Mobile Data
-              <span className="sr-only">Buy Data Bundles</span>
-            </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              Choose a data bundle for your recipient.
-            </p>
-          </div>
-        </div>
-      </div>
+      <span className="sr-only">Buy Data Bundles</span>
 
       <Form {...form}>
         <form onSubmit={handleValidateForConfirm} className="space-y-6" noValidate>

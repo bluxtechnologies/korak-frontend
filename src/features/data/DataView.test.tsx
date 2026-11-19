@@ -28,6 +28,9 @@ describe("DataView (F16)", () => {
     render(<DataView />);
 
     expect(screen.getByTestId("data-view")).toBeInTheDocument();
+    expect(screen.getByText("Back to Services")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Mobile Data/i })).toBeInTheDocument();
+    expect(screen.getByText("Choose a data bundle for your recipient.")).toBeInTheDocument();
     expect(screen.getByTestId("data-purchase-card")).toBeInTheDocument();
     expect(screen.getByTestId("data-order-summary")).toBeInTheDocument();
 
