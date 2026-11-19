@@ -17,7 +17,7 @@ describe("DataPurchaseForm (F16.2 & F16.4)", () => {
     vi.clearAllMocks();
   });
 
-  it("renders network selector, plan type tabs, and data bundle options", () => {
+  it("renders network selector and selected plan card without inline bundle buttons", () => {
     render(<DataPurchaseForm walletBalance={500000} />);
 
     expect(screen.getByTestId("data-purchase-card")).toBeInTheDocument();
@@ -27,38 +27,35 @@ describe("DataPurchaseForm (F16.2 & F16.4)", () => {
     expect(screen.getByRole("button", { name: /Glo/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /9mobile/i })).toBeInTheDocument();
 
-    // Plan type tabs
-    expect(
-      screen.getByRole("button", { name: /SME Data/i })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /Corporate Gifting/i })
-    ).toBeInTheDocument();
+    // Prominent selected plan card with Change Plan action
+    expect(screen.getByRole("button", { name: /Change Plan/i })).toBeInTheDocument();
+    expect(screen.getByText(/MTN SME 1\.0GB/i)).toBeInTheDocument();
 
-    // Bundle card options (e.g. 1.0 GB)
-    expect(
-      screen.getByRole("button", { name: /1\.0 GB/i })
-    ).toBeInTheDocument();
+    // Inline quick select and plan grid are removed from main page
+    expect(screen.queryByLabelText(/Or quick select:/i)).not.toBeInTheDocument();
   });
 
-  it("switches network and filters available data bundles", async () => {
+  it("opens data plan modal on Change Plan click and selects a plan", async () => {
     const user = userEvent.setup();
     render(<DataPurchaseForm walletBalance={500000} />);
 
-    // Click Airtel
-    const airtelBtn = screen.getByRole("button", { name: /Airtel/i });
-    await user.click(airtelBtn);
+    // Click Change Plan to open modal
+    const changePlanBtn = screen.getByRole("button", { name: /Change Plan/i });
+    await user.click(changePlanBtn);
 
-    // Switch to Corporate Gifting
-    await user.click(
-      screen.getByRole("button", { name: /Corporate Gifting/i })
-    );
+    // Modal dialog is open
+    expect(
+      screen.getByRole("heading", { name: /Select MTN Nigeria Data Plan/i })
+    ).toBeInTheDocument();
 
-    // Airtel CG 1.0GB is ₦340
+    // Select a plan in modal (e.g. MTN SME 5.0GB)
+    const fiveGbPlan = screen.getByRole("button", { name: /MTN SME 5\.0GB/i });
+    await user.click(fiveGbPlan);
+
+    // Modal closes and main page updates to the selected plan
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: /340/i })
-      ).toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(screen.getByText(/MTN SME 5\.0GB/i)).toBeInTheDocument();
     });
   });
 
@@ -101,6 +98,7 @@ describe("DataPurchaseForm (F16.2 & F16.4)", () => {
       status: "completed",
       message: "MTN SME 1.0GB (1.0 GB) successfully credited.",
       created_at: new Date().toISOString(),
+      auto_refunded: false,
     });
 
     render(
@@ -125,11 +123,13 @@ describe("DataPurchaseForm (F16.2 & F16.4)", () => {
     await user.click(payBtn);
 
     await waitFor(() => {
-      expect(dataApi.purchaseData).toHaveBeenCalledWith({
-        network: "mtn",
-        plan_id: "mtn_sme_1gb",
-        phone: "08031234567",
-      });
+      expect(dataApi.purchaseData).toHaveBeenCalledWith(
+        expect.objectContaining({
+          network: "mtn",
+          plan_id: "mtn_sme_1gb",
+          phone: "08031234567",
+        })
+      );
       expect(handleOrderCompleted).toHaveBeenCalled();
     });
 
@@ -137,5 +137,95 @@ describe("DataPurchaseForm (F16.2 & F16.4)", () => {
     expect(screen.getByTestId("data-success-card")).toBeInTheDocument();
     expect(screen.getByText(/Data Bundle Credited/i)).toBeInTheDocument();
     expect(screen.getByText(/DAT-20261115-9988/)).toBeInTheDocument();
+  });
+
+  it("displays auto-refund alert when purchase has failed status", async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(dataApi.purchaseData).mockResolvedValueOnce({
+      order_id: "ord_dat_fail",
+      reference: "DAT-FAIL-1122",
+      network: "mtn",
+      plan_name: "MTN SME 1.0GB",
+      size: "1.0 GB",
+      phone: "08031234567",
+      amount: 320,
+      status: "failed",
+      message: "Data bundle delivery could not be completed by the network. Your wallet has been automatically refunded.",
+      created_at: new Date().toISOString(),
+      auto_refunded: true,
+    });
+
+    render(<DataPurchaseForm walletBalance={500000} />);
+
+    const phoneInput = screen.getByPlaceholderText("08031234567");
+    await user.type(phoneInput, "08031234567");
+
+    await user.click(screen.getByRole("button", { name: /Review Order/i }));
+    await user.click(screen.getByRole("button", { name: /Pay ₦320/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("data-auto-refund-alert")).toBeInTheDocument();
+      expect(
+        screen.getByText(/Your wallet has been automatically refunded/i)
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("displays processing alert when purchase has processing status", async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(dataApi.purchaseData).mockResolvedValueOnce({
+      order_id: "ord_dat_proc",
+      reference: "DAT-PROC-3344",
+      network: "mtn",
+      plan_name: "MTN SME 1.0GB",
+      size: "1.0 GB",
+      phone: "08031234567",
+      amount: 320,
+      status: "processing",
+      message: "Data bundle request is processing with the network provider. Your line will be credited shortly.",
+      created_at: new Date().toISOString(),
+      auto_refunded: false,
+    });
+
+    render(<DataPurchaseForm walletBalance={500000} />);
+
+    const phoneInput = screen.getByPlaceholderText("08031234567");
+    await user.type(phoneInput, "08031234567");
+
+    await user.click(screen.getByRole("button", { name: /Review Order/i }));
+    await user.click(screen.getByRole("button", { name: /Pay ₦320/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("data-processing-alert")).toBeInTheDocument();
+      expect(
+        screen.getByText(/processing with the network provider/i)
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("handles 422 insufficient balance and displays deposit prompt", async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(dataApi.purchaseData).mockRejectedValueOnce({
+      status: 422,
+      code: "insufficient_balance",
+      message: "Insufficient wallet balance for this purchase.",
+    });
+
+    render(<DataPurchaseForm walletBalance={500000} />);
+
+    const phoneInput = screen.getByPlaceholderText("08031234567");
+    await user.type(phoneInput, "08031234567");
+
+    await user.click(screen.getByRole("button", { name: /Review Order/i }));
+    await user.click(screen.getByRole("button", { name: /Pay ₦320/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Insufficient wallet balance for this purchase/i)
+      ).toBeInTheDocument();
+    });
   });
 });

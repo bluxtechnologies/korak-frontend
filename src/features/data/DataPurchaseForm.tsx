@@ -41,23 +41,22 @@ import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { NAV_ICON_STROKE_WIDTH, ROUTES } from "@/config/navigation";
-import { formatCurrency, formatNaira } from "@/lib/formatters";
+import { formatNaira } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import {
   TELECOM_NETWORKS,
   detectNetworkFromPhone,
-  type TelecomNetwork,
   type NetworkInfo,
 } from "@/features/airtime/api";
 import {
   MOCK_DATA_PLANS,
   purchaseData,
   getDataPlans,
+  getSupportedDataNetworks,
   getPlanValidityCategory,
   getPlanAllowance,
   type DataBundlePlan,
   type DataOrderResult,
-  type DataPlanType,
   DATA_PLAN_TYPES,
 } from "./api";
 import { DataPlanModal } from "./DataPlanModal";
@@ -107,6 +106,20 @@ export function DataPurchaseForm({
   const [completedOrder, setCompletedOrder] =
     React.useState<DataOrderResult | null>(null);
   const [availablePlans, setAvailablePlans] = React.useState<DataBundlePlan[]>(MOCK_DATA_PLANS);
+  const [networks, setNetworks] = React.useState<NetworkInfo[]>(TELECOM_NETWORKS);
+
+  // Dynamic discovery of supported telecom data networks
+  React.useEffect(() => {
+    let ignore = false;
+    getSupportedDataNetworks().then((data) => {
+      if (!ignore && data && data.length > 0) {
+        setNetworks(data);
+      }
+    });
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const form = useForm<DataFormData>({
     resolver: zodResolver(dataFormSchema),
@@ -126,10 +139,12 @@ export function DataPurchaseForm({
 
   const currentNetworkInfo = React.useMemo(() => {
     return (
+      networks.find((n) => n.id === selectedNetwork) ||
       TELECOM_NETWORKS.find((n) => n.id === selectedNetwork) ||
+      networks[0] ||
       TELECOM_NETWORKS[0]
     );
-  }, [selectedNetwork]);
+  }, [networks, selectedNetwork]);
 
   // Load plans whenever network changes
   React.useEffect(() => {
@@ -223,18 +238,49 @@ export function DataPurchaseForm({
         network: values.network,
         plan_id: values.plan_id,
         phone: values.phone,
+        amount: activePlan.price,
+        package_name: activePlan.name,
+        service_code: currentNetworkInfo.service_code,
+        service_name: currentNetworkInfo.fullName,
       });
 
       setCompletedOrder(result);
       setIsConfirmOpen(false);
-      toast.success(result.message || "Data bundle credited successfully!");
+
+      if (result.status === "failed") {
+        toast.error(
+          "Data bundle delivery could not be completed by the network. Your wallet has been automatically refunded."
+        );
+      } else if (result.status === "processing") {
+        toast.info(
+          "Data bundle request is processing with the network provider. Your line will be credited shortly."
+        );
+      } else {
+        toast.success(result.message || "Data bundle credited successfully!");
+      }
+
       if (onOrderCompleted) onOrderCompleted(result);
     } catch (err: unknown) {
-      const msg =
-        (err as { message?: string })?.message ||
-        "Could not complete data bundle purchase. Please try again.";
-      setRootError(msg);
-      toast.error(msg);
+      setIsConfirmOpen(false);
+      const errObj = err as {
+        code?: string;
+        message?: string;
+        response?: { data?: { code?: string; message?: string } };
+      };
+      const code = errObj?.code || errObj?.response?.data?.code;
+      if (code === "insufficient_balance") {
+        const msg =
+          "Insufficient wallet balance for this purchase. Please deposit funds into your wallet.";
+        setRootError(msg);
+        toast.error(msg);
+      } else {
+        const msg =
+          errObj?.message ||
+          errObj?.response?.data?.message ||
+          "Could not complete data bundle purchase. Please try again.";
+        setRootError(msg);
+        toast.error(msg);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -261,24 +307,103 @@ export function DataPurchaseForm({
 
   // Render Completed / Success Receipt State
   if (completedOrder) {
+    const isFailed = completedOrder.status === "failed";
+    const isProcessing = completedOrder.status === "processing";
+
     return (
       <Card
-        className={cn("rounded-[10px] border border-border bg-card shadow-none overflow-hidden", className)}
+        className={cn(
+          "rounded-[10px] border border-border bg-card shadow-none overflow-hidden",
+          className
+        )}
         data-testid="data-success-card"
       >
-        <CardHeader className="border-b border-border p-6 text-center bg-muted/20">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-[10px] border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2 className="size-6" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+        <CardHeader
+          className={cn(
+            "border-b border-border p-6 text-center",
+            isFailed
+              ? "bg-amber-500/5 dark:bg-amber-500/10"
+              : isProcessing
+              ? "bg-primary/5 dark:bg-primary/10"
+              : "bg-muted/20"
+          )}
+        >
+          <div
+            className={cn(
+              "mx-auto flex size-12 items-center justify-center rounded-[10px]",
+              isFailed
+                ? "border border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                : isProcessing
+                ? "border border-primary/20 bg-primary/10 text-primary"
+                : "border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+            )}
+          >
+            {isFailed ? (
+              <AlertCircle className="size-6" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+            ) : isProcessing ? (
+              <Clock className="size-6" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+            ) : (
+              <CheckCircle2 className="size-6" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+            )}
           </div>
           <CardTitle className="mt-3 text-lg font-bold text-foreground sm:text-xl">
-            Data Bundle Credited
+            {isFailed
+              ? "Data Bundle Delivery Failed"
+              : isProcessing
+              ? "Data Bundle Request Processing"
+              : "Data Bundle Credited"}
           </CardTitle>
           <CardDescription className="text-xs text-muted-foreground">
-            Direct high-speed carrier provisioning completed
+            {isFailed
+              ? "Carrier route unavailable — wallet automatically refunded"
+              : isProcessing
+              ? "Direct carrier provisioning currently in progress"
+              : "Direct high-speed carrier provisioning completed"}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="p-6 space-y-5 text-sm">
+          {/* Status Alert Banners */}
+          {isFailed && (
+            <div
+              className="flex items-start gap-2.5 rounded-[8px] border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-900 dark:text-amber-200"
+              data-testid="data-auto-refund-alert"
+            >
+              <AlertCircle
+                className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400"
+                strokeWidth={NAV_ICON_STROKE_WIDTH}
+              />
+              <div className="space-y-1">
+                <p className="font-semibold">
+                  Data bundle delivery could not be completed by the network. Your wallet has been automatically refunded.
+                </p>
+                <p className="text-[11px] text-amber-800/90 dark:text-amber-300/80">
+                  ₦{completedOrder.amount.toLocaleString()} has been restored to your wallet ledger. No funds were debited.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isProcessing && (
+            <div
+              className="flex items-start gap-2.5 rounded-[8px] border border-primary/30 bg-primary/10 p-3.5 text-xs text-foreground"
+              data-testid="data-processing-alert"
+            >
+              <Clock
+                className="mt-0.5 size-4 shrink-0 text-primary"
+                strokeWidth={NAV_ICON_STROKE_WIDTH}
+              />
+              <div className="space-y-1">
+                <p className="font-semibold">
+                  Data bundle request is processing with the network provider. Your line will be credited shortly.
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  The telecom network has accepted the request and is provisioning the data bundle.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between rounded-[8px] border border-border bg-muted/30 px-3.5 py-2.5 text-xs">
             <span className="text-muted-foreground font-medium">Reference</span>
             <div className="flex items-center gap-2">
@@ -320,16 +445,32 @@ export function DataPurchaseForm({
               </span>
             </div>
             <div className="border-t border-border pt-2.5 flex justify-between text-sm font-bold">
-              <span className="text-foreground">Total Debited</span>
-              <span className="text-primary font-mono">
+              <span className="text-foreground">
+                {isFailed ? "Amount Refunded" : "Total Debited"}
+              </span>
+              <span
+                className={cn(
+                  "font-mono",
+                  isFailed
+                    ? "text-amber-600 dark:text-amber-400"
+                    : "text-primary"
+                )}
+              >
                 ₦{completedOrder.amount.toLocaleString()}
               </span>
             </div>
           </div>
 
           <div className="flex items-center gap-2 rounded-[8px] border border-emerald-500/20 bg-emerald-500/5 p-3 text-xs text-muted-foreground">
-            <ShieldCheck className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" strokeWidth={NAV_ICON_STROKE_WIDTH} />
-            <span>Automated carrier cluster delivery. Check data balance using the network USSD code.</span>
+            <ShieldCheck
+              className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400"
+              strokeWidth={NAV_ICON_STROKE_WIDTH}
+            />
+            <span>
+              {isFailed
+                ? "Transaction verified and balance safely credited back to your wallet."
+                : "Automated carrier cluster delivery. Check data balance using the network USSD code."}
+            </span>
           </div>
         </CardContent>
 
@@ -349,7 +490,10 @@ export function DataPurchaseForm({
             }}
             className="w-full flex-1 text-xs font-medium rounded-[8px] h-10 sm:w-auto gap-1.5"
           >
-            <Printer className="size-3.5 text-muted-foreground" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+            <Printer
+              className="size-3.5 text-muted-foreground"
+              strokeWidth={NAV_ICON_STROKE_WIDTH}
+            />
             <span>Print Receipt</span>
           </Button>
           <Button
@@ -480,7 +624,7 @@ export function DataPurchaseForm({
                     aria-label="Select carrier network"
                     className="absolute left-0 top-full mt-1.5 z-40 w-64 rounded-[10px] border border-border bg-card p-1.5 shadow-lg space-y-1"
                   >
-                    {TELECOM_NETWORKS.map((net) => {
+                    {networks.map((net) => {
                       const isSelected = selectedNetwork === net.id;
                       return (
                         <div
@@ -519,7 +663,7 @@ export function DataPurchaseForm({
 
             {/* Carrier Network Selector Buttons */}
             <div className="flex items-center gap-1.5 pt-1 overflow-x-auto no-scrollbar">
-              {TELECOM_NETWORKS.map((net) => {
+              {networks.map((net) => {
                 const isSelected = selectedNetwork === net.id;
                 return (
                   <button
@@ -554,7 +698,7 @@ export function DataPurchaseForm({
             </div>
 
             {/* Prominent Selected Plan Component */}
-            {activePlan && (
+            {activePlan ? (
               <div
                 onClick={() => setIsPlanModalOpen(true)}
                 className="group relative flex items-center justify-between rounded-[10px] border border-primary/30 bg-primary/[0.03] p-4 sm:p-5 transition-all hover:border-primary/60 cursor-pointer shadow-2xs"
@@ -600,86 +744,30 @@ export function DataPurchaseForm({
                   </div>
                 </div>
               </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsPlanModalOpen(true)}
+                className="flex items-center justify-between w-full rounded-[10px] border-2 border-dashed border-border bg-card p-4 sm:p-5 text-left transition-colors hover:border-primary/50 hover:bg-muted/20"
+              >
+                <div>
+                  <span className="text-sm font-semibold text-foreground block">
+                    No data plan selected
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Click to browse and choose an available bundle
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-[6px] text-xs font-semibold"
+                >
+                  Choose Plan
+                </Button>
+              </button>
             )}
-
-            {/* 4.D Quick Plan Selector Dropdown */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs">
-              <label
-                htmlFor="quick-plan-select"
-                className="text-muted-foreground font-medium shrink-0"
-              >
-                Or quick select:
-              </label>
-              <select
-                id="quick-plan-select"
-                value={selectedPlanId}
-                onChange={(e) => {
-                  form.setValue("plan_id", e.target.value, { shouldValidate: true });
-                }}
-                className="flex-1 h-9 rounded-[8px] border border-border bg-card px-3 text-xs text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
-              >
-                {availablePlans.map((plan) => (
-                  <option key={plan.id} value={plan.id}>
-                    {plan.name} — {formatNaira(plan.price)} ({plan.validity})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Plan Category Filter Tabs */}
-            <div className="flex items-center gap-1.5 pt-1 overflow-x-auto no-scrollbar">
-              {DATA_PLAN_TYPES.map((type) => {
-                const isSelected = selectedPlanType === type.id;
-                return (
-                  <button
-                    key={type.id}
-                    type="button"
-                    onClick={() => {
-                      form.setValue("plan_type", type.id);
-                      const matching = availablePlans.find((p) => p.plan_type === type.id);
-                      if (matching) {
-                        form.setValue("plan_id", matching.id, { shouldValidate: true });
-                      }
-                    }}
-                    className={cn(
-                      "rounded-[6px] border px-2.5 py-1 text-[11px] font-semibold transition-all",
-                      isSelected
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-muted/20 text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    {type.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Quick Plan Buttons */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
-              {availablePlans
-                .filter((p) => p.plan_type === selectedPlanType)
-                .map((p) => {
-                  const isSelected = selectedPlanId === p.id;
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => form.setValue("plan_id", p.id, { shouldValidate: true })}
-                      className={cn(
-                        "rounded-[8px] border p-2 text-left text-xs transition-all",
-                        isSelected
-                          ? "border-primary bg-primary/10 text-primary font-bold"
-                          : "border-border bg-card hover:bg-muted/30 text-foreground"
-                      )}
-                    >
-                      <span className="block font-bold truncate">{p.size}</span>
-                      <span className="block text-[11px] font-mono text-muted-foreground">
-                        ₦{p.price.toLocaleString()}
-                      </span>
-                    </button>
-                  );
-                })}
-            </div>
           </div>
 
           {/* 4.E Wallet Balance Warning */}
