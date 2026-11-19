@@ -4,8 +4,10 @@ import {
   apiClient,
   ApiClientError,
   buildApiUrl,
+  checkBackendHealth,
   fetchCsrfCookie,
   getBaseApiUrl,
+  getBackendRootUrl,
   getXsrfCookie,
 } from "./client";
 import {
@@ -48,6 +50,12 @@ describe("API Client Layer (lib/api)", () => {
       });
       expect(url).toBe(
         "http://localhost:8070/api/v1/orders?page=2&status=completed"
+      );
+    });
+
+    it("resolves /sanctum/csrf-cookie against the backend root URL", () => {
+      expect(buildApiUrl("/sanctum/csrf-cookie")).toBe(
+        `${getBackendRootUrl()}/sanctum/csrf-cookie`
       );
     });
   });
@@ -723,6 +731,26 @@ describe("API Client Layer (lib/api)", () => {
         expect(apiErr.status).toBe(0);
         expect(apiErr.code).toBe("network_error");
       }
+    });
+
+    it("checkBackendHealth calls GET /api/v1/health successfully", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: new Headers({ "content-type": "application/json" }),
+        json: async () => ({ status: "ok", service: "korak-backend" }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const health = await checkBackendHealth();
+      expect(health).toEqual({ status: "ok", service: "korak-backend" });
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("/api/v1/health"),
+        expect.objectContaining({
+          method: "GET",
+          credentials: "include",
+        })
+      );
     });
   });
 });

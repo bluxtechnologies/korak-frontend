@@ -34,10 +34,20 @@ export class ApiClientError extends Error {
 
 const DEFAULT_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ||
-  "http://localhost:8070";
+  (process.env.NODE_ENV === "production"
+    ? "https://backend.korakdigital.com/api/v1"
+    : "http://localhost:8070");
+
+const BACKEND_ROOT_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/+$/, "") ||
+  DEFAULT_BASE_URL.replace(/\/api\/v1\/?$/, "");
 
 export function getBaseApiUrl(): string {
   return DEFAULT_BASE_URL;
+}
+
+export function getBackendRootUrl(): string {
+  return BACKEND_ROOT_URL;
 }
 
 export function buildApiUrl(
@@ -45,7 +55,19 @@ export function buildApiUrl(
   params?: Record<string, string | number | boolean | undefined | null>
 ): string {
   const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
-  const url = new URL(`${DEFAULT_BASE_URL}${cleanEndpoint}`);
+
+  let fullUrlString: string;
+  if (cleanEndpoint.startsWith("/sanctum/")) {
+    fullUrlString = `${BACKEND_ROOT_URL}${cleanEndpoint}`;
+  } else if (cleanEndpoint.startsWith("/api/v1/")) {
+    fullUrlString = `${BACKEND_ROOT_URL}${cleanEndpoint}`;
+  } else if (DEFAULT_BASE_URL.endsWith("/api/v1")) {
+    fullUrlString = `${DEFAULT_BASE_URL}${cleanEndpoint}`;
+  } else {
+    fullUrlString = `${DEFAULT_BASE_URL}${cleanEndpoint}`;
+  }
+
+  const url = new URL(fullUrlString);
 
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
@@ -143,6 +165,16 @@ export async function fetchCsrfCookie(): Promise<void> {
  */
 export async function initCsrf(): Promise<void> {
   return fetchCsrfCookie();
+}
+
+/**
+ * Checks backend health per Frontend Integration Guide (GET /api/v1/health).
+ */
+export async function checkBackendHealth(): Promise<{ status: string; [key: string]: unknown }> {
+  return baseApiClient<{ status: string; [key: string]: unknown }>("/api/v1/health", {
+    method: "GET",
+    skipCsrf: true,
+  });
 }
 
 const STATE_CHANGING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);

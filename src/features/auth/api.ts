@@ -217,22 +217,23 @@ export async function register(
   payload: RegisterPayload
 ): Promise<LoginResponse> {
   await fetchCsrfCookie();
-  const fallbackUsername =
-    payload.username ||
-    (payload.email ? payload.email.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "") : "");
+  const body: Record<string, unknown> = {
+    name: payload.name,
+    phone_number: payload.phone_number,
+    phone: payload.phone_number,
+    email: payload.email,
+    password: payload.password,
+    password_confirmation: payload.password_confirmation,
+    terms: payload.terms,
+  };
+
+  if (payload.username) {
+    body.username = payload.username;
+  }
 
   const raw = await api.post<ApiResponse<AuthUser | LoginResponse>>(
     "/api/v1/auth/register",
-    {
-      name: payload.name,
-      username: fallbackUsername,
-      phone_number: payload.phone_number,
-      phone: payload.phone_number,
-      email: payload.email,
-      password: payload.password,
-      password_confirmation: payload.password_confirmation,
-      terms: payload.terms,
-    }
+    body
   );
   const unwrapped = unwrapApiResponse(raw) as unknown as Record<string, unknown>;
 
