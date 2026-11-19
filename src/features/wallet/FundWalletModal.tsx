@@ -17,7 +17,7 @@ import type { VirtualAccountDetails } from "./api";
 export interface FundWalletModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  accountDetails: VirtualAccountDetails;
+  accountDetails?: VirtualAccountDetails | null;
 }
 
 export function FundWalletModal({
@@ -28,6 +28,7 @@ export function FundWalletModal({
   const [copied, setCopied] = React.useState(false);
 
   const handleCopy = async () => {
+    if (!accountDetails?.account_number) return;
     try {
       if (typeof navigator !== "undefined" && navigator.clipboard) {
         await navigator.clipboard.writeText(accountDetails.account_number);
@@ -57,59 +58,76 @@ export function FundWalletModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="mt-4 space-y-3.5 rounded-[8px] border border-border bg-muted/20 p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Bank Name</span>
-            <span className="text-sm font-bold text-foreground">{accountDetails.bank_name}</span>
-          </div>
+        {accountDetails ? (
+          <>
+            <div className="mt-4 space-y-3.5 rounded-[8px] border border-border bg-muted/20 p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground font-medium">Bank Name</span>
+                <span className="text-sm font-bold text-foreground">{accountDetails.bank_name}</span>
+              </div>
 
-          <div className="flex items-center justify-between border-t border-border/50 pt-3">
-            <span className="text-xs text-muted-foreground font-medium">Account Number</span>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-sm font-bold text-foreground">
-                {accountDetails.account_number}
+              <div className="flex items-center justify-between border-t border-border/50 pt-3">
+                <span className="text-xs text-muted-foreground font-medium">Account Number</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm font-bold text-foreground">
+                    {accountDetails.account_number}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleCopy}
+                    aria-label="Copy account number"
+                    className="size-7 rounded-[6px]"
+                  >
+                    {copied ? (
+                      <Check className="size-3.5 text-emerald-500" />
+                    ) : (
+                      <Copy className="size-3.5" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-border/50 pt-3">
+                <span className="text-xs text-muted-foreground font-medium">Account Name</span>
+                <span className="text-xs font-semibold text-foreground text-right font-mono">
+                  {accountDetails.account_name}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 rounded-[8px] border border-warning-border bg-warning-surface p-3 text-xs text-warning mt-2">
+              <AlertCircle className="size-4 shrink-0 mt-0.5" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+              <span>
+                Please only transfer from accounts bearing your verified identity. Minimum deposit is ₦100.00.
               </span>
+            </div>
+
+            <div className="mt-4 flex justify-end">
               <Button
                 type="button"
-                variant="outline"
-                size="icon"
-                onClick={handleCopy}
-                aria-label="Copy account number"
-                className="size-7 rounded-[6px]"
+                onClick={() => onOpenChange(false)}
+                className="w-full rounded-[8px] bg-primary font-bold text-primary-foreground hover:bg-primary/90 text-xs h-10"
               >
-                {copied ? (
-                  <Check className="size-3.5 text-emerald-500" />
-                ) : (
-                  <Copy className="size-3.5" strokeWidth={NAV_ICON_STROKE_WIDTH} />
-                )}
+                I Have Transferred
               </Button>
             </div>
+          </>
+        ) : (
+          <div className="mt-4 space-y-4 text-center">
+            <div className="rounded-[8px] border border-border bg-muted/20 p-4 text-xs text-muted-foreground">
+              You do not have a dedicated virtual account yet. Please click &quot;Generate Account Details&quot; in the Wallet Account Details card to create your deposit account.
+            </div>
+            <Button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="w-full rounded-[8px] bg-primary font-bold text-primary-foreground text-xs h-10"
+            >
+              Close
+            </Button>
           </div>
-
-          <div className="flex items-center justify-between border-t border-border/50 pt-3">
-            <span className="text-xs text-muted-foreground font-medium">Account Name</span>
-            <span className="text-xs font-semibold text-foreground text-right font-mono">
-              {accountDetails.account_name}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-start gap-2 rounded-[8px] border border-warning-border bg-warning-surface p-3 text-xs text-warning mt-2">
-          <AlertCircle className="size-4 shrink-0 mt-0.5" strokeWidth={NAV_ICON_STROKE_WIDTH} />
-          <span>
-            Please only transfer from accounts bearing your verified identity. Minimum deposit is ₦100.00.
-          </span>
-        </div>
-
-        <div className="mt-4 flex justify-end">
-          <Button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className="w-full rounded-[8px] bg-primary font-bold text-primary-foreground hover:bg-primary/90 text-xs h-10"
-          >
-            I Have Transferred
-          </Button>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   );

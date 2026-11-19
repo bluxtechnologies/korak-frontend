@@ -41,11 +41,12 @@ describe("Navigation Configuration (F5.1: src/config/navigation.ts)", () => {
       });
     });
 
-    it("has exact 2 bottom items in the specified order with correct hrefs", () => {
-      expect(BOTTOM_NAV_ITEMS).toHaveLength(2);
+    it("has exact 3 bottom items in the specified order with correct hrefs", () => {
+      expect(BOTTOM_NAV_ITEMS).toHaveLength(3);
 
       const expectedBottom = [
         { label: "Profile", href: "/profile" },
+        { label: "Support", href: "/support" },
         { label: "Settings", href: "/settings" },
       ];
 
@@ -60,10 +61,10 @@ describe("Navigation Configuration (F5.1: src/config/navigation.ts)", () => {
       expect(NAV_ICON_STROKE_WIDTH).toBe(1.75);
     });
 
-    it("contains total 9 navigation items in DASHBOARD_NAV and ALL_NAV_ITEMS", () => {
+    it("contains total 10 navigation items in DASHBOARD_NAV and ALL_NAV_ITEMS", () => {
       expect(DASHBOARD_NAV.main).toBe(MAIN_NAV_ITEMS);
       expect(DASHBOARD_NAV.bottom).toBe(BOTTOM_NAV_ITEMS);
-      expect(ALL_NAV_ITEMS).toHaveLength(9);
+      expect(ALL_NAV_ITEMS).toHaveLength(10);
     });
 
     it("aligns user menu links with customer routes", () => {

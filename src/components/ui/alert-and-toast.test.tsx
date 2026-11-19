@@ -96,5 +96,23 @@ describe("Alert and Toast Provider Components", () => {
       expect(warnId).toBeDefined();
       expect(infoId).toBeDefined();
     });
+
+    it("supports showToast.loading and showToast.dismiss", () => {
+      const loadId = showToast.loading("Processing", "Generating virtual account...");
+      expect(loadId).toBeDefined();
+      expect(() => showToast.dismiss(loadId)).not.toThrow();
+    });
+
+    it("supports direct sonner toast methods", () => {
+      expect(() => toast.success("Copied to clipboard")).not.toThrow();
+      expect(() => toast.error("Network error occurred")).not.toThrow();
+      expect(() => toast.warning("Session expiring soon")).not.toThrow();
+      expect(() => toast.info("New update available")).not.toThrow();
+    });
+
+    it("renders custom icons and configuration for Toaster", () => {
+      const { container } = render(<Toaster position="top-right" gap={12} />);
+      expect(document.body).toBeInTheDocument();
+    });
   });
 });

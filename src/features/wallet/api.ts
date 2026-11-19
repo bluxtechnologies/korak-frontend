@@ -1,13 +1,12 @@
 /**
  * Dedicated Wallet Feature API service & types.
- * Follows docs/14-wallet-and-payments.md and docs/09-frontend-standards.md.
+ * Follows docs/14-wallet-and-payments.md and docs/25-frontend-customer-endpoints-handoff.md.
  */
-import { api } from "@/lib/api";
-import { unwrapApiResponse } from "@/lib/api/errors";
-import type { ApiResponse } from "@/lib/api/types";
+import { customerApi } from "@/lib/api/customer";
 import type { WalletSummary } from "@/features/overview/api";
 import {
   type TransactionRecord,
+  type TransactionDirection,
   MOCK_TRANSACTION_RECORDS,
 } from "@/features/transactions/api";
 
@@ -21,7 +20,7 @@ export interface VirtualAccountDetails {
 
 export interface WalletPageData {
   wallet: WalletSummary;
-  account_details: VirtualAccountDetails;
+  account_details: VirtualAccountDetails | null;
   transactions: TransactionRecord[];
 }
 
@@ -44,12 +43,75 @@ export const MOCK_WALLET_PAGE_DATA: WalletPageData = {
   transactions: MOCK_TRANSACTION_RECORDS,
 };
 
+/**
+ * Fetches real wallet page data from live customer API endpoints:
+ * - Wallet balance via customerApi.getWallet()
+ * - Dedicated virtual account via customerApi.getDedicatedAccount()
+ * - Recent transaction ledger entries via customerApi.getTransactions()
+ *
+ * For new accounts or zero balances, cleanly returns 0 / null / empty arrays
+ * without falling back to mock fixtures.
+ */
 export async function getWalletPageData(): Promise<WalletPageData> {
   try {
-    const response = await api.get<ApiResponse<WalletPageData>>("/api/v1/wallet");
-    return unwrapApiResponse(response);
+    const [walletRes, accountRes, txRes] = await Promise.allSettled([
+      customerApi.getWallet(),
+      customerApi.getDedicatedAccount(),
+      customerApi.getTransactions({ per_page: 15 }),
+    ]);
+
+    const walletData = walletRes.status === "fulfilled" ? walletRes.value : null;
+    const accountData = accountRes.status === "fulfilled" ? accountRes.value.account : null;
+    const txData = txRes.status === "fulfilled" ? txRes.value.data : [];
+
+    const account_details: VirtualAccountDetails | null = accountData
+      ? {
+          account_name: accountData.account_name,
+          account_number: accountData.account_number,
+          bank_name: accountData.bank_name,
+          currency: "NGN",
+          assigned_at: accountData.created_at,
+        }
+      : null;
+
+    const transactions: TransactionRecord[] = txData.map((t) => ({
+      id: t.id,
+      reference: t.reference,
+      wallet_id: walletData?.id ?? "",
+      direction: t.direction as TransactionDirection,
+      type:
+        t.type === "funding"
+          ? "wallet_funding"
+          : t.type === "refund"
+          ? "order_refund"
+          : "order_payment",
+      description: t.description,
+      amount: t.amount,
+      currency: t.currency,
+      balance_after: t.balance_after,
+      created_at: t.created_at,
+    }));
+
+    return {
+      wallet: {
+        balance: walletData?.balance ?? 0,
+        currency: walletData?.currency ?? "NGN",
+        ledger_count: txRes.status === "fulfilled" ? txRes.value.meta.total : 0,
+        updated_at: walletData?.updated_at ?? new Date().toISOString(),
+      },
+      account_details,
+      transactions,
+    };
   } catch {
-    // In dev / offline or unmocked backend, gracefully return realistic fixture
-    return MOCK_WALLET_PAGE_DATA;
+    return {
+      wallet: {
+        balance: 0,
+        currency: "NGN",
+        ledger_count: 0,
+        updated_at: new Date().toISOString(),
+      },
+      account_details: null,
+      transactions: [],
+    };
   }
 }

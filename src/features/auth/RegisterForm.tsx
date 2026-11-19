@@ -40,13 +40,13 @@ const registerSchema = z
       .min(1, "Please enter your email address.")
       .email("Please enter a valid email address.")
       .max(254, "Email address is too long."),
-    username: z
+    phone_number: z
       .string()
-      .min(3, "Username must be at least 3 characters.")
-      .max(30, "Username must be 30 characters or fewer.")
+      .min(7, "Phone number must be at least 7 digits.")
+      .max(20, "Phone number is too long.")
       .regex(
-        /^[a-zA-Z0-9_.-]+$/,
-        "Username may only contain letters, numbers, and underscores, dashes, or periods."
+        /^\+?[0-9\s\-().]+$/,
+        "Please enter a valid phone number."
       ),
     password: z
       .string()
@@ -79,7 +79,7 @@ export function RegisterForm() {
     defaultValues: {
       name: "",
       email: "",
-      username: "",
+      phone_number: "",
       password: "",
       password_confirmation: "",
       terms: false,
@@ -167,26 +167,24 @@ export function RegisterForm() {
           )}
         />
 
-        {/* Username */}
+        {/* Phone number */}
         <FormField
           control={form.control}
-          name="username"
+          name="phone_number"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Username</FormLabel>
+              <FormLabel>Phone number</FormLabel>
               <FormControl>
                 <Input
                   {...field}
-                  type="text"
-                  placeholder="jane_smith"
-                  autoComplete="username"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck="false"
+                  type="tel"
+                  placeholder="+234 801 234 5678"
+                  autoComplete="tel"
+                  inputMode="tel"
                 />
               </FormControl>
               <FormDescription>
-                Letters, numbers, and underscores only.
+                Include your country code (e.g. +234 for Nigeria).
               </FormDescription>
               <FormMessage />
             </FormItem>

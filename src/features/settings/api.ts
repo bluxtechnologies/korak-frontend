@@ -17,6 +17,8 @@ export interface UserProfile {
   email: string;
   username: string;
   phone?: string;
+  first_name?: string | null;
+  last_name?: string | null;
   email_verified_at: string | null;
   created_at: string;
 }
@@ -26,6 +28,8 @@ export interface UpdateProfilePayload {
   username: string;
   email: string;
   phone?: string;
+  first_name?: string;
+  last_name?: string;
 }
 
 export interface ChangePasswordPayload {
@@ -72,6 +76,93 @@ export interface SecurityActivity {
 // API Methods
 // ---------------------------------------------------------------------------
 
+function parseUserAgent(ua?: string | null): {
+  device_type: "desktop" | "mobile" | "tablet";
+  browser: string;
+} {
+  if (!ua) return { device_type: "desktop", browser: "Web Browser" };
+  const lower = ua.toLowerCase();
+  let device_type: "desktop" | "mobile" | "tablet" = "desktop";
+  if (
+    lower.includes("mobile") ||
+    lower.includes("android") ||
+    lower.includes("iphone")
+  ) {
+    device_type = "mobile";
+  } else if (lower.includes("ipad") || lower.includes("tablet")) {
+    device_type = "tablet";
+  }
+
+  let browser = "Web Browser";
+  if (lower.includes("chrome") && !lower.includes("edg")) browser = "Chrome";
+  else if (lower.includes("safari") && !lower.includes("chrome")) browser = "Safari";
+  else if (lower.includes("edg")) browser = "Edge";
+  else if (lower.includes("firefox")) browser = "Firefox";
+
+  if (lower.includes("windows")) browser += " on Windows";
+  else if (lower.includes("macintosh") || lower.includes("mac os")) browser += " on macOS";
+  else if (lower.includes("android")) browser += " on Android";
+  else if (lower.includes("iphone") || lower.includes("ios")) browser += " on iOS";
+  else if (lower.includes("linux")) browser += " on Linux";
+
+  return { device_type, browser };
+}
+
+function normalizeSecurityEvent(event: string): {
+  normalizedEvent: SecurityActivity["event"];
+  description: string;
+  status: "success" | "warning" | "info";
+} {
+  const e = (event || "").replace(/^auth\./, "").toLowerCase();
+  switch (e) {
+    case "login_success":
+    case "login":
+      return {
+        normalizedEvent: "login_success",
+        description: "Successful login from recognized device",
+        status: "success",
+      };
+    case "login_failed":
+      return {
+        normalizedEvent: "login_failed",
+        description: "Failed login attempt",
+        status: "warning",
+      };
+    case "password_changed":
+      return {
+        normalizedEvent: "password_changed",
+        description: "Account password changed successfully",
+        status: "info",
+      };
+    case "device_verified":
+      return {
+        normalizedEvent: "device_verified",
+        description: "Device verified via security verification",
+        status: "info",
+      };
+    case "session_revoked":
+    case "session_revoked_other":
+      return {
+        normalizedEvent: "session_revoked",
+        description: "Active session signed out",
+        status: "warning",
+      };
+    case "device_revoked":
+    case "device_revoked_all":
+      return {
+        normalizedEvent: "device_revoked",
+        description: "Trusted device revoked",
+        status: "warning",
+      };
+    default:
+      return {
+        normalizedEvent: "login_success",
+        description: event ? event.replace(/[._]/g, " ") : "Security Event",
+        status: "info",
+      };
+  }
+}
+
 /**
  * Fetches current customer profile.
  */
@@ -91,16 +182,25 @@ export async function getProfile(): Promise<UserProfile> {
     first_name?: string | null;
     last_name?: string | null;
     full_name?: string | null;
+    phone_number?: string | null;
   };
 
-  const resolvedName = resolveRealName(rawProfile);
+  const resolvedName =
+    rawProfile?.name ||
+    rawProfile?.full_name ||
+    [rawProfile?.first_name, rawProfile?.last_name].filter(Boolean).join(" ") ||
+    resolveRealName(rawProfile) ||
+    rawProfile?.username ||
+    "";
 
   return {
     id: String(rawProfile?.id ?? ""),
-    name: resolvedName || rawProfile?.name || rawProfile?.username || "",
+    name: resolvedName,
+    first_name: rawProfile?.first_name ?? null,
+    last_name: rawProfile?.last_name ?? null,
     username: rawProfile?.username || "",
     email: rawProfile?.email || "",
-    phone: rawProfile?.phone ?? "",
+    phone: rawProfile?.phone ?? rawProfile?.phone_number ?? "",
     email_verified_at: rawProfile?.email_verified_at ?? null,
     created_at: rawProfile?.created_at ?? new Date().toISOString(),
   };
@@ -108,13 +208,32 @@ export async function getProfile(): Promise<UserProfile> {
 
 /**
  * Updates editable profile information (name, username, email, phone).
+ * Splits composite full name into first_name and last_name for backend Laravel compatibility.
  */
 export async function updateProfile(
   payload: UpdateProfilePayload
 ): Promise<UserProfile> {
+  const trimmedName = (payload.name ?? "").trim();
+  const nameParts = trimmedName ? trimmedName.split(/\s+/) : [];
+  const firstName = payload.first_name || (nameParts[0] ?? "");
+  const lastName = payload.last_name || (nameParts.slice(1).join(" ") ?? "");
+
+  const body: Record<string, unknown> = {
+    username: payload.username,
+    email: payload.email,
+  };
+
+  if (firstName) body.first_name = firstName;
+  if (lastName) body.last_name = lastName;
+  if (trimmedName) body.name = trimmedName;
+  if (payload.phone !== undefined) {
+    body.phone = payload.phone;
+    body.phone_number = payload.phone;
+  }
+
   const response = await api.patch<ApiResponse<UserProfile> | UserProfile>(
     "/api/v1/profile",
-    payload
+    body
   );
   const unwrapped = unwrapApiResponse(response) as unknown as Record<
     string,
@@ -124,14 +243,29 @@ export async function updateProfile(
     unwrapped?.user && typeof unwrapped.user === "object"
       ? unwrapped.user
       : unwrapped
-  ) as unknown as Partial<UserProfile>;
+  ) as unknown as Partial<UserProfile> & {
+    first_name?: string | null;
+    last_name?: string | null;
+    full_name?: string | null;
+    phone_number?: string | null;
+  };
+
+  const resolvedName =
+    rawProfile?.name ||
+    rawProfile?.full_name ||
+    [rawProfile?.first_name, rawProfile?.last_name].filter(Boolean).join(" ") ||
+    payload.name ||
+    rawProfile?.username ||
+    "";
 
   return {
     id: String(rawProfile?.id ?? ""),
-    name: rawProfile?.name || payload.name || rawProfile?.username || "",
+    name: resolvedName,
+    first_name: rawProfile?.first_name ?? (firstName || null),
+    last_name: rawProfile?.last_name ?? (lastName || null),
     username: rawProfile?.username || payload.username || "",
     email: rawProfile?.email || payload.email || "",
-    phone: rawProfile?.phone ?? payload.phone ?? "",
+    phone: rawProfile?.phone ?? rawProfile?.phone_number ?? payload.phone ?? "",
     email_verified_at: rawProfile?.email_verified_at ?? null,
     created_at: rawProfile?.created_at ?? new Date().toISOString(),
   };
@@ -143,7 +277,7 @@ export async function updateProfile(
 export async function changePassword(
   payload: ChangePasswordPayload
 ): Promise<{ message: string }> {
-  const response = await api.post<ApiResponse<{ message: string }>>(
+  const response = await api.put<ApiResponse<{ message: string }>>(
     "/api/v1/profile/password",
     payload
   );
@@ -154,40 +288,79 @@ export async function changePassword(
  * Fetches all currently active sessions for the customer.
  */
 export async function getActiveSessions(): Promise<ActiveSession[]> {
-  const response = await api.get<ApiResponse<ActiveSession[]>>(
+  const response = await api.get<ApiResponse<Array<Record<string, unknown>>>>(
     "/api/v1/profile/sessions"
   );
-  return unwrapApiResponse(response);
+  const items = unwrapApiResponse(response);
+  const list = Array.isArray(items) ? items : [];
+
+  return list.map((raw) => {
+    const ua = typeof raw.user_agent === "string" ? raw.user_agent : "";
+    const parsed = parseUserAgent(ua);
+    return {
+      id: String(raw.id ?? ""),
+      is_current: Boolean(raw.is_current),
+      device_type: (raw.device_type as ActiveSession["device_type"]) || parsed.device_type,
+      browser: typeof raw.browser === "string" ? raw.browser : parsed.browser,
+      ip_address: String(raw.ip_address ?? "Unknown IP"),
+      location: typeof raw.location === "string" ? raw.location : undefined,
+      last_active_at: String(raw.last_active_at || raw.last_activity || new Date().toISOString()),
+    };
+  });
 }
 
 /**
  * Revokes all active sessions except the current session.
  */
-export async function revokeOtherSessions(): Promise<{ message: string }> {
-  const response = await api.post<ApiResponse<{ message: string }>>(
-    "/api/v1/profile/sessions/revoke-others"
+export async function revokeOtherSessions(
+  currentPassword?: string
+): Promise<{ message: string }> {
+  const response = await api.delete<ApiResponse<{ message: string }>>(
+    "/api/v1/profile/sessions/other",
+    currentPassword ? { body: { current_password: currentPassword } } : undefined
   );
   return unwrapApiResponse(response);
 }
 
 /**
- * Fetches all remembered/trusted devices for the customer.
+ * Revokes a specific session by its opaque identifier.
+ */
+export async function revokeSession(
+  sessionId: string
+): Promise<{ message: string }> {
+  const response = await api.delete<ApiResponse<{ message: string }>>(
+    `/api/v1/profile/sessions/${encodeURIComponent(sessionId)}`
+  );
+  return unwrapApiResponse(response);
+}
+
+/**
+ * Fetches all remembered/trusted devices for the customer (Doc 04 §4.5).
  */
 export async function getTrustedDevices(): Promise<TrustedDevice[]> {
-  const response = await api.get<ApiResponse<TrustedDevice[]>>(
-    "/api/v1/profile/devices"
+  const response = await api.get<ApiResponse<Array<Record<string, unknown>>>>(
+    "/api/v1/auth/devices"
   );
-  return unwrapApiResponse(response);
+  const items = unwrapApiResponse(response);
+  const list = Array.isArray(items) ? items : [];
+
+  return list.map((raw) => ({
+    id: String(raw.id ?? ""),
+    device_name: String(raw.device_name ?? "Recognized Device"),
+    ip_address: String(raw.ip_address ?? "Unknown IP"),
+    trusted_at: String(raw.trusted_at || raw.created_at || new Date().toISOString()),
+    last_used_at: String(raw.last_used_at || raw.created_at || new Date().toISOString()),
+  }));
 }
 
 /**
- * Revokes a specific trusted device by ID.
+ * Revokes a specific trusted device by ULID.
  */
 export async function revokeTrustedDevice(
   deviceId: string
 ): Promise<{ message: string }> {
   const response = await api.delete<ApiResponse<{ message: string }>>(
-    `/api/v1/profile/devices/${encodeURIComponent(deviceId)}`
+    `/api/v1/auth/devices/${encodeURIComponent(deviceId)}`
   );
   return unwrapApiResponse(response);
 }
@@ -196,10 +369,25 @@ export async function revokeTrustedDevice(
  * Fetches recent security and authentication activity audit log.
  */
 export async function getSecurityActivity(): Promise<SecurityActivity[]> {
-  const response = await api.get<ApiResponse<SecurityActivity[]>>(
+  const response = await api.get<ApiResponse<Array<Record<string, unknown>>>>(
     "/api/v1/profile/security-activity"
   );
-  return unwrapApiResponse(response);
+  const items = unwrapApiResponse(response);
+  const list = Array.isArray(items) ? items : [];
+
+  return list.map((raw) => {
+    const rawEvent = String(raw.event ?? "");
+    const normalized = normalizeSecurityEvent(rawEvent);
+    return {
+      id: String(raw.id ?? ""),
+      event: (raw.event as SecurityActivity["event"]) || normalized.normalizedEvent,
+      description: typeof raw.description === "string" ? raw.description : normalized.description,
+      ip_address: String(raw.ip_address ?? "Unknown IP"),
+      user_agent: typeof raw.user_agent === "string" ? raw.user_agent : undefined,
+      created_at: String(raw.created_at || raw.occurred_at || new Date().toISOString()),
+      status: (raw.status as SecurityActivity["status"]) || normalized.status,
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------

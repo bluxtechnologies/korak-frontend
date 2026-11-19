@@ -19,17 +19,8 @@ export interface LoginPayload {
 
 export interface RegisterPayload {
   name: string;
-  /**
-   * @backend-handoff
-   * The registration form collects `phone_number` (not `username`).
-   * The API must accept `phone_number` as a unique identifier for the user.
-   * Endpoint: POST /auth/register
-   * Expected field: `phone_number` (string, E.164 or local format with country code)
-   * The backend should NOT require a `username` field on registration —
-   * if a username is auto-generated server-side, that is fine, but the
-   * client will not send one.
-   */
-  phone_number: string;
+  phone_number?: string;
+  username?: string;
   email: string;
   password: string;
   password_confirmation: string;
@@ -226,11 +217,17 @@ export async function register(
   payload: RegisterPayload
 ): Promise<LoginResponse> {
   await fetchCsrfCookie();
+  const fallbackUsername =
+    payload.username ||
+    (payload.email ? payload.email.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "") : "");
+
   const raw = await api.post<ApiResponse<AuthUser | LoginResponse>>(
     "/api/v1/auth/register",
     {
       name: payload.name,
+      username: fallbackUsername,
       phone_number: payload.phone_number,
+      phone: payload.phone_number,
       email: payload.email,
       password: payload.password,
       password_confirmation: payload.password_confirmation,

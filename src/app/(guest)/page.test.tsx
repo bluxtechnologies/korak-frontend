@@ -1,38 +1,20 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import GuestHomePage from "./page";
-import { GUEST_CONTENT } from "@/config/guest-content";
 
-describe("GuestHomePage (F7A.2)", () => {
+describe("GuestHomePage (Phase 01)", () => {
   it("renders with a single h1 across the entire page", () => {
     render(<GuestHomePage />);
     const h1Headings = screen.getAllByRole("heading", { level: 1 });
     expect(h1Headings).toHaveLength(1);
-    expect(h1Headings[0]).toHaveTextContent(GUEST_CONTENT.hero.h1);
+    expect(h1Headings[0]).toHaveTextContent(/everything you need/i);
   });
 
-  it("renders all five sections in exact sequence", () => {
+  it("renders the hero section with aria-labelledby attribute", () => {
     const { container } = render(<GuestHomePage />);
-    const sections = container.querySelectorAll("section");
-    expect(sections).toHaveLength(5);
-
-    // Section 1: Hero
-    expect(sections[0]).toHaveAttribute("aria-labelledby", "hero-heading");
-
-    // Section 2: Services
-    expect(sections[1]).toHaveAttribute("id", "services");
-    expect(sections[1]).toHaveAttribute("aria-labelledby", "services-heading");
-
-    // Section 3: How it works
-    expect(sections[2]).toHaveAttribute("id", "how-it-works");
-    expect(sections[2]).toHaveAttribute("aria-labelledby", "how-it-works-heading");
-
-    // Section 4: Security and trust
-    expect(sections[3]).toHaveAttribute("id", "security");
-    expect(sections[3]).toHaveAttribute("aria-labelledby", "security-heading");
-
-    // Section 5: Closing CTA
-    expect(sections[4]).toHaveAttribute("aria-labelledby", "cta-heading");
+    const heroSection = container.querySelector("section");
+    expect(heroSection).toBeInTheDocument();
+    expect(heroSection).toHaveAttribute("aria-labelledby", "hero-heading");
   });
 
   it("does not include an FAQ section or statistics strip", () => {
@@ -56,7 +38,7 @@ describe("GuestHomePage (F7A.2)", () => {
     // First heading is h1
     expect(headings[0].level).toBe(1);
 
-    // No level is skipped (e.g. h1 directly to h3 without an h2)
+    // No level is skipped
     for (let i = 1; i < headings.length; i++) {
       const prevLevel = headings[i - 1].level;
       const currLevel = headings[i].level;

@@ -19,6 +19,7 @@ vi.mock("@/lib/api", () => ({
   api: {
     get: vi.fn(),
     post: vi.fn(),
+    put: vi.fn(),
     patch: vi.fn(),
     delete: vi.fn(),
   },
@@ -45,12 +46,20 @@ describe("settings api (F13)", () => {
       email: "amara.nwosu@example.com",
     };
     const res = await updateProfile(payload);
-    expect(api.patch).toHaveBeenCalledWith("/api/v1/profile", payload);
+    expect(api.patch).toHaveBeenCalledWith(
+      "/api/v1/profile",
+      expect.objectContaining({
+        first_name: "Amara",
+        last_name: "Okonkwo",
+        username: "amaranwosu",
+        email: "amara.nwosu@example.com",
+      })
+    );
     expect(res.name).toBe("Amara Okonkwo");
   });
 
   it("submits change password with re-authentication payload", async () => {
-    vi.mocked(api.post).mockResolvedValueOnce({
+    vi.mocked(api.put).mockResolvedValueOnce({
       data: { message: "Password updated successfully" },
     });
     const payload = {
@@ -59,7 +68,7 @@ describe("settings api (F13)", () => {
       password_confirmation: "NewPassword123!",
     };
     const res = await changePassword(payload);
-    expect(api.post).toHaveBeenCalledWith(
+    expect(api.put).toHaveBeenCalledWith(
       "/api/v1/profile/password",
       payload
     );
@@ -75,12 +84,13 @@ describe("settings api (F13)", () => {
   });
 
   it("revokes other active sessions", async () => {
-    vi.mocked(api.post).mockResolvedValueOnce({
+    vi.mocked(api.delete).mockResolvedValueOnce({
       data: { message: "All other sessions signed out" },
     });
     const res = await revokeOtherSessions();
-    expect(api.post).toHaveBeenCalledWith(
-      "/api/v1/profile/sessions/revoke-others"
+    expect(api.delete).toHaveBeenCalledWith(
+      "/api/v1/profile/sessions/other",
+      undefined
     );
     expect(res.message).toBe("All other sessions signed out");
   });
@@ -88,14 +98,14 @@ describe("settings api (F13)", () => {
   it("fetches trusted devices and revokes a device", async () => {
     vi.mocked(api.get).mockResolvedValueOnce({ data: MOCK_TRUSTED_DEVICES });
     const devices = await getTrustedDevices();
-    expect(api.get).toHaveBeenCalledWith("/api/v1/profile/devices");
+    expect(api.get).toHaveBeenCalledWith("/api/v1/auth/devices");
     expect(devices).toHaveLength(2);
 
     vi.mocked(api.delete).mockResolvedValueOnce({
       data: { message: "Device revoked" },
     });
     const revokeRes = await revokeTrustedDevice("dev_02");
-    expect(api.delete).toHaveBeenCalledWith("/api/v1/profile/devices/dev_02");
+    expect(api.delete).toHaveBeenCalledWith("/api/v1/auth/devices/dev_02");
     expect(revokeRes.message).toBe("Device revoked");
   });
 

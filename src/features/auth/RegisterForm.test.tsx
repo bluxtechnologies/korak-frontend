@@ -35,7 +35,7 @@ function renderRegisterForm() {
   return {
     nameInput: () => screen.getByLabelText(/full name/i),
     emailInput: () => screen.getByLabelText(/email address/i),
-    usernameInput: () => screen.getByLabelText(/username/i),
+    phoneInput: () => screen.getByLabelText(/phone number/i),
     // Both password fields share the same placeholder — select by label
     passwordInput: () =>
       screen.getByRole("textbox", { hidden: true, name: /^password$/i }) ||
@@ -50,7 +50,7 @@ function renderRegisterForm() {
 async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/full name/i), "Collins Okeke");
   await user.type(screen.getByLabelText(/email address/i), "collins@example.com");
-  await user.type(screen.getByLabelText(/^username/i), "collins_ok");
+  await user.type(screen.getByLabelText(/phone number/i), "+2348012345678");
   // Min-8-characters password field
   const [pwField, confirmField] = screen.getAllByPlaceholderText(/characters|password/i);
   await user.type(pwField, "Secret123!");
@@ -69,7 +69,7 @@ describe("RegisterForm (F8.3)", () => {
 
     expect(screen.getByLabelText(/full name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^username/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/phone number/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Min. 8 characters")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Re-enter password")).toBeInTheDocument();
     expect(screen.getByRole("checkbox")).toBeInTheDocument();
@@ -92,7 +92,7 @@ describe("RegisterForm (F8.3)", () => {
       screen.getByText(/please enter your email address/i)
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/username must be at least 3 characters/i)
+      screen.getByText(/phone number must be at least 7 digits/i)
     ).toBeInTheDocument();
     expect(
       screen.getByText(/password must be at least 8 characters/i)
@@ -108,7 +108,7 @@ describe("RegisterForm (F8.3)", () => {
       screen.getByLabelText(/email address/i),
       "collins@example.com"
     );
-    await user.type(screen.getByLabelText(/^username/i), "collins_ok");
+    await user.type(screen.getByLabelText(/phone number/i), "+2348012345678");
     await user.type(
       screen.getByPlaceholderText("Min. 8 characters"),
       "Secret123!"
@@ -133,7 +133,7 @@ describe("RegisterForm (F8.3)", () => {
       screen.getByLabelText(/email address/i),
       "collins@example.com"
     );
-    await user.type(screen.getByLabelText(/^username/i), "collins_ok");
+    await user.type(screen.getByLabelText(/phone number/i), "+2348012345678");
     await user.type(
       screen.getByPlaceholderText("Min. 8 characters"),
       "Secret123!"
@@ -151,7 +151,7 @@ describe("RegisterForm (F8.3)", () => {
     ).toBeInTheDocument();
   });
 
-  it("validates username format (no special chars)", async () => {
+  it("validates phone number format (rejects non-numeric characters)", async () => {
     const user = userEvent.setup();
     renderRegisterForm();
 
@@ -160,7 +160,7 @@ describe("RegisterForm (F8.3)", () => {
       screen.getByLabelText(/email address/i),
       "collins@example.com"
     );
-    await user.type(screen.getByLabelText(/^username/i), "bad user!");
+    await user.type(screen.getByLabelText(/phone number/i), "not-a-phone!!");
     await user.type(
       screen.getByPlaceholderText("Min. 8 characters"),
       "Secret123!"
@@ -173,7 +173,7 @@ describe("RegisterForm (F8.3)", () => {
     await user.click(screen.getByRole("button", { name: /create account/i }));
 
     expect(
-      screen.getByText(/only contain letters, numbers, and underscores/i)
+      screen.getByText(/please enter a valid phone number/i)
     ).toBeInTheDocument();
   });
 
@@ -198,7 +198,7 @@ describe("RegisterForm (F8.3)", () => {
       expect(mockRegister).toHaveBeenCalledWith({
         name: "Collins Okeke",
         email: "collins@example.com",
-        username: "collins_ok",
+        phone_number: "+2348012345678",
         password: "Secret123!",
         password_confirmation: "Secret123!",
         terms: true,
@@ -237,7 +237,7 @@ describe("RegisterForm (F8.3)", () => {
     mockRegister.mockRejectedValueOnce(
       new ApiClientError("The given data was invalid.", 422, "validation_error", {
         email: ["The email has already been taken."],
-        username: ["The username has already been taken."],
+        phone_number: ["The phone number has already been taken."],
       })
     );
 
@@ -250,7 +250,7 @@ describe("RegisterForm (F8.3)", () => {
         screen.getByText(/the email has already been taken/i)
       ).toBeInTheDocument();
       expect(
-        screen.getByText(/the username has already been taken/i)
+        screen.getByText(/the phone number has already been taken/i)
       ).toBeInTheDocument();
     });
   });

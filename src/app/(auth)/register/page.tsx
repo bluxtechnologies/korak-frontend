@@ -13,12 +13,12 @@ export default function RegisterPage() {
   return (
     <>
       {/* Page heading */}
-      <div className="mb-6 space-y-1 text-center">
-        <h1 className="text-foreground text-xl font-semibold tracking-tight">
+      <div className="mb-6 space-y-1.5 text-center">
+        <h1 className="text-foreground text-3xl font-extrabold tracking-tight sm:text-4xl text-balance">
           Create account
         </h1>
-        <p className="text-muted-foreground text-sm">
-          Fill in your details to get started.
+        <p className="text-muted-foreground text-sm text-pretty">
+          Join Korak Digitals and get instant access to airtime, data, VPN, and social media services — all in one place.
         </p>
       </div>
 

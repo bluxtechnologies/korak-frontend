@@ -1,49 +1,35 @@
 import * as React from "react";
 import type { Metadata } from "next";
 import { HeroSection } from "@/components/guest/HeroSection";
-import { ServicesSection } from "@/components/guest/ServicesSection";
-import { HowItWorksSection } from "@/components/guest/HowItWorksSection";
-import { SecurityTrustSection } from "@/components/guest/SecurityTrustSection";
-import { ClosingCtaSection } from "@/components/guest/ClosingCtaSection";
-import { GUEST_CONTENT } from "@/config/guest-content";
 
 export const metadata: Metadata = {
   title: "Digital Services & Marketplace",
-  description: GUEST_CONTENT.hero.support,
+  description:
+    "Access digital services, manage your wallet and complete everyday transactions seamlessly with KORAK.",
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "Korak Digitals — Digital Services & Marketplace",
-    description: GUEST_CONTENT.hero.support,
+    title: "KORAK — Everything you need. All in one place.",
+    description:
+      "Access digital services, manage your wallet and complete everyday transactions seamlessly with KORAK.",
     url: "/",
     siteName: "Korak Digitals",
     type: "website",
   },
   twitter: {
     card: "summary",
-    title: "Korak Digitals — Digital Services & Marketplace",
-    description: GUEST_CONTENT.hero.support,
+    title: "KORAK — Everything you need. All in one place.",
+    description:
+      "Access digital services, manage your wallet and complete everyday transactions seamlessly with KORAK.",
   },
 };
 
 export default function GuestHomePage() {
   return (
     <>
-      {/* 1. Hero */}
+      {/* Phase 01: Hero Section */}
       <HeroSection />
-
-      {/* 2. Services */}
-      <ServicesSection />
-
-      {/* 3. How it works */}
-      <HowItWorksSection />
-
-      {/* 4. Security and trust */}
-      <SecurityTrustSection />
-
-      {/* 5. Closing call to action */}
-      <ClosingCtaSection />
     </>
   );
 }

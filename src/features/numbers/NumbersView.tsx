@@ -39,13 +39,13 @@ export interface NumbersViewProps {
 export function NumbersView({
   initialMode = "otp",
   initialActiveOrder = null,
-  initialRentals = MOCK_RENTAL_RECORDS,
+  initialRentals = [],
   className,
 }: NumbersViewProps) {
   const [mode, setMode] = React.useState<NumbersMode>(initialMode);
   const [activeOrder, setActiveOrder] = React.useState<ActiveOtpOrder | null>(initialActiveOrder);
   const [rentals, setRentals] = React.useState<RentalNumberRecord[]>(initialRentals);
-  const [walletBalance, setWalletBalance] = React.useState<number>(500000); // ₦5,000
+  const [walletBalance, setWalletBalance] = React.useState<number>(0);
 
   React.useEffect(() => {
     getOverviewData()
@@ -55,7 +55,7 @@ export function NumbersView({
         }
       })
       .catch(() => {
-        setWalletBalance(MOCK_OVERVIEW_DATA.wallet.balance);
+        setWalletBalance(0);
       });
   }, []);
 

@@ -1,4 +1,5 @@
 import {
+  Headphones,
   LayoutDashboard,
   MessageSquareText,
   Package,
@@ -125,7 +126,7 @@ export const MAIN_NAV_ITEMS: NavItem[] = [
 
 /**
  * Bottom section navigation items (F5.1), placed after a 1px divider.
- * Exactly 2 items.
+ * Profile, Support, Settings.
  */
 export const BOTTOM_NAV_ITEMS: NavItem[] = [
   {
@@ -133,6 +134,12 @@ export const BOTTOM_NAV_ITEMS: NavItem[] = [
     label: "Profile",
     href: ROUTES.PROFILE,
     icon: UserRound,
+  },
+  {
+    id: "support",
+    label: "Support",
+    href: ROUTES.SUPPORT,
+    icon: Headphones,
   },
   {
     id: "settings",

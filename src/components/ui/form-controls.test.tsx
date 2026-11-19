@@ -191,7 +191,7 @@ describe("Form Controls UI Components", () => {
       });
       expect(trigger).toBeInTheDocument();
       expect(trigger).toHaveTextContent("MTN");
-      expect(trigger).toHaveClass("h-11 rounded-md border-input");
+      expect(trigger).toHaveClass("h-11 border-input");
     });
   });
 });

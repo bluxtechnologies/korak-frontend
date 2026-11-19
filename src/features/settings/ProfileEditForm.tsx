@@ -82,6 +82,18 @@ export function ProfileEditForm({
     mode: "onTouched",
   });
 
+  // Keep form values in sync with profile prop when loaded or updated
+  React.useEffect(() => {
+    if (profile) {
+      form.reset({
+        name: profile.name || profile.username || "",
+        username: profile.username || "",
+        email: profile.email || "",
+        phone: profile.phone || "",
+      });
+    }
+  }, [profile, form]);
+
   const { isSubmitting, isDirty } = form.formState;
 
   const onSubmit = async (values: UpdateProfileFormValues) => {
@@ -97,21 +109,33 @@ export function ProfileEditForm({
         phone: updated?.phone ?? "",
       });
       onProfileUpdated?.(updated);
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("korak:profile-updated", { detail: updated })
+        );
+      }
     } catch (err: unknown) {
       if (err instanceof ApiClientError && err.errors) {
         Object.entries(err.errors).forEach(([field, messages]) => {
           if (messages?.[0]) {
-            form.setError(field as keyof UpdateProfileFormValues, {
+            const formField =
+              field === "first_name" || field === "last_name"
+                ? "name"
+                : (field as keyof UpdateProfileFormValues);
+            form.setError(formField, {
               type: "server",
               message: messages[0],
             });
           }
         });
-        const firstField = Object.keys(
-          err.errors
-        )[0] as keyof UpdateProfileFormValues;
+        const firstField = Object.keys(err.errors)[0] as string | undefined;
         if (firstField) {
-          form.setFocus(firstField);
+          form.setFocus(
+            firstField === "first_name" || firstField === "last_name"
+              ? "name"
+              : (firstField as keyof UpdateProfileFormValues)
+          );
         }
       } else {
         setServerError(

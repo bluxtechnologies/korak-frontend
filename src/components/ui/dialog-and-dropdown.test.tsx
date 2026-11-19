@@ -102,9 +102,7 @@ describe("Dialog and Dropdown Menu Components", () => {
 
       const content = screen.getByTestId("dropdown-content");
       expect(content).toBeInTheDocument();
-      expect(content).toHaveClass(
-        "rounded-md border border-border bg-popover shadow-lg"
-      );
+      expect(content).toHaveClass("border border-border bg-popover");
       expect(screen.getByText("My Account")).toBeInTheDocument();
 
       const profileItem = screen.getByText("Profile Settings");

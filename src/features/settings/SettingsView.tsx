@@ -91,18 +91,12 @@ export function SettingsView({
       ]).then(([profRes, sessRes, devRes, actRes]) => {
         if (ignore) return;
 
-        setProfile(
-          profRes.status === "fulfilled" ? profRes.value : MOCK_PROFILE
-        );
-        setSessions(
-          sessRes.status === "fulfilled" ? sessRes.value : MOCK_SESSIONS
-        );
-        setDevices(
-          devRes.status === "fulfilled" ? devRes.value : MOCK_TRUSTED_DEVICES
-        );
-        setActivities(
-          actRes.status === "fulfilled" ? actRes.value : MOCK_SECURITY_ACTIVITY
-        );
+        if (profRes.status === "fulfilled") {
+          setProfile(profRes.value);
+        }
+        setSessions(sessRes.status === "fulfilled" ? sessRes.value : []);
+        setDevices(devRes.status === "fulfilled" ? devRes.value : []);
+        setActivities(actRes.status === "fulfilled" ? actRes.value : []);
         setIsLoading(false);
       });
     }

@@ -35,6 +35,7 @@ describe("Sidebar Component (F5.1 & F5.2)", () => {
 
     // Check bottom section items (in order)
     expect(hrefs).toContain("/profile");
+    expect(hrefs).toContain("/support");
     expect(hrefs).toContain("/settings");
 
     // Verify ordering
@@ -51,6 +52,7 @@ describe("Sidebar Component (F5.1 & F5.2)", () => {
       "Orders",
       "Transactions",
       "Profile",
+      "Support",
       "Settings",
     ];
 
@@ -125,7 +127,7 @@ describe("Sidebar Component (F5.1 & F5.2)", () => {
     const menuLinks = container.querySelectorAll(
       "[data-sidebar='menu-button']"
     );
-    expect(menuLinks.length).toBe(9);
+    expect(menuLinks.length).toBe(10);
   });
 
   it("renders user initials, name and email when expanded, and avatar only when collapsed", () => {
