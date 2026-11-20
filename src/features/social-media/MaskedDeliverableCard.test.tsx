@@ -11,9 +11,9 @@ vi.mock("./api", async (importOriginal) => {
     revealSocialCredentials: vi.fn().mockResolvedValue({
       order_id: "ord_123",
       username: "creator_transferred_admin",
-      password: "KorakAuth_#9821_SecureX",
-      recovery_email: "transfer-backup@korakdigital.com",
-      two_factor_backup_key: "K79A 28BC 9901 4410",
+      password: "mock_temp_pass_9821",
+      recovery_email: "recovery@example.com",
+      two_factor_backup_key: "0000 0000 0000 0000",
       audit_id: "aud_rev_mock_9821",
       revealed_at: new Date().toISOString(),
     }),
@@ -75,7 +75,7 @@ describe("MaskedDeliverableCard Component (F19.3 & Doc 12)", () => {
     await user.click(confirmBtn);
 
     await waitFor(() => {
-      expect(screen.getByText("KorakAuth_#9821_SecureX")).toBeInTheDocument();
+      expect(screen.getByText("mock_temp_pass_9821")).toBeInTheDocument();
       expect(screen.getByText("creator_transferred_admin")).toBeInTheDocument();
     });
 

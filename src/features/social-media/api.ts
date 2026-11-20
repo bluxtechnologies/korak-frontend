@@ -311,9 +311,9 @@ export async function revealSocialCredentials(
     return {
       order_id: orderId,
       username: "creator_transferred_admin",
-      password: "KorakAuth_#9821_SecureX",
-      recovery_email: "transfer-backup@korakdigital.com",
-      two_factor_backup_key: "K79A 28BC 9901 4410",
+      password: "mock_temp_pass_9821",
+      recovery_email: "recovery@example.com",
+      two_factor_backup_key: "0000 0000 0000 0000",
       audit_id: `aud_rev_${Date.now()}`,
       revealed_at: new Date().toISOString(),
     };
