@@ -238,13 +238,13 @@ export function WalletView({ initialData, className }: WalletViewProps) {
         </div>
       </div>
 
-      {/* 2. Main 2-Column Layout */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
+      {/* 2. Main 2-Column Layout (Responsive ordering: on small/medium screens (< lg), Account Details card appears right after Balance card) */}
+      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-12 items-start">
         {/* Left Column: Larger (lg:col-span-7 xl:col-span-8) */}
-        <div className="space-y-6 lg:col-span-7 xl:col-span-8">
+        <div className="contents lg:block lg:space-y-6 lg:col-span-7 xl:col-span-8">
           {/* Main Wallet Balance Card (Burgundy) */}
           <div
-            className="relative overflow-hidden rounded-[10px] bg-[#7A1F3D] dark:bg-[#5C142B] p-6 text-white shadow-none sm:p-7 transition-colors"
+            className="order-1 lg:order-none relative overflow-hidden rounded-[10px] bg-[#7A1F3D] dark:bg-[#5C142B] p-6 text-white shadow-none sm:p-7 transition-colors"
             data-testid="wallet-main-balance-card"
           >
             {/* Top Row: Available Balance + Eye Toggle + Top Right Wallet Icon */}
@@ -318,8 +318,10 @@ export function WalletView({ initialData, className }: WalletViewProps) {
             </div>
           </div>
 
-          {/* Transaction Filters */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Transactions Group: order-3 on mobile, directly under Account Details card */}
+          <div className="order-3 lg:order-none space-y-6" data-testid="wallet-transactions-section">
+            {/* Transaction Filters */}
+            <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => setActiveFilter("all")}
@@ -494,87 +496,94 @@ export function WalletView({ initialData, className }: WalletViewProps) {
               </div>
             )}
           </div>
+          </div>
         </div>
 
         {/* Right Column: Smaller (lg:col-span-5 xl:col-span-4) */}
-        <div className="space-y-5 lg:col-span-5 xl:col-span-4">
+        <div className="contents lg:block lg:space-y-5 lg:col-span-5 xl:col-span-4">
           {/* C. Display Currency Card */}
-          <Card className="rounded-[10px] border border-border bg-card shadow-none">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-bold tracking-wider uppercase text-muted-foreground">
-                  DISPLAY CURRENCY
-                </span>
-                <p className="mt-0.5 text-xs font-bold text-foreground">
-                  Nigerian Naira (₦)
-                </p>
-              </div>
+          <div className="order-4 lg:order-none">
+            <Card className="rounded-[10px] border border-border bg-card shadow-none">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold tracking-wider uppercase text-muted-foreground">
+                    DISPLAY CURRENCY
+                  </span>
+                  <p className="mt-0.5 text-xs font-bold text-foreground">
+                    Nigerian Naira (₦)
+                  </p>
+                </div>
 
-              {/* Static Currency Badge (no select) */}
-              <div
-                className="inline-flex items-center rounded-[8px] border border-border bg-muted/40 px-3 py-1 text-xs font-bold text-foreground"
-                data-testid="currency-badge"
-              >
-                {data.wallet.currency || "NGN"}
-              </div>
-            </CardContent>
-          </Card>
+                {/* Static Currency Badge (no select) */}
+                <div
+                  className="inline-flex items-center rounded-[8px] border border-border bg-muted/40 px-3 py-1 text-xs font-bold text-foreground"
+                  data-testid="currency-badge"
+                >
+                  {data.wallet.currency || "NGN"}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-          {/* D. Wallet Account Details Panel */}
-          <WalletAccountDetailsCard
-            id="wallet-account-details"
-            accountDetails={data.account_details}
-            hasAccount={Boolean(data.account_details)}
-            onGenerateSuccess={(newAccount) => {
-              setData((prev) => ({
-                ...prev,
-                account_details: {
-                  account_name: newAccount.account_name,
-                  account_number: newAccount.account_number,
-                  bank_name: newAccount.bank_name,
-                  currency: "NGN",
-                  assigned_at: newAccount.created_at,
-                },
-              }));
-            }}
-          />
+          {/* D. Wallet Account Details Panel (order-2 on mobile: positioned upwards right after the Balance card) */}
+          <div className="order-2 lg:order-none" data-testid="wallet-account-details-wrapper">
+            <WalletAccountDetailsCard
+              id="wallet-account-details"
+              accountDetails={data.account_details}
+              hasAccount={Boolean(data.account_details)}
+              onGenerateSuccess={(newAccount) => {
+                setData((prev) => ({
+                  ...prev,
+                  account_details: {
+                    account_name: newAccount.account_name,
+                    account_number: newAccount.account_number,
+                    bank_name: newAccount.bank_name,
+                    currency: "NGN",
+                    assigned_at: newAccount.created_at,
+                  },
+                }));
+              }}
+            />
+          </div>
 
           {/* E. Quick Actions Card */}
-          <Card className="rounded-[10px] border border-border bg-card shadow-none">
-            <CardContent className="p-4 space-y-3">
-              <span className="text-xs font-bold text-foreground">
-                Quick Actions
-              </span>
+          <div className="order-5 lg:order-none">
+            <Card className="rounded-[10px] border border-border bg-card shadow-none">
+              <CardContent className="p-4 space-y-3">
+                <span className="text-xs font-bold text-foreground">
+                  Quick Actions
+                </span>
 
-              {/* Fund Wallet Action Row */}
-              <button
-                type="button"
-                onClick={() => setIsFundModalOpen(true)}
-                className="w-full flex items-center justify-between rounded-[8px] bg-[#7A1F3D] hover:bg-[#681933] text-white font-bold h-11 px-4 shadow-none transition-colors"
-              >
-                <div className="flex items-center gap-2.5">
-                  <WalletIcon className="size-4" strokeWidth={NAV_ICON_STROKE_WIDTH} />
-                  <span className="text-xs">Fund Wallet</span>
-                </div>
-                <ChevronRight className="size-4 opacity-80" strokeWidth={NAV_ICON_STROKE_WIDTH} />
-              </button>
+                {/* Fund Wallet Action Row */}
+                <button
+                  type="button"
+                  onClick={() => setIsFundModalOpen(true)}
+                  className="w-full flex items-center justify-between rounded-[8px] bg-[#7A1F3D] hover:bg-[#681933] text-white font-bold h-11 px-4 shadow-none transition-colors"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <WalletIcon className="size-4" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+                    <span className="text-xs">Fund Wallet</span>
+                  </div>
+                  <ChevronRight className="size-4 opacity-80" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+                </button>
 
-              {/* View Statement Action Row */}
-              <Link
-                href={ROUTES.TRANSACTIONS}
-                className="w-full flex items-center justify-between rounded-[8px] border border-border hover:bg-muted/30 font-semibold h-11 px-4 text-foreground shadow-none transition-colors"
-              >
-                <div className="flex items-center gap-2.5">
-                  <FileText className="size-4 text-muted-foreground" strokeWidth={NAV_ICON_STROKE_WIDTH} />
-                  <span className="text-xs">View Statement</span>
-                </div>
-                <ChevronRight className="size-4 text-muted-foreground" strokeWidth={NAV_ICON_STROKE_WIDTH} />
-              </Link>
-            </CardContent>
-          </Card>
+                {/* View Statement Action Row */}
+                <Link
+                  href={ROUTES.TRANSACTIONS}
+                  className="w-full flex items-center justify-between rounded-[8px] border border-border hover:bg-muted/30 font-semibold h-11 px-4 text-foreground shadow-none transition-colors"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <FileText className="size-4 text-muted-foreground" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+                    <span className="text-xs">View Statement</span>
+                  </div>
+                  <ChevronRight className="size-4 text-muted-foreground" strokeWidth={NAV_ICON_STROKE_WIDTH} />
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* F. Wallet Security Information Component */}
-          <div className="flex items-start gap-3 rounded-[10px] border border-border bg-muted/20 p-4">
+          <div className="order-6 lg:order-none flex items-start gap-3 rounded-[10px] border border-border bg-muted/20 p-4">
             <div className="flex size-7 shrink-0 items-center justify-center rounded-[6px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mt-0.5">
               <ShieldCheck className="size-4" strokeWidth={NAV_ICON_STROKE_WIDTH} />
             </div>

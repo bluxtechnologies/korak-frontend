@@ -95,4 +95,16 @@ describe("WalletView Component", () => {
       screen.queryByRole("combobox", { name: /select display currency/i })
     ).not.toBeInTheDocument();
   });
+
+  it("applies responsive mobile order classes so account details sits right after balance card on small screens", () => {
+    render(<WalletView initialData={MOCK_WALLET_PAGE_DATA} />);
+
+    const balanceCard = screen.getByTestId("wallet-main-balance-card");
+    const accountDetailsWrapper = screen.getByTestId("wallet-account-details-wrapper");
+    const transactionsSection = screen.getByTestId("wallet-transactions-section");
+
+    expect(balanceCard).toHaveClass("order-1", "lg:order-none");
+    expect(accountDetailsWrapper).toHaveClass("order-2", "lg:order-none");
+    expect(transactionsSection).toHaveClass("order-3", "lg:order-none");
+  });
 });
