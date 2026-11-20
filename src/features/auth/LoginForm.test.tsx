@@ -266,6 +266,34 @@ describe("LoginForm (F8.2)", () => {
     });
   });
 
+  it("shows a safe server connection error banner on a csrf_handshake_failed response", async () => {
+    const { ApiClientError } = await import("@/lib/api/client");
+    const user = userEvent.setup();
+
+    mockLogin.mockRejectedValueOnce(
+      new ApiClientError(
+        "Unable to initialize security session (HTTP 500).",
+        500,
+        "csrf_handshake_failed"
+      )
+    );
+
+    renderLoginForm();
+
+    await user.type(
+      screen.getByLabelText(/username or email/i),
+      "user@example.com"
+    );
+    await user.type(screen.getByPlaceholderText("••••••••"), "password123");
+    await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+    await waitFor(() => {
+      const alert = screen.getByRole("alert");
+      expect(alert).toBeInTheDocument();
+      expect(alert.textContent).toMatch(/could not connect to the authentication server/i);
+    });
+  });
+
   it("redirects to safe intended path if query param is set", async () => {
     mockSearchParams = new URLSearchParams({ intended: "/orders" });
     const user = userEvent.setup();

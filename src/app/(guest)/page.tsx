@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { Metadata } from "next";
 import { HeroSection } from "@/components/guest/HeroSection";
+import { ServicesBentoSection } from "@/components/landing/ServicesBentoSection";
 
 export const metadata: Metadata = {
   title: "Digital Services & Marketplace",
@@ -30,6 +31,8 @@ export default function GuestHomePage() {
     <>
       {/* Phase 01: Hero Section */}
       <HeroSection />
+      {/* Phase 02: Digital Services Overview / Bento Grid */}
+      <ServicesBentoSection />
     </>
   );
 }

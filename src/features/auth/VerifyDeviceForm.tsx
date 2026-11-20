@@ -45,7 +45,14 @@ export type VerifyDeviceFormData = z.infer<typeof verifyDeviceSchema>;
 export function VerifyDeviceForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const challengeToken = searchParams?.get("token") ?? "";
+  const initialToken =
+    searchParams?.get("challenge") || searchParams?.get("token") || "";
+  const [currentToken, setCurrentToken] = React.useState<string>(initialToken);
+
+  React.useEffect(() => {
+    const t = searchParams?.get("challenge") || searchParams?.get("token") || "";
+    if (t) setCurrentToken(t);
+  }, [searchParams]);
 
   const [rootError, setRootError] = React.useState<string | undefined>();
   const [resendCooldown, setResendCooldown] = React.useState(0);
@@ -72,13 +79,13 @@ export function VerifyDeviceForm() {
 
   const onSubmit = async (data: VerifyDeviceFormData) => {
     setRootError(undefined);
-    if (!challengeToken) {
+    if (!currentToken) {
       setRootError("Verification session expired or missing token. Please sign in again.");
       return;
     }
     try {
       await verifyDevice({
-        challenge_token: challengeToken,
+        challenge_token: currentToken,
         code: data.code,
         remember_device: data.remember_device,
       });
@@ -87,7 +94,13 @@ export function VerifyDeviceForm() {
       const intended = searchParams?.get("intended") ?? null;
       const destination = getSafeRedirectPath(intended);
       router.push(destination);
-    } catch (err) {
+    } catch (err: unknown) {
+      const apiErr = err as { code?: string; status?: number };
+      if (apiErr?.code === "invalid_or_expired_challenge" || apiErr?.status === 400) {
+        toast.error("Invalid or expired verification challenge. Please log in again.");
+        router.push(ROUTES.LOGIN);
+        return;
+      }
       const { rootError: msg } = setServerFormErrors(form, err);
       if (msg) {
         setRootError(msg);
@@ -101,11 +114,33 @@ export function VerifyDeviceForm() {
     setIsResending(true);
     setRootError(undefined);
     try {
-      const res = await resendVerificationCode();
-      toast.success(res.message || "A new verification code has been emailed to you.");
+      const email = searchParams?.get("email") || undefined;
+      const login = searchParams?.get("login") || undefined;
+      const res = await resendVerificationCode({
+        ...(currentToken ? { challenge_token: currentToken } : {}),
+        ...(email ? { email } : {}),
+        ...(login ? { login } : {}),
+      });
+
+      if (res?.challenge_token) {
+        setCurrentToken(res.challenge_token);
+      }
+      toast.success(res.message || "Verification code resent successfully.");
       setResendCooldown(60);
       form.setValue("code", "");
-    } catch (err) {
+    } catch (err: unknown) {
+      const apiErr = err as { code?: string; status?: number; retryAfter?: number };
+      if (apiErr?.code === "invalid_or_expired_challenge" || apiErr?.status === 400) {
+        toast.error("Invalid or expired verification challenge. Please log in again.");
+        router.push(ROUTES.LOGIN);
+        return;
+      }
+      if (apiErr?.status === 429 || apiErr?.code === "too_many_requests") {
+        const cooldown = apiErr.retryAfter || 60;
+        setResendCooldown(cooldown);
+        setRootError(`Too many requests. Please try again in ${cooldown} seconds.`);
+        return;
+      }
       const { rootError: msg } = setServerFormErrors(form, err);
       if (msg) {
         setRootError(msg);

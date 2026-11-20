@@ -270,6 +270,9 @@ describe("VerifyDeviceForm (F10)", () => {
 
     await waitFor(() => {
       expect(mockResendVerificationCode).toHaveBeenCalledTimes(1);
+      expect(mockResendVerificationCode).toHaveBeenCalledWith({
+        challenge_token: "tok_test_123",
+      });
     });
 
     expect(mockToast.success).toHaveBeenCalledWith(
@@ -278,6 +281,49 @@ describe("VerifyDeviceForm (F10)", () => {
 
     // Cooldown indicator should now appear
     expect(screen.getByText(/resend in 60s/i)).toBeInTheDocument();
+  });
+
+  it("redirects to /login when resend receives 400 invalid_or_expired_challenge", async () => {
+    const user = userEvent.setup();
+    mockResendVerificationCode.mockRejectedValueOnce({
+      status: 400,
+      code: "invalid_or_expired_challenge",
+      message: "Invalid or expired verification challenge. Please log in again.",
+    });
+
+    render(<VerifyDeviceForm />);
+
+    const resendBtn = screen.getByRole("button", { name: /resend code/i });
+    await user.click(resendBtn);
+
+    await waitFor(() => {
+      expect(mockToast.error).toHaveBeenCalledWith(
+        "Invalid or expired verification challenge. Please log in again."
+      );
+      expect(mockPush).toHaveBeenCalledWith("/login");
+    });
+  });
+
+  it("handles 429 too_many_requests on resend and displays cooldown banner", async () => {
+    const user = userEvent.setup();
+    mockResendVerificationCode.mockRejectedValueOnce({
+      status: 429,
+      code: "too_many_requests",
+      message: "Too many requests. Please try again later.",
+      retryAfter: 45,
+    });
+
+    render(<VerifyDeviceForm />);
+
+    const resendBtn = screen.getByRole("button", { name: /resend code/i });
+    await user.click(resendBtn);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/too many requests\. please try again in 45 seconds\./i)
+      ).toBeInTheDocument();
+      expect(screen.getByText(/resend in 45s/i)).toBeInTheDocument();
+    });
   });
 
   it("displays error banner when challenge token is missing from query params", async () => {

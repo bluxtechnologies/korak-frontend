@@ -38,6 +38,7 @@ describe("SettingsView (F13)", () => {
     const securityTab = screen.getByRole("tab", { name: /password & security/i });
     await user.click(securityTab);
 
+    expect(screen.getByTestId("device-verification-card")).toBeInTheDocument();
     expect(screen.getByTestId("change-password-card")).toBeInTheDocument();
     expect(screen.getByTestId("security-activity-card")).toBeInTheDocument();
 

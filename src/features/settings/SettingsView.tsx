@@ -11,6 +11,7 @@ import { ChangePasswordForm } from "./ChangePasswordForm";
 import { ActiveSessionsCard } from "./ActiveSessionsCard";
 import { TrustedDevicesCard } from "./TrustedDevicesCard";
 import { SecurityActivityCard } from "./SecurityActivityCard";
+import { DeviceVerificationCard } from "./DeviceVerificationCard";
 import {
   getProfile,
   getActiveSessions,
@@ -183,6 +184,17 @@ export function SettingsView({
           >
             {activeTab === "security" && (
               <div className="space-y-6">
+                <DeviceVerificationCard
+                  enabled={profile?.device_verification_enabled ?? false}
+                  onStatusChanged={(newVal) => {
+                    if (profile) {
+                      setProfile({
+                        ...profile,
+                        device_verification_enabled: newVal,
+                      });
+                    }
+                  }}
+                />
                 <ChangePasswordForm />
                 {activities && (
                   <SecurityActivityCard activities={activities} />

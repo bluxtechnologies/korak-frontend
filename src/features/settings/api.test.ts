@@ -3,6 +3,7 @@ import { api } from "@/lib/api";
 import {
   getProfile,
   updateProfile,
+  toggleDeviceVerification,
   changePassword,
   getActiveSessions,
   revokeOtherSessions,
@@ -118,5 +119,37 @@ describe("settings api (F13)", () => {
       "/api/v1/profile/security-activity"
     );
     expect(activity).toHaveLength(4);
+  });
+
+  describe("toggleDeviceVerification (opt-in OTP)", () => {
+    it("sends device_verification_enabled: true to PATCH /api/v1/profile", async () => {
+      vi.mocked(api.patch).mockResolvedValueOnce({
+        data: {
+          ...MOCK_PROFILE,
+          device_verification_enabled: true,
+        },
+      });
+
+      const res = await toggleDeviceVerification(true);
+      expect(api.patch).toHaveBeenCalledWith("/api/v1/profile", {
+        device_verification_enabled: true,
+      });
+      expect(res.device_verification_enabled).toBe(true);
+    });
+
+    it("sends device_verification_enabled: false to PATCH /api/v1/profile", async () => {
+      vi.mocked(api.patch).mockResolvedValueOnce({
+        data: {
+          ...MOCK_PROFILE,
+          device_verification_enabled: false,
+        },
+      });
+
+      const res = await toggleDeviceVerification(false);
+      expect(api.patch).toHaveBeenCalledWith("/api/v1/profile", {
+        device_verification_enabled: false,
+      });
+      expect(res.device_verification_enabled).toBe(false);
+    });
   });
 });

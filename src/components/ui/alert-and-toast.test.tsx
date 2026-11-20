@@ -103,8 +103,9 @@ describe("Alert and Toast Provider Components", () => {
       expect(() => showToast.dismiss(loadId)).not.toThrow();
     });
 
-    it("supports direct sonner toast methods", () => {
+    it("supports direct sonner toast methods and auto-expands single error strings", () => {
       expect(() => toast.success("Copied to clipboard")).not.toThrow();
+      expect(() => toast.error("Session ended.")).not.toThrow();
       expect(() => toast.error("Network error occurred")).not.toThrow();
       expect(() => toast.warning("Session expiring soon")).not.toThrow();
       expect(() => toast.info("New update available")).not.toThrow();

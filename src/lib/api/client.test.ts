@@ -229,6 +229,50 @@ describe("API Client Layer (lib/api)", () => {
       const [, init] = mockFetch.mock.calls[0];
       expect(init.headers.get("X-XSRF-TOKEN")).toBeNull();
     });
+
+    it("throws ApiClientError with csrf_handshake_failed when /sanctum/csrf-cookie returns 500", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        headers: new Headers(),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      await expect(fetchCsrfCookie()).rejects.toThrow(ApiClientError);
+      try {
+        await fetchCsrfCookie();
+      } catch (err: unknown) {
+        expect(err).toBeInstanceOf(ApiClientError);
+        const apiError = err as ApiClientError;
+        expect(apiError.status).toBe(500);
+        expect(apiError.code).toBe("csrf_handshake_failed");
+        expect(apiError.message).toContain("Unable to initialize security session");
+      }
+    });
+
+    it("halts state-changing requests when CSRF pre-fetch fails (does not fire target POST)", async () => {
+      const mockFetch = vi.fn().mockImplementation(async (url: string) => {
+        if (url.includes("/sanctum/csrf-cookie")) {
+          return {
+            ok: false,
+            status: 500,
+            headers: new Headers(),
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({ "content-type": "application/json" }),
+          json: async () => ({ success: true }),
+        };
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      await expect(api.post("/api/v1/orders", { amount: 100 })).rejects.toThrow(ApiClientError);
+      // The CSRF endpoint was called, but the POST /api/v1/orders was NEVER fired
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch.mock.calls[0][0]).toContain("/sanctum/csrf-cookie");
+    });
   });
 
   describe("apiClient requests", () => {

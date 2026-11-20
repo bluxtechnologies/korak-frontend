@@ -48,6 +48,11 @@ describe("API Error Mapping & Envelope Parsing (lib/api/errors)", () => {
       expect(getSafeErrorMessage(errLocked)).toBe(
         "Your account is temporarily locked. Please contact support."
       );
+
+      const errCsrf = new ApiClientError("CSRF error", 500, "csrf_handshake_failed");
+      expect(getSafeErrorMessage(errCsrf)).toBe(
+        "Could not connect to the authentication server. Please try again later."
+      );
     });
 
     it("never exposes internal SQL errors or stack traces for 500 status", () => {

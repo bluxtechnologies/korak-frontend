@@ -37,6 +37,9 @@ export interface AuthUser {
   first_name?: string | null;
   last_name?: string | null;
   full_name?: string | null;
+  phone?: string | null;
+  device_verification_enabled?: boolean;
+  has_virtual_account?: boolean;
 }
 
 /**
@@ -112,8 +115,11 @@ export const MOCK_AUTH_USER: AuthUser = {
   name: "Amara Nwosu",
   username: "amaranwosu",
   email: "amara.nwosu@example.com",
+  phone: "08012345678",
   email_verified_at: "2026-10-15T08:00:00Z",
   created_at: "2026-10-15T08:00:00Z",
+  device_verification_enabled: false,
+  has_virtual_account: true,
 };
 
 export type CustomerResource = AuthUser;
@@ -159,9 +165,21 @@ export interface VerifyDeviceResponse {
   message?: string;
 }
 
-export interface ResendOtpResponse {
-  message: string;
+export interface ResendDeviceOtpPayload {
+  challenge_token?: string;
+  email?: string;
+  login?: string;
 }
+
+export interface ResendDeviceOtpResponse {
+  status?: string;
+  requires_device_verification?: boolean;
+  message: string;
+  challenge_token?: string;
+  expires_at?: string;
+}
+
+export type ResendOtpResponse = ResendDeviceOtpResponse;
 
 // ---------------------------------------------------------------------------
 // Auth API calls
@@ -176,25 +194,53 @@ export async function login(
   payloadOrLogin: LoginPayload | string,
   maybePassword?: string
 ): Promise<LoginResponse> {
+  // Step 1: Ensure CSRF cookie is initialized before posting credentials.
+  // If the CSRF handshake fails, this throws ApiClientError immediately,
+  // preventing POST /api/v1/auth/login from firing into an uninitialized session.
   await fetchCsrfCookie();
+
   const payload: LoginPayload =
     typeof payloadOrLogin === "string"
       ? { login: payloadOrLogin, password: maybePassword ?? "" }
       : payloadOrLogin;
 
+  // Step 2: Post login payload with identifier and credentials.
+  // Note: skipCsrf is set because CSRF was already initialized above,
+  // preventing duplicate CSRF pre-fetch on cross-origin setups.
   const raw = await api.post<ApiResponse<AuthUser | LoginResponse>>(
     "/api/v1/auth/login",
     {
+      identifier: payload.login,
       login: payload.login,
+      username: payload.login,
+      email: payload.login,
       password: payload.password,
-    }
+      remember: payload.remember_me ?? false,
+    },
+    { skipCsrf: true }
   );
   const unwrapped = unwrapApiResponse(raw) as unknown as Record<string, unknown>;
+  const rawObj = raw as unknown as Record<string, unknown>;
+  const rawData =
+    rawObj?.data && typeof rawObj.data === "object"
+      ? (rawObj.data as Record<string, unknown>)
+      : {};
+
   const isDeviceVerification =
+    rawObj?.status === "device_verification_required" ||
+    rawObj?.requires_device_verification === true ||
+    rawData?.requires_device_verification === true ||
+    rawData?.status === "device_verification_required" ||
     unwrapped?.status === "device_verification_required" ||
     Boolean(unwrapped?.requires_device_verification);
 
-  const rawUser = unwrapped?.user;
+  const challengeToken =
+    (unwrapped?.challenge_token as string) ||
+    (rawData?.challenge_token as string) ||
+    (rawObj?.challenge_token as string) ||
+    undefined;
+
+  const rawUser = unwrapped?.user || (rawData?.id ? rawData : undefined);
   const user: AuthUser = (rawUser && typeof rawUser === "object" ? rawUser : unwrapped) as unknown as AuthUser;
   if (user) {
     const resolved = resolveRealName(user);
@@ -204,7 +250,7 @@ export async function login(
   return {
     user,
     requires_device_verification: isDeviceVerification,
-    challenge_token: (unwrapped?.challenge_token as string) || undefined,
+    challenge_token: challengeToken,
   };
 }
 
@@ -233,7 +279,8 @@ export async function register(
 
   const raw = await api.post<ApiResponse<AuthUser | LoginResponse>>(
     "/api/v1/auth/register",
-    body
+    body,
+    { skipCsrf: true }
   );
   const unwrapped = unwrapApiResponse(raw) as unknown as Record<string, unknown>;
 
@@ -355,12 +402,25 @@ export async function verifyDevice(
 
 /**
  * Resends the verification OTP code to the customer's email (F10.3).
+ * Accepts challenge_token, email, or login per Frontend Handoff.
  * Pre-fetches CSRF cookie before POSTing.
  */
-export async function resendVerificationCode(): Promise<ResendOtpResponse> {
+export async function resendVerificationCode(
+  payload?: ResendDeviceOtpPayload | string
+): Promise<ResendDeviceOtpResponse> {
   await fetchCsrfCookie();
-  const raw = await api.post<ApiResponse<ResendOtpResponse> | ResendOtpResponse>(
-    "/api/v1/auth/verify-device/resend"
+
+  const body: ResendDeviceOtpPayload =
+    typeof payload === "string"
+      ? { challenge_token: payload }
+      : payload || {};
+
+  const raw = await api.post<ApiResponse<ResendDeviceOtpResponse> | ResendDeviceOtpResponse>(
+    "/api/v1/auth/verify-device/resend",
+    body
   );
   return unwrapApiResponse(raw);
 }
+
+/** Alias matching Device Verification Resend Code API Handoff */
+export const resendDeviceCode = resendVerificationCode;

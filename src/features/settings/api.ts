@@ -21,15 +21,18 @@ export interface UserProfile {
   last_name?: string | null;
   email_verified_at: string | null;
   created_at: string;
+  device_verification_enabled?: boolean;
+  has_virtual_account?: boolean;
 }
 
 export interface UpdateProfilePayload {
-  name: string;
-  username: string;
-  email: string;
+  name?: string;
+  username?: string;
+  email?: string;
   phone?: string;
   first_name?: string;
   last_name?: string;
+  device_verification_enabled?: boolean;
 }
 
 export interface ChangePasswordPayload {
@@ -183,6 +186,8 @@ export async function getProfile(): Promise<UserProfile> {
     last_name?: string | null;
     full_name?: string | null;
     phone_number?: string | null;
+    device_verification_enabled?: boolean;
+    has_virtual_account?: boolean;
   };
 
   const resolvedName =
@@ -203,11 +208,69 @@ export async function getProfile(): Promise<UserProfile> {
     phone: rawProfile?.phone ?? rawProfile?.phone_number ?? "",
     email_verified_at: rawProfile?.email_verified_at ?? null,
     created_at: rawProfile?.created_at ?? new Date().toISOString(),
+    device_verification_enabled: Boolean(rawProfile?.device_verification_enabled),
+    has_virtual_account: Boolean(rawProfile?.has_virtual_account),
   };
 }
 
 /**
- * Updates editable profile information (name, username, email, phone).
+ * Toggles opt-in device verification (OTP) on or off for the customer account.
+ * PATCH /api/v1/profile { device_verification_enabled: boolean }
+ */
+export async function toggleDeviceVerification(
+  enabled: boolean
+): Promise<UserProfile> {
+  const response = await api.patch<ApiResponse<UserProfile> | UserProfile>(
+    "/api/v1/profile",
+    {
+      device_verification_enabled: enabled,
+    }
+  );
+  const unwrapped = unwrapApiResponse(response) as unknown as Record<
+    string,
+    unknown
+  >;
+  const rawProfile = (
+    unwrapped?.user && typeof unwrapped.user === "object"
+      ? unwrapped.user
+      : unwrapped
+  ) as unknown as Partial<UserProfile> & {
+    first_name?: string | null;
+    last_name?: string | null;
+    full_name?: string | null;
+    phone_number?: string | null;
+    device_verification_enabled?: boolean;
+    has_virtual_account?: boolean;
+  };
+
+  const resolvedName =
+    rawProfile?.name ||
+    rawProfile?.full_name ||
+    [rawProfile?.first_name, rawProfile?.last_name].filter(Boolean).join(" ") ||
+    resolveRealName(rawProfile) ||
+    rawProfile?.username ||
+    "";
+
+  return {
+    id: String(rawProfile?.id ?? ""),
+    name: resolvedName,
+    first_name: rawProfile?.first_name ?? null,
+    last_name: rawProfile?.last_name ?? null,
+    username: rawProfile?.username || "",
+    email: rawProfile?.email || "",
+    phone: rawProfile?.phone ?? rawProfile?.phone_number ?? "",
+    email_verified_at: rawProfile?.email_verified_at ?? null,
+    created_at: rawProfile?.created_at ?? new Date().toISOString(),
+    device_verification_enabled:
+      rawProfile?.device_verification_enabled !== undefined
+        ? Boolean(rawProfile.device_verification_enabled)
+        : enabled,
+    has_virtual_account: Boolean(rawProfile?.has_virtual_account),
+  };
+}
+
+/**
+ * Updates editable profile information (name, username, email, phone, security toggles).
  * Splits composite full name into first_name and last_name for backend Laravel compatibility.
  */
 export async function updateProfile(
@@ -218,17 +281,19 @@ export async function updateProfile(
   const firstName = payload.first_name || (nameParts[0] ?? "");
   const lastName = payload.last_name || (nameParts.slice(1).join(" ") ?? "");
 
-  const body: Record<string, unknown> = {
-    username: payload.username,
-    email: payload.email,
-  };
+  const body: Record<string, unknown> = {};
 
+  if (payload.username !== undefined) body.username = payload.username;
+  if (payload.email !== undefined) body.email = payload.email;
   if (firstName) body.first_name = firstName;
   if (lastName) body.last_name = lastName;
   if (trimmedName) body.name = trimmedName;
   if (payload.phone !== undefined) {
     body.phone = payload.phone;
     body.phone_number = payload.phone;
+  }
+  if (payload.device_verification_enabled !== undefined) {
+    body.device_verification_enabled = payload.device_verification_enabled;
   }
 
   const response = await api.patch<ApiResponse<UserProfile> | UserProfile>(
@@ -402,6 +467,8 @@ export const MOCK_PROFILE: UserProfile = {
   phone: "08023456789",
   email_verified_at: "2026-10-15T08:00:00Z",
   created_at: "2026-10-15T08:00:00Z",
+  device_verification_enabled: false,
+  has_virtual_account: true,
 };
 
 export const MOCK_SESSIONS: ActiveSession[] = [

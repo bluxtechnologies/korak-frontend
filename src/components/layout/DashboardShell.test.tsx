@@ -83,7 +83,12 @@ describe("DashboardShell (F11.2 & F11.3)", () => {
 
     await waitFor(() => {
       expect(mockLogout).toHaveBeenCalledTimes(1);
-      expect(toast.success).toHaveBeenCalledWith("You have been signed out.");
+      expect(toast.success).toHaveBeenCalledWith(
+        "Signed Out",
+        expect.objectContaining({
+          description: "You have been successfully signed out of your account.",
+        })
+      );
       expect(mockPush).toHaveBeenCalledWith("/login");
     });
   }, 15000);
@@ -106,7 +111,12 @@ describe("DashboardShell (F11.2 & F11.3)", () => {
 
     await waitFor(() => {
       expect(mockLogout).toHaveBeenCalledTimes(1);
-      expect(toast.info).toHaveBeenCalledWith("Session ended.");
+      expect(toast.error).toHaveBeenCalledWith(
+        "Session Ended",
+        expect.objectContaining({
+          description: "Your session has ended. Please sign in again to continue.",
+        })
+      );
       expect(mockPush).toHaveBeenCalledWith("/login");
     });
   });

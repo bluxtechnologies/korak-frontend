@@ -64,7 +64,7 @@ export const Toaster = ({
         error: (
           <div
             data-testid="toast-icon-error"
-            className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-[#7A1F3D]/10 text-[#7A1F3D] dark:bg-[#7A1F3D]/25 dark:text-[#E892A8]"
+            className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-red-500/15 text-red-600 dark:bg-red-500/25 dark:text-red-400 border border-red-500/20"
           >
             <AlertCircle className="size-[17px]" strokeWidth={2.2} />
           </div>
@@ -72,7 +72,7 @@ export const Toaster = ({
         warning: (
           <div
             data-testid="toast-icon-warning"
-            className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400"
+            className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 border border-amber-500/20"
           >
             <AlertTriangle className="size-[17px]" strokeWidth={2.2} />
           </div>
@@ -80,7 +80,7 @@ export const Toaster = ({
         info: (
           <div
             data-testid="toast-icon-info"
-            className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-[#7A1F3D]/10 text-[#7A1F3D] dark:bg-[#7A1F3D]/25 dark:text-[#E892A8]"
+            className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-blue-600 dark:bg-blue-500/25 dark:text-blue-400 border border-blue-500/20"
           >
             <Info className="size-[17px]" strokeWidth={2.2} />
           </div>
@@ -119,13 +119,13 @@ export const Toaster = ({
           content: "flex flex-col gap-0.5 flex-1 min-w-0 !pr-8",
           icon: "!shrink-0 !mt-0.5 !mr-3.5",
           success:
-            "group-[.toaster]:border-border/80 dark:group-[.toaster]:border-border group-[.toaster]:bg-white dark:group-[.toaster]:bg-card",
+            "group-[.toaster]:border-emerald-500/30 dark:group-[.toaster]:border-emerald-500/35 group-[.toaster]:bg-white dark:group-[.toaster]:bg-card",
           error:
-            "group-[.toaster]:border-border/80 dark:group-[.toaster]:border-border group-[.toaster]:bg-white dark:group-[.toaster]:bg-card",
+            "group-[.toaster]:border-red-500/35 dark:group-[.toaster]:border-red-500/40 group-[.toaster]:bg-red-50/20 dark:group-[.toaster]:bg-red-950/10",
           warning:
-            "group-[.toaster]:border-border/80 dark:group-[.toaster]:border-border group-[.toaster]:bg-white dark:group-[.toaster]:bg-card",
+            "group-[.toaster]:border-amber-500/30 dark:group-[.toaster]:border-amber-500/35 group-[.toaster]:bg-white dark:group-[.toaster]:bg-card",
           info:
-            "group-[.toaster]:border-border/80 dark:group-[.toaster]:border-border group-[.toaster]:bg-white dark:group-[.toaster]:bg-card",
+            "group-[.toaster]:border-blue-500/30 dark:group-[.toaster]:border-blue-500/35 group-[.toaster]:bg-white dark:group-[.toaster]:bg-card",
         },
       }}
       {...props}
@@ -137,7 +137,8 @@ type ToastInput = string | { title: string; message?: string; description?: stri
 
 function parseToastArgs(
   titleOrPayload: ToastInput,
-  messageOrOptions?: string | ShowToastOptions
+  messageOrOptions?: string | ShowToastOptions,
+  variant?: "success" | "error" | "warning" | "info" | "loading"
 ): { title: string; options?: ShowToastOptions } {
   if (typeof titleOrPayload === "object" && titleOrPayload !== null) {
     const title = titleOrPayload.title;
@@ -157,10 +158,10 @@ function parseToastArgs(
     };
   }
 
-  const title = titleOrPayload;
+  const rawTitle = titleOrPayload;
   if (typeof messageOrOptions === "string") {
     return {
-      title,
+      title: rawTitle,
       options: {
         description: messageOrOptions,
         style: {
@@ -172,10 +173,28 @@ function parseToastArgs(
 
   const opts = messageOrOptions || {};
   const duration = opts?.duration ?? 4500;
+
+  // Ensure toasts have both title and message when single string is provided
+  let finalTitle = rawTitle;
+  let finalDesc = opts.description;
+
+  if (!finalDesc) {
+    if (/session (ended|expired)/i.test(rawTitle)) {
+      finalTitle = "Session Ended";
+      finalDesc = "Your session has ended. Please sign in again to continue.";
+    } else if (variant === "error") {
+      if (rawTitle.length > 25 || /\.\s*$/.test(rawTitle) || /failed|error|unable|could not|invalid/i.test(rawTitle)) {
+        finalTitle = "Action Failed";
+        finalDesc = rawTitle;
+      }
+    }
+  }
+
   return {
-    title,
+    title: finalTitle,
     options: {
       ...opts,
+      description: finalDesc,
       style: {
         "--toast-duration": `${duration}ms`,
         ...(opts.style || {}),
@@ -193,31 +212,43 @@ function parseToastArgs(
  */
 export const showToast = {
   success: (titleOrPayload: ToastInput, messageOrOptions?: string | ShowToastOptions) => {
-    const { title, options } = parseToastArgs(titleOrPayload, messageOrOptions);
+    const { title, options } = parseToastArgs(titleOrPayload, messageOrOptions, "success");
     return sonnerToast.success(title, options);
   },
 
   error: (titleOrPayload: ToastInput, messageOrOptions?: string | ShowToastOptions) => {
-    const { title, options } = parseToastArgs(titleOrPayload, messageOrOptions);
+    const { title, options } = parseToastArgs(titleOrPayload, messageOrOptions, "error");
     return sonnerToast.error(title, options);
   },
 
   warning: (titleOrPayload: ToastInput, messageOrOptions?: string | ShowToastOptions) => {
-    const { title, options } = parseToastArgs(titleOrPayload, messageOrOptions);
+    const { title, options } = parseToastArgs(titleOrPayload, messageOrOptions, "warning");
     return sonnerToast.warning(title, options);
   },
 
   info: (titleOrPayload: ToastInput, messageOrOptions?: string | ShowToastOptions) => {
-    const { title, options } = parseToastArgs(titleOrPayload, messageOrOptions);
+    const { title, options } = parseToastArgs(titleOrPayload, messageOrOptions, "info");
     return sonnerToast.info(title, options);
   },
 
   loading: (titleOrPayload: ToastInput, messageOrOptions?: string | ShowToastOptions) => {
-    const { title, options } = parseToastArgs(titleOrPayload, messageOrOptions);
+    const { title, options } = parseToastArgs(titleOrPayload, messageOrOptions, "loading");
     return sonnerToast.loading(title, options);
   },
 
   dismiss: (id?: string | number) => sonnerToast.dismiss(id),
 };
 
-export { sonnerToast as toast };
+const smartToast = Object.assign(
+  (message: any, options?: any) => sonnerToast(message, options),
+  sonnerToast,
+  {
+    success: (titleOrMsg: any, options?: any) => showToast.success(titleOrMsg, options),
+    error: (titleOrMsg: any, options?: any) => showToast.error(titleOrMsg, options),
+    warning: (titleOrMsg: any, options?: any) => showToast.warning(titleOrMsg, options),
+    info: (titleOrMsg: any, options?: any) => showToast.info(titleOrMsg, options),
+    loading: (titleOrMsg: any, options?: any) => showToast.loading(titleOrMsg, options),
+  }
+);
+
+export { smartToast as toast };

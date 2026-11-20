@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { showToast } from "@/components/ui/sonner";
 import {
   Bell,
   ChevronRight,
@@ -72,9 +72,15 @@ export function MenuView({
     setIsLoggingOut(true);
     try {
       await logout();
-      toast.success("You have been signed out.");
+      showToast.success(
+        "Signed Out",
+        "You have been successfully signed out of your account."
+      );
     } catch {
-      toast.info("Session ended.");
+      showToast.error(
+        "Session Ended",
+        "Your session has ended. Please sign in again to continue."
+      );
     } finally {
       router.push(ROUTES.LOGIN);
     }

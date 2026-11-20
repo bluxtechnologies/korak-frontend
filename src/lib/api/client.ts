@@ -40,7 +40,7 @@ const DEFAULT_BASE_URL =
 
 const BACKEND_ROOT_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/+$/, "") ||
-  DEFAULT_BASE_URL.replace(/\/api\/v1\/?$/, "");
+  DEFAULT_BASE_URL.replace(/\/api(\/v1)?\/?$/, "");
 
 export function getBaseApiUrl(): string {
   return DEFAULT_BASE_URL;
@@ -59,12 +59,13 @@ export function buildApiUrl(
   let fullUrlString: string;
   if (cleanEndpoint.startsWith("/sanctum/")) {
     fullUrlString = `${BACKEND_ROOT_URL}${cleanEndpoint}`;
-  } else if (cleanEndpoint.startsWith("/api/v1/")) {
+  } else if (cleanEndpoint.startsWith("/api/")) {
     fullUrlString = `${BACKEND_ROOT_URL}${cleanEndpoint}`;
-  } else if (DEFAULT_BASE_URL.endsWith("/api/v1")) {
-    fullUrlString = `${DEFAULT_BASE_URL}${cleanEndpoint}`;
   } else {
-    fullUrlString = `${DEFAULT_BASE_URL}${cleanEndpoint}`;
+    const base = DEFAULT_BASE_URL.endsWith("/api/v1")
+      ? DEFAULT_BASE_URL
+      : `${DEFAULT_BASE_URL}/api/v1`;
+    fullUrlString = `${base}${cleanEndpoint}`;
   }
 
   const url = new URL(fullUrlString);
@@ -122,6 +123,7 @@ let csrfPromise: Promise<void> | null = null;
 /**
  * Fetches CSRF cookie from Laravel Sanctum (/sanctum/csrf-cookie).
  * Coalesces concurrent calls so only one request is in-flight.
+ * Verifies response status and aborts on errors (e.g. 500) per Doc 04 §3.
  */
 export async function fetchCsrfCookie(): Promise<void> {
   if (csrfPromise) {
@@ -131,13 +133,45 @@ export async function fetchCsrfCookie(): Promise<void> {
   csrfPromise = (async () => {
     try {
       const url = buildApiUrl("/sanctum/csrf-cookie");
-      await fetch(url, {
+      const res = await fetch(url, {
         method: "GET",
         credentials: "include",
         headers: {
           Accept: "application/json",
         },
       });
+
+      if (!res.ok) {
+        let errorData: ApiErrorResponse | null = null;
+        try {
+          const contentType = res.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            errorData = (await res.json()) as ApiErrorResponse;
+          }
+        } catch {
+          // Ignore JSON parse error on non-json responses
+        }
+
+        const retryAfterHeader = res.headers.get("retry-after");
+        const retryAfter = retryAfterHeader ? parseInt(retryAfterHeader, 10) : undefined;
+        const code = errorData?.code || (res.status === 429 ? "too_many_requests" : "csrf_handshake_failed");
+        const message =
+          errorData?.message ||
+          (res.status === 429
+            ? "Too many requests. Please wait a moment and try again."
+            : `Unable to initialize security session (HTTP ${res.status}). The authentication server returned an error. Please try again later.`);
+
+        throw new ApiClientError(
+          message,
+          res.status,
+          code,
+          errorData?.errors,
+          res.headers.get("x-request-id") || undefined,
+          res,
+          Number.isNaN(retryAfter) ? undefined : retryAfter,
+          errorData?.reference_id
+        );
+      }
     } catch (networkError: unknown) {
       if (networkError instanceof ApiClientError) {
         throw networkError;
@@ -250,6 +284,12 @@ async function baseApiClient<T>(
       await fetchCsrfCookie();
       token = getXsrfCookie();
     }
+    if (token && !headers.has("X-XSRF-TOKEN")) {
+      headers.set("X-XSRF-TOKEN", token);
+    }
+  } else if (typeof document !== "undefined" && STATE_CHANGING_METHODS.has(method)) {
+    // If CSRF fetch was already performed externally (skipCsrf), attach cookie if available
+    const token = getXsrfCookie();
     if (token && !headers.has("X-XSRF-TOKEN")) {
       headers.set("X-XSRF-TOKEN", token);
     }

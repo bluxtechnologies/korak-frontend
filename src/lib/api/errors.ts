@@ -42,6 +42,8 @@ const CODE_MESSAGE_MAP: Record<string, string> = {
   server_error: "An unexpected error occurred. Please try again later.",
   network_error:
     "Unable to connect to the server. Please check your network connection or ensure the API server is running.",
+  csrf_handshake_failed:
+    "Could not connect to the authentication server. Please try again later.",
 };
 
 const STATUS_MESSAGE_MAP: Record<number, string> = {
@@ -75,6 +77,14 @@ export function getSafeErrorMessage(
   }
 
   if (error instanceof ApiClientError) {
+    // Specifically handle csrf handshake failures with friendly prompt per Doc 04 §3
+    if (error.code === "csrf_handshake_failed") {
+      return (
+        CODE_MESSAGE_MAP.csrf_handshake_failed ||
+        "Could not connect to the authentication server. Please try again later."
+      );
+    }
+
     // 429 rate limit error with retry-after header handling (Key Security Rule §6)
     if (error.status === 429) {
       if (typeof error.retryAfter === "number" && error.retryAfter > 0) {

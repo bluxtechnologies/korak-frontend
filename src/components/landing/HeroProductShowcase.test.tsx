@@ -37,6 +37,6 @@ describe("HeroProductShowcase (Phase 01)", () => {
     const notification = screen.getByLabelText("Transaction notification highlight");
     expect(notification).toBeInTheDocument();
     expect(screen.getByText("Payment successful")).toBeInTheDocument();
-    expect(screen.getByText(/airtime purchase/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/airtime purchase/i)[0]).toBeInTheDocument();
   });
 });
