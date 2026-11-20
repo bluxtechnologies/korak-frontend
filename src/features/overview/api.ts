@@ -96,77 +96,87 @@ export async function getOverviewData(): Promise<OverviewData> {
     const response = await api.get<ApiResponse<OverviewData>>("/api/v1/overview");
     return unwrapApiResponse(response);
   } catch (err: unknown) {
-    // If /api/v1/overview is not implemented on backend (404/500), aggregate live from modular endpoints
-    const [walletRes, txRes, billRes, profileRes] = await Promise.allSettled([
-      customerApi.getWallet(),
-      customerApi.getTransactions({ per_page: 5 }),
-      customerApi.getBillHistory({ per_page: 5 }),
-      customerApi.getProfile(),
-    ]);
+    const fetchModular = async () => {
+      return Promise.allSettled([
+        customerApi.getWallet(),
+        customerApi.getTransactions({ per_page: 5 }),
+        customerApi.getBillHistory({ per_page: 5 }),
+        customerApi.getProfile(),
+      ]);
+    };
 
-    const walletData = walletRes.status === "fulfilled" ? walletRes.value : null;
-    const txData = txRes.status === "fulfilled" ? txRes.value.data : [];
-    const billData = billRes.status === "fulfilled" ? billRes.value.data : [];
-    const profileData = profileRes.status === "fulfilled" ? profileRes.value : null;
+    let [walletRes, txRes, billRes, profileRes] = await fetchModular();
 
-    // If both wallet and transactions failed and error was NOT 404, rethrow
-    if (walletRes.status === "rejected" && txRes.status === "rejected" && (err as { status?: number })?.status !== 404) {
-      throw err;
+    // If both wallet and transactions failed (e.g. temporary mobile network hiccup), retry once after a short delay
+    if (walletRes.status === "rejected" && txRes.status === "rejected") {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      const retried = await fetchModular();
+      if (retried[0].status === "fulfilled" || retried[1].status === "fulfilled") {
+        [walletRes, txRes, billRes, profileRes] = retried;
+      } else {
+        // If still rejected after retry, throw the primary rejection reason
+        throw (walletRes as PromiseRejectedResult).reason || err;
+      }
     }
 
-    const resolvedName = profileData ? resolveRealName(profileData) : "";
-    const user = profileData
-      ? {
-          name: resolvedName || profileData.full_name || profileData.first_name || profileData.username,
-          first_name: profileData.first_name,
-          last_name: profileData.last_name,
-          full_name: profileData.full_name,
-          username: profileData.username,
-        }
-      : undefined;
+  const walletData = walletRes.status === "fulfilled" ? walletRes.value : null;
+  const txData = txRes.status === "fulfilled" ? txRes.value.data : [];
+  const billData = billRes.status === "fulfilled" ? billRes.value.data : [];
+  const profileData = profileRes.status === "fulfilled" ? profileRes.value : null;
 
-    const wallet: WalletSummary = {
-      balance: walletData?.balance ?? 0,
-      currency: walletData?.currency ?? "NGN",
-      ledger_count: txRes.status === "fulfilled" ? txRes.value.meta.total : 0,
-      updated_at: walletData?.updated_at ?? new Date().toISOString(),
-    };
+  const resolvedName = profileData ? resolveRealName(profileData) : "";
+  const user = profileData
+    ? {
+        name: resolvedName || profileData.full_name || profileData.first_name || profileData.username,
+        first_name: profileData.first_name,
+        last_name: profileData.last_name,
+        full_name: profileData.full_name,
+        username: profileData.username,
+      }
+    : undefined;
 
-    const recent_transactions: OverviewTransaction[] = txData.map((t) => ({
-      id: t.id,
-      reference: t.reference,
-      direction: t.direction as TransactionDirection,
-      type: t.type === "funding" ? "wallet_funding" : t.type === "refund" ? "order_refund" : "order_payment",
-      description: t.description,
-      amount: t.amount,
-      currency: t.currency,
-      balance_after: t.balance_after,
-      created_at: t.created_at,
-    }));
+  const wallet: WalletSummary = {
+    balance: walletData?.balance ?? 0,
+    currency: walletData?.currency ?? "NGN",
+    ledger_count: txRes.status === "fulfilled" ? txRes.value.meta.total : 0,
+    updated_at: walletData?.updated_at ?? new Date().toISOString(),
+  };
 
-    const recent_orders: OverviewOrder[] = billData.map((b) => ({
-      id: b.id,
-      reference: b.reference,
-      service_type: (b.category as ServiceType) || "data",
-      service_label: b.service_name,
-      amount: b.amount,
-      currency: "NGN",
-      status: b.status === "completed" ? "completed" : b.status === "failed" ? "failed" : "processing",
-      recipient: b.customer_identifier,
-      created_at: b.created_at,
-    }));
+  const recent_transactions: OverviewTransaction[] = txData.map((t) => ({
+    id: t.id,
+    reference: t.reference,
+    direction: t.direction as TransactionDirection,
+    type: t.type === "funding" ? "wallet_funding" : t.type === "refund" ? "order_refund" : "order_payment",
+    description: t.description,
+    amount: t.amount,
+    currency: t.currency,
+    balance_after: t.balance_after,
+    created_at: t.created_at,
+  }));
 
-    return {
-      wallet,
-      metrics: {
-        active_services_count: 0,
-        completed_orders_count: billRes.status === "fulfilled" ? billRes.value.meta.total : 0,
-        pending_orders_count: 0,
-      },
-      recent_orders,
-      recent_transactions,
-      user,
-    };
+  const recent_orders: OverviewOrder[] = billData.map((b) => ({
+    id: b.id,
+    reference: b.reference,
+    service_type: (b.category as ServiceType) || "data",
+    service_label: b.service_name,
+    amount: b.amount,
+    currency: "NGN",
+    status: b.status === "completed" ? "completed" : b.status === "failed" ? "failed" : "processing",
+    recipient: b.customer_identifier,
+    created_at: b.created_at,
+  }));
+
+  return {
+    wallet,
+    metrics: {
+      active_services_count: 0,
+      completed_orders_count: billRes.status === "fulfilled" ? billRes.value.meta.total : 0,
+      pending_orders_count: 0,
+    },
+    recent_orders,
+    recent_transactions,
+    user,
+  };
   }
 }
 

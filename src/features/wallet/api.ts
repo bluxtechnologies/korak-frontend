@@ -64,15 +64,16 @@ export async function getWalletPageData(): Promise<WalletPageData> {
     const accountData = accountRes.status === "fulfilled" ? accountRes.value.account : null;
     const txData = txRes.status === "fulfilled" ? txRes.value.data : [];
 
-    const account_details: VirtualAccountDetails | null = accountData
-      ? {
-          account_name: accountData.account_name,
-          account_number: accountData.account_number,
-          bank_name: accountData.bank_name,
-          currency: "NGN",
-          assigned_at: accountData.created_at,
-        }
-      : null;
+    const account_details: VirtualAccountDetails | null =
+      accountData && accountData.account_number?.trim()
+        ? {
+            account_name: accountData.account_name,
+            account_number: accountData.account_number,
+            bank_name: accountData.bank_name,
+            currency: "NGN",
+            assigned_at: accountData.created_at,
+          }
+        : null;
 
     const transactions: TransactionRecord[] = txData.map((t) => ({
       id: t.id,

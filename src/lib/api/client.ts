@@ -182,7 +182,7 @@ export async function fetchCsrfCookie(): Promise<void> {
           : "Failed to connect to authentication server";
 
       throw new ApiClientError(
-        `Unable to reach the server to initialize security cookie (${message}). Please verify the backend API server is running.`,
+        "Unable to reach the server to initialize security cookie. Please check your internet connection and try again.",
         0,
         "network_error"
       );
@@ -331,7 +331,7 @@ async function baseApiClient<T>(
         : "Failed to connect to server";
 
     throw new ApiClientError(
-      `Unable to connect to the server (${message}). Please verify the backend API server is running and accessible.`,
+      "Unable to connect to the server. Please check your internet connection and try again.",
       0,
       "network_error",
       undefined,

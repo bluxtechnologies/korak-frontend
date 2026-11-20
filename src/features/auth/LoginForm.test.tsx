@@ -16,9 +16,13 @@ vi.mock("next/navigation", () => ({
 // ---------------------------------------------------------------------------
 // Mock the auth API
 // ---------------------------------------------------------------------------
-vi.mock("@/features/auth/api", () => ({
-  login: vi.fn(),
-}));
+vi.mock("@/features/auth/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/auth/api")>();
+  return {
+    ...actual,
+    login: vi.fn(),
+  };
+});
 import { login } from "@/features/auth/api";
 const mockLogin = vi.mocked(login);
 

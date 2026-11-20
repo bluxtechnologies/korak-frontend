@@ -44,7 +44,7 @@ export function WalletAccountDetailsCard({
 
   // Sync state if initialAccountDetails prop updates or arrives
   React.useEffect(() => {
-    if (initialAccountDetails) {
+    if (initialAccountDetails && initialAccountDetails.account_number?.trim()) {
       setGeneratedAccount(initialAccountDetails);
       setExplicitHasAccount(true);
     }
@@ -61,7 +61,7 @@ export function WalletAccountDetailsCard({
       customerApi
         .getDedicatedAccount()
         .then((res) => {
-          if (!ignore && res?.account) {
+          if (!ignore && res?.account && res.account.account_number?.trim()) {
             setGeneratedAccount(res.account);
             setExplicitHasAccount(true);
             onGenerateSuccess?.(res.account);
@@ -76,7 +76,8 @@ export function WalletAccountDetailsCard({
 
   const account = generatedAccount ?? initialAccountDetails ?? null;
   const hasAccount =
-    explicitHasAccount ?? (initialHasAccount ?? Boolean(initialAccountDetails));
+    explicitHasAccount ??
+    (initialHasAccount ?? Boolean(account?.account_number?.trim()));
 
   const [hasCopied, setHasCopied] = React.useState(false);
   const [phone, setPhone] = React.useState("");

@@ -41,7 +41,7 @@ const CODE_MESSAGE_MAP: Record<string, string> = {
   validation_failed: "Please check the information you entered and try again.",
   server_error: "An unexpected error occurred. Please try again later.",
   network_error:
-    "Unable to connect to the server. Please check your network connection or ensure the API server is running.",
+    "Unable to connect to the server. Please check your internet connection and try again.",
   csrf_handshake_failed:
     "Could not connect to the authentication server. Please try again later.",
 };

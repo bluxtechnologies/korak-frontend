@@ -79,7 +79,7 @@ export function WalletView({ initialData, className }: WalletViewProps) {
               updated_at: wallet.updated_at || new Date().toISOString(),
             };
           }
-          if (account) {
+          if (account && account.account_number?.trim()) {
             updated.account_details = {
               account_name: account.account_name,
               account_number: account.account_number,
@@ -87,6 +87,8 @@ export function WalletView({ initialData, className }: WalletViewProps) {
               currency: "NGN",
               assigned_at: account.created_at,
             };
+          } else if (accountRes.status === "fulfilled" && !account) {
+            updated.account_details = null;
           }
           if (txs) {
             updated.transactions = txs.map((t) => ({
@@ -600,6 +602,18 @@ export function WalletView({ initialData, className }: WalletViewProps) {
         open={isFundModalOpen}
         onOpenChange={setIsFundModalOpen}
         accountDetails={data.account_details}
+        onAccountGenerated={(newAccount) => {
+          setData((prev) => ({
+            ...prev,
+            account_details: {
+              account_name: newAccount.account_name,
+              account_number: newAccount.account_number,
+              bank_name: newAccount.bank_name,
+              currency: "NGN",
+              assigned_at: newAccount.created_at,
+            },
+          }));
+        }}
       />
     </div>
   );

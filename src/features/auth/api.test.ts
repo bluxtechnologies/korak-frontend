@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { login, register, resendVerificationCode, resendDeviceCode, resolveRealName } from "./api";
+import { login, register, resendVerificationCode, resendDeviceCode, resolveRealName, resolveGreetingName } from "./api";
 import { api, ApiClientError, fetchCsrfCookie } from "@/lib/api";
 
 vi.mock("@/lib/api", async (importOriginal) => {
@@ -64,6 +64,25 @@ describe("resolveRealName", () => {
   it("handles null or undefined input gracefully", () => {
     expect(resolveRealName(null)).toBe("");
     expect(resolveRealName(undefined, "there")).toBe("there");
+  });
+});
+
+describe("resolveGreetingName", () => {
+  it("shortens 'Obaseki Collins' to 'Collins'", () => {
+    expect(resolveGreetingName({ name: "Obaseki Collins" })).toBe("Collins");
+  });
+
+  it("shortens 'John Doe' to 'John'", () => {
+    expect(resolveGreetingName({ name: "John Doe" })).toBe("John");
+  });
+
+  it("prioritizes Collins if present in last_name", () => {
+    expect(resolveGreetingName({ first_name: "Obaseki", last_name: "Collins" })).toBe("Collins");
+  });
+
+  it("handles empty or missing user safely", () => {
+    expect(resolveGreetingName(null)).toBe("");
+    expect(resolveGreetingName({})).toBe("");
   });
 });
 

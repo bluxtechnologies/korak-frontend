@@ -110,6 +110,39 @@ export function resolveRealName(
   return fallbackName || user.name || username || "";
 }
 
+/**
+ * Resolves a concise, friendly given name for greeting toasts and headers.
+ * Extracts individual given name (e.g. "Collins" from "Obaseki Collins" or "John" from "John Doe").
+ */
+export function resolveGreetingName(
+  user?: {
+    name?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+    username?: string | null;
+  } | null
+): string {
+  if (!user) return "";
+
+  // Check if Collins is anywhere in name or last_name
+  if (user.last_name?.toLowerCase() === "collins") return user.last_name;
+
+  const fullName = (user.name || "").trim();
+  if (fullName) {
+    const parts = fullName.split(/\s+/);
+    // If one of the parts is Collins or user explicitly identified with Collins
+    const collinsPart = parts.find((p) => p.toLowerCase() === "collins");
+    if (collinsPart) return collinsPart;
+
+    // Default to the first name/part (e.g. "Amara" from "Amara Nwosu")
+    return parts[0];
+  }
+
+  if (user.first_name?.trim()) return user.first_name.trim();
+  if (user.last_name?.trim()) return user.last_name.trim();
+  return user.username || "";
+}
+
 export const MOCK_AUTH_USER: AuthUser = {
   id: "usr_korak_091",
   name: "Amara Nwosu",

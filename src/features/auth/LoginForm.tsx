@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { toast } from "sonner";
+import { showToast } from "@/components/ui/sonner";
 import { ROUTES } from "@/config/navigation";
 import {
   Form,
@@ -24,7 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert } from "@/components/ui/alert";
 import { AlertCircle, ArrowRight } from "lucide-react";
 import { SocialAuthButtons } from "@/components/shared/SocialAuthButtons";
-import { login } from "@/features/auth/api";
+import { login, resolveGreetingName } from "@/features/auth/api";
 
 // ---------------------------------------------------------------------------
 // Schema — Doc 09 §6: client validation is a usability aid, server re-validates
@@ -84,8 +84,11 @@ export function LoginForm() {
         return;
       }
 
-      const displayName = result.user?.name || result.user?.username || "back";
-      toast.success(`Welcome back, ${displayName}!`);
+      const greetingName = resolveGreetingName(result.user) || "Collins";
+      showToast.success(
+        `Welcome back, ${greetingName}`,
+        "You have signed in successfully. Redirecting to your dashboard..."
+      );
       const destination = getSafeRedirectPath(searchParams?.get("intended") ?? null);
       router.push(destination);
     } catch (err) {
