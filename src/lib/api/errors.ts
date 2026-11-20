@@ -18,6 +18,10 @@ const INTERNAL_LEAK_PATTERNS = [
   /INSERT\s+INTO/i,
   /UPDATE\s+.+\s+SET/i,
   /DELETE\s+FROM/i,
+  /\bcURL error\b/i,
+  /\blibcurl\b/i,
+  /\bCURLE_[A-Z_]+\b/i,
+  /\bCould not resolve host\b/i,
 ];
 
 function containsInternalLeak(message: string): boolean {
@@ -44,6 +48,8 @@ const CODE_MESSAGE_MAP: Record<string, string> = {
     "Unable to connect to the server. Please check your internet connection and try again.",
   csrf_handshake_failed:
     "Could not connect to the authentication server. Please try again later.",
+  dedicated_account_generation_failed:
+    "Could not connect to payment provider. Please try again later.",
 };
 
 const STATUS_MESSAGE_MAP: Record<number, string> = {

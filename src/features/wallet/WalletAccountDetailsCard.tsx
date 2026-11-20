@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NAV_ICON_STROKE_WIDTH } from "@/config/navigation";
 import { cn } from "@/lib/utils";
+import { getSafeErrorMessage } from "@/lib/api/errors";
 import { customerApi } from "@/lib/api/customer";
 import type { DedicatedVirtualAccount, DedicatedAccountMeta } from "@/lib/api/types";
 import type { VirtualAccountDetails } from "./api";
@@ -126,9 +127,10 @@ export function WalletAccountDetailsCard({
         `Your ${res.account.bank_name} account number is ready for instant deposits.`
       );
     } catch (err: unknown) {
-      const msg =
-        (err as { message?: string })?.message ||
-        "Unable to generate dedicated account. Please try again.";
+      const msg = getSafeErrorMessage(
+        err,
+        "Unable to generate dedicated account. Please try again."
+      );
       showToast.error("Generation Failed", msg);
     } finally {
       setIsGenerating(false);

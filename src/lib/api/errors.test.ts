@@ -93,6 +93,16 @@ describe("API Error Mapping & Envelope Parsing (lib/api/errors)", () => {
       expect(safeMsg).not.toContain(".php");
       expect(safeMsg).not.toContain("OrderController");
       expect(safeMsg).toBe("The request was invalid. Please check your input.");
+
+      const curlError = new ApiClientError(
+        "Could not connect to payment provider: cURL error 6: Could not resolve host: api.cofinance.ng (see https://curl.se/libcurl/c/libcurl-errors.html) for https://api.cofinance.ng/v1/customers",
+        400,
+        "dedicated_account_generation_failed"
+      );
+      const safeCurlMsg = getSafeErrorMessage(curlError);
+      expect(safeCurlMsg).not.toContain("cURL");
+      expect(safeCurlMsg).not.toContain("api.cofinance.ng");
+      expect(safeCurlMsg).toBe("Could not connect to payment provider. Please try again later.");
     });
 
     it("allows safe, non-leaking custom error messages through", () => {
