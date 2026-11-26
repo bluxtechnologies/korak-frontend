@@ -26,6 +26,7 @@ import type { TransactionRecord, TransactionDirection } from "@/features/transac
 import { customerApi } from "@/lib/api/customer";
 import { WalletAccountDetailsCard } from "./WalletAccountDetailsCard";
 import { FundWalletModal } from "./FundWalletModal";
+import { useOptionalWallet } from "./context";
 import type { WalletPageData } from "./api";
 
 export interface WalletViewProps {
@@ -40,6 +41,7 @@ export function WalletView({ initialData, className }: WalletViewProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedTx, setSelectedTx] = React.useState<TransactionRecord | null>(null);
   const [isFundModalOpen, setIsFundModalOpen] = React.useState(false);
+  const walletContext = useOptionalWallet();
 
   // Sync state if initialData prop updates from server revalidation
   React.useEffect(() => {
@@ -48,76 +50,78 @@ export function WalletView({ initialData, className }: WalletViewProps) {
     }
   }, [initialData]);
 
+  const refreshWalletData = React.useCallback(async () => {
+    try {
+      const [walletRes, accountRes, txRes] = await Promise.allSettled([
+        customerApi.getWallet(),
+        customerApi.getDedicatedAccount(),
+        customerApi.getTransactions({ per_page: 15 }),
+      ]);
+
+      const wallet = walletRes.status === "fulfilled" ? walletRes.value : null;
+      const account =
+        accountRes.status === "fulfilled" ? accountRes.value.account : null;
+      const txs = txRes.status === "fulfilled" ? txRes.value.data : null;
+
+      if (wallet && walletContext?.setWallet) {
+        walletContext.setWallet(wallet);
+      }
+
+      setData((prev) => {
+        const updated = { ...prev };
+        if (wallet) {
+          updated.wallet = {
+            balance: wallet.balance,
+            currency: wallet.currency || "NGN",
+            ledger_count:
+              txRes.status === "fulfilled"
+                ? txRes.value.meta.total
+                : prev.wallet.ledger_count,
+            updated_at: wallet.updated_at || new Date().toISOString(),
+          };
+        }
+        if (account && account.account_number?.trim()) {
+          updated.account_details = {
+            account_name: account.account_name,
+            account_number: account.account_number,
+            bank_name: account.bank_name,
+            currency: "NGN",
+            assigned_at: account.created_at,
+          };
+        } else if (accountRes.status === "fulfilled" && !account) {
+          updated.account_details = null;
+        }
+        if (txs) {
+          updated.transactions = txs.map((t) => ({
+            id: t.id,
+            reference: t.reference,
+            wallet_id: wallet?.id ?? prev.wallet.ledger_count.toString(),
+            direction: t.direction as TransactionDirection,
+            type:
+              t.type === "funding"
+                ? "wallet_funding"
+                : t.type === "refund"
+                ? "order_refund"
+                : "order_payment",
+            description: t.description,
+            amount: t.amount,
+            currency: t.currency,
+            balance_after: t.balance_after,
+            created_at: t.created_at,
+          }));
+        }
+        return updated;
+      });
+    } catch {
+      // keep existing data gracefully
+    }
+  }, [walletContext]);
+
   // Client-side hydration: refresh wallet, dedicated account, and recent transactions
   // where browser session cookies (korak_session, XSRF-TOKEN) are guaranteed
   React.useEffect(() => {
-    let ignore = false;
-
-    Promise.allSettled([
-      customerApi.getWallet(),
-      customerApi.getDedicatedAccount(),
-      customerApi.getTransactions({ per_page: 15 }),
-    ])
-      .then(([walletRes, accountRes, txRes]) => {
-        if (ignore) return;
-
-        const wallet = walletRes.status === "fulfilled" ? walletRes.value : null;
-        const account =
-          accountRes.status === "fulfilled" ? accountRes.value.account : null;
-        const txs = txRes.status === "fulfilled" ? txRes.value.data : null;
-
-        setData((prev) => {
-          const updated = { ...prev };
-          if (wallet) {
-            updated.wallet = {
-              balance: wallet.balance,
-              currency: wallet.currency || "NGN",
-              ledger_count:
-                txRes.status === "fulfilled"
-                  ? txRes.value.meta.total
-                  : prev.wallet.ledger_count,
-              updated_at: wallet.updated_at || new Date().toISOString(),
-            };
-          }
-          if (account && account.account_number?.trim()) {
-            updated.account_details = {
-              account_name: account.account_name,
-              account_number: account.account_number,
-              bank_name: account.bank_name,
-              currency: "NGN",
-              assigned_at: account.created_at,
-            };
-          } else if (accountRes.status === "fulfilled" && !account) {
-            updated.account_details = null;
-          }
-          if (txs) {
-            updated.transactions = txs.map((t) => ({
-              id: t.id,
-              reference: t.reference,
-              wallet_id: wallet?.id ?? prev.wallet.ledger_count.toString(),
-              direction: t.direction as TransactionDirection,
-              type:
-                t.type === "funding"
-                  ? "wallet_funding"
-                  : t.type === "refund"
-                  ? "order_refund"
-                  : "order_payment",
-              description: t.description,
-              amount: t.amount,
-              currency: t.currency,
-              balance_after: t.balance_after,
-              created_at: t.created_at,
-            }));
-          }
-          return updated;
-        });
-      })
-      .catch(() => {});
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
+    refreshWalletData();
+  }, [refreshWalletData]);
 
   const toggleMask = () => setIsMasked((prev) => !prev);
 
@@ -612,6 +616,7 @@ export function WalletView({ initialData, className }: WalletViewProps) {
         open={isFundModalOpen}
         onOpenChange={setIsFundModalOpen}
         accountDetails={data.account_details}
+        onTransferCompleted={refreshWalletData}
         onAccountGenerated={(newAccount) => {
           setData((prev) => ({
             ...prev,

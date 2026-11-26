@@ -27,6 +27,10 @@ export interface AppShellProps {
   unreadCount?: number;
   /** Custom notifications dropdown widget (F14) */
   notificationsSlot?: React.ReactNode;
+  /** Optional custom wallet widget/pill */
+  walletSlot?: React.ReactNode;
+  /** Wallet balance string displayed in the wallet pill (defaults to ₦0.00) */
+  walletBalance?: string;
   /** Additional content placed beside mobile menu trigger in Topbar left slot */
   topbarLeftSlot?: React.ReactNode;
   /** Sidebar navigation sections override */
@@ -60,6 +64,8 @@ export function AppShell({
   user,
   unreadCount = 0,
   notificationsSlot,
+  walletSlot,
+  walletBalance,
   topbarLeftSlot,
   sections: _sections = SIDEBAR_NAV_SECTIONS,
   abilities: _abilities,
@@ -130,6 +136,8 @@ export function AppShell({
           user={user}
           unreadCount={unreadCount}
           notificationsSlot={notificationsSlot}
+          walletSlot={walletSlot}
+          walletBalance={walletBalance}
           menuItems={menuItems}
           onLogout={onLogout}
           isLoggingOut={isLoggingOut}

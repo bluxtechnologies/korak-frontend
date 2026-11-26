@@ -343,6 +343,125 @@ describe("customerApi (Doc 25 Customer Endpoints Client)", () => {
       });
       expect(result).toEqual(mockTransactions);
     });
+
+    it("getDepositTiers fetches tiered deposit fee schedule and account context", async () => {
+      const mockTiersResponse = {
+        tiers: [
+          {
+            id: 1,
+            name: "Below ₦1,000",
+            min_amount_kobo: 0,
+            min_amount_ngn: 0,
+            max_amount_kobo: 99999,
+            max_amount_ngn: 999.99,
+            fee_kobo: 2000,
+            fee_ngn: 20,
+            fee_formatted: "₦20.00",
+            range_formatted: "₦0.00 – ₦999.99",
+            description: "Transactions ₦0.00 – ₦999.99 incur a fee of ₦20.00.",
+          },
+        ],
+        fee_context: {
+          title: "Deposit Processing Fees",
+          below_1000: "₦0 – ₦999: ₦20 fee",
+          tier_1000_10000: "₦1,000 – ₦10,000: ₦75 fee",
+          tier_10000_50000: "₦10,001 – ₦50,000: ₦155 fee",
+          tier_50000_100000: "₦50,001 – ₦100,000: ₦350 fee",
+          above_100000: "Above ₦100,000: ₦500 flat fee",
+          notice: "Fees apply to deposit transfers.",
+        },
+        dedicated_account: {
+          bank_name: "Paga",
+          account_number: "1299843895",
+          account_name: "Korak/ObasekiCollins",
+          status: "active",
+        },
+        has_dedicated_account: true,
+      };
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { data: mockTiersResponse, meta: {} },
+        status: 200,
+        headers: new Headers(),
+      });
+
+      const result = await customerApi.getDepositTiers();
+      expect(apiClient.get).toHaveBeenCalledWith("/api/v1/wallet/deposit/tiers");
+      expect(result).toEqual(mockTiersResponse);
+    });
+
+    it("calculateDepositFee calls calculate endpoint and returns breakdown", async () => {
+      const mockBreakdown = {
+        requested_amount_kobo: 100000,
+        requested_amount_ngn: 1000,
+        requested_amount_formatted: "₦1,000.00",
+        fee_kobo: 7500,
+        fee_ngn: 75,
+        fee_formatted: "₦75.00",
+        total_payable_kobo: 107500,
+        total_payable_ngn: 1075,
+        total_payable_formatted: "₦1,075.00",
+        tier_name: "₦1,000 to ₦10,000",
+        summary: "Deposit ₦1,000.00 + Fee ₦75.00 = Total Payable ₦1,075.00.",
+      };
+
+      vi.mocked(apiClient.post).mockResolvedValueOnce({
+        data: { data: mockBreakdown, meta: {} },
+        status: 200,
+        headers: new Headers(),
+      });
+
+      const result = await customerApi.calculateDepositFee({ amount_ngn: 1000 });
+      expect(apiClient.post).toHaveBeenCalledWith(
+        "/api/v1/wallet/deposit/calculate",
+        { amount_ngn: 1000 }
+      );
+      expect(result).toEqual(mockBreakdown);
+    });
+
+    it("initiateDeposit calls initiate endpoint and returns instructions and breakdown", async () => {
+      const mockInitiateRes = {
+        reference: "KORAK-DEP-ABC123XYZ456",
+        status: "pending" as const,
+        breakdown: {
+          requested_amount_kobo: 100000,
+          requested_amount_ngn: 1000,
+          requested_amount_formatted: "₦1,000.00",
+          fee_kobo: 7500,
+          fee_ngn: 75,
+          fee_formatted: "₦75.00",
+          total_payable_kobo: 107500,
+          total_payable_ngn: 1075,
+          total_payable_formatted: "₦1,075.00",
+          tier_name: "₦1,000 to ₦10,000",
+        },
+        virtual_account: {
+          bank_name: "Paga",
+          account_number: "1299843895",
+          account_name: "Korak/ObasekiCollins",
+        },
+        instructions: {
+          headline: "Transfer ₦1,075.00 to your dedicated account",
+          steps: [
+            "Open your bank app or internet banking.",
+            "Send ₦1,075.00 to Paga - 1299843895.",
+          ],
+        },
+      };
+
+      vi.mocked(apiClient.post).mockResolvedValueOnce({
+        data: { data: mockInitiateRes, meta: {} },
+        status: 201,
+        headers: new Headers(),
+      });
+
+      const result = await customerApi.initiateDeposit({ amount_ngn: 1000 });
+      expect(apiClient.post).toHaveBeenCalledWith(
+        "/api/v1/wallet/deposit/initiate",
+        { amount_ngn: 1000 }
+      );
+      expect(result).toEqual(mockInitiateRes);
+    });
   });
 
   describe("Notifications", () => {

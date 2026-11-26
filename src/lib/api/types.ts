@@ -104,6 +104,86 @@ export interface FundingRecord {
 }
 
 // ==========================================
+// Wallet Deposit Flow & Fee Schedule (Doc 26)
+// ==========================================
+export interface FeeTier {
+  id: number;
+  name: string;
+  min_amount_kobo: number;
+  min_amount_ngn: number;
+  max_amount_kobo: number | null;
+  max_amount_ngn: number | null;
+  fee_kobo: number;
+  fee_ngn: number;
+  fee_formatted: string;
+  range_formatted: string;
+  description: string;
+}
+
+export interface DepositFeeContext {
+  title: string;
+  below_1000: string;
+  tier_1000_10000: string;
+  tier_10000_50000: string;
+  tier_50000_100000: string;
+  above_100000: string;
+  notice: string;
+}
+
+export interface DedicatedAccountSummary {
+  bank_name: string;
+  account_number: string;
+  account_name: string;
+  status: string;
+}
+
+export interface DepositTiersResponse {
+  tiers: FeeTier[];
+  fee_context: DepositFeeContext;
+  dedicated_account: DedicatedAccountSummary | null;
+  has_dedicated_account: boolean;
+}
+
+export interface DepositBreakdown {
+  requested_amount_kobo: number;
+  requested_amount_ngn: number;
+  requested_amount_formatted: string;
+  fee_kobo: number;
+  fee_ngn: number;
+  fee_formatted: string;
+  total_payable_kobo: number;
+  total_payable_ngn: number;
+  total_payable_formatted: string;
+  tier_name: string;
+  summary?: string;
+}
+
+export interface DepositInitiateResponse {
+  reference: string;
+  status: "pending" | "successful" | "failed";
+  breakdown: DepositBreakdown;
+  virtual_account: {
+    bank_name: string;
+    account_number: string;
+    account_name: string;
+  };
+  instructions: {
+    headline: string;
+    steps: string[];
+  };
+}
+
+export interface DepositCalculatePayload {
+  amount_ngn?: number;
+  amount?: number;
+  in_kobo?: boolean;
+}
+
+export interface DepositInitiatePayload {
+  amount_ngn: number;
+}
+
+// ==========================================
 // Bills & VTU (Doc 25 §2)
 // ==========================================
 export interface BillCategory {

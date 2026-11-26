@@ -7,6 +7,11 @@ import type {
   DedicatedAccountMeta,
   LedgerEntry,
   FundingRecord,
+  DepositTiersResponse,
+  DepositBreakdown,
+  DepositInitiateResponse,
+  DepositCalculatePayload,
+  DepositInitiatePayload,
   BillCategory,
   BillServiceItem,
   DataBundlePackage,
@@ -115,6 +120,32 @@ export const customerApi = {
 
   getFundingStatus: async (referenceOrUlid: string): Promise<FundingRecord> => {
     const res = await apiClient.get<ApiResponse<FundingRecord>>(`/api/v1/wallet/fund/${referenceOrUlid}`);
+    return res.data.data;
+  },
+
+  // Wallet Deposit Flow (Doc 26)
+  getDepositTiers: async (): Promise<DepositTiersResponse> => {
+    const res = await apiClient.get<ApiResponse<DepositTiersResponse>>("/api/v1/wallet/deposit/tiers");
+    return res.data.data;
+  },
+
+  calculateDepositFee: async (
+    payload: DepositCalculatePayload
+  ): Promise<DepositBreakdown> => {
+    const res = await apiClient.post<ApiResponse<DepositBreakdown>>(
+      "/api/v1/wallet/deposit/calculate",
+      payload
+    );
+    return res.data.data;
+  },
+
+  initiateDeposit: async (
+    payload: DepositInitiatePayload
+  ): Promise<DepositInitiateResponse> => {
+    const res = await apiClient.post<ApiResponse<DepositInitiateResponse>>(
+      "/api/v1/wallet/deposit/initiate",
+      payload
+    );
     return res.data.data;
   },
 

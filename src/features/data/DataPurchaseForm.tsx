@@ -43,6 +43,7 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { NAV_ICON_STROKE_WIDTH, ROUTES } from "@/config/navigation";
 import { formatNaira } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
+import { notifyWalletUpdated } from "@/features/wallet";
 import {
   TELECOM_NETWORKS,
   detectNetworkFromPhone,
@@ -259,6 +260,7 @@ export function DataPurchaseForm({
         toast.success(result.message || "Data bundle credited successfully!");
       }
 
+      notifyWalletUpdated();
       if (onOrderCompleted) onOrderCompleted(result);
     } catch (err: unknown) {
       setIsConfirmOpen(false);

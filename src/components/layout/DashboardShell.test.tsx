@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { DashboardShell, useAuthUser } from "./DashboardShell";
+import { DashboardShell, useAuthUser, useWallet } from "./DashboardShell";
 import type { AuthUser } from "@/features/auth/api";
+import type { Wallet } from "@/lib/api/types";
 
 // Mock next/navigation
 const mockPush = vi.fn();
@@ -17,6 +18,20 @@ vi.mock("@/features/auth/api", () => ({
 }));
 import { logout } from "@/features/auth/api";
 const mockLogout = vi.mocked(logout);
+
+// Mock customer API for wallet
+vi.mock("@/lib/api/customer", () => ({
+  customerApi: {
+    getWallet: vi.fn().mockResolvedValue({
+      id: "w_test",
+      balance: 10000,
+      currency: "NGN",
+      balance_formatted: "100.00",
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+    }),
+  },
+}));
 
 // Mock sonner
 vi.mock("sonner", () => ({
@@ -33,9 +48,24 @@ const mockUser: AuthUser = {
   created_at: "2026-01-01T00:00:00Z",
 };
 
+const mockWallet: Wallet = {
+  id: "w_123",
+  balance: 10000, // ₦100.00
+  currency: "NGN",
+  balance_formatted: "100.00",
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+};
+
 function TestConsumer() {
   const user = useAuthUser();
-  return <div data-testid="consumer-user-name">{user.name}</div>;
+  const wallet = useWallet();
+  return (
+    <div>
+      <div data-testid="consumer-user-name">{user.name}</div>
+      <div data-testid="consumer-wallet-balance">{wallet.balanceFormatted}</div>
+    </div>
+  );
 }
 
 describe("DashboardShell (F11.2 & F11.3)", () => {
@@ -52,6 +82,21 @@ describe("DashboardShell (F11.2 & F11.3)", () => {
 
     expect(screen.getByTestId("consumer-user-name")).toHaveTextContent("Amara Nwosu");
     expect(screen.getAllByText("Amara Nwosu").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders live dynamic wallet balance in the Topbar and provides useWallet context", () => {
+    render(
+      <DashboardShell user={mockUser} initialWallet={mockWallet}>
+        <TestConsumer />
+      </DashboardShell>
+    );
+
+    expect(screen.getByTestId("consumer-wallet-balance")).toHaveTextContent("₦100.00");
+    const walletLinks = screen.getAllByRole("link", {
+      name: /wallet balance: ₦100\.00/i,
+    });
+    expect(walletLinks.length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("₦100.00").length).toBeGreaterThanOrEqual(1);
   });
 
   it("throws error when useAuthUser is rendered outside DashboardShell", () => {

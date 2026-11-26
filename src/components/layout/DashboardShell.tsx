@@ -8,6 +8,10 @@ import { AppShell, type AppShellProps } from "./AppShell";
 import type { AuthUser } from "@/features/auth/api";
 import { logout } from "@/features/auth/api";
 import { NotificationBellDropdown } from "@/features/notifications";
+import { WalletProvider, useWallet } from "@/features/wallet/context";
+import type { Wallet } from "@/lib/api/types";
+
+export { useWallet } from "@/features/wallet/context";
 
 // ---------------------------------------------------------------------------
 // AuthUser Context
@@ -28,19 +32,38 @@ export function useAuthUser(): AuthUser {
 export interface DashboardShellProps
   extends Omit<AppShellProps, "onLogout" | "isLoggingOut" | "user"> {
   user: AuthUser;
+  initialWallet?: Wallet | null;
 }
 
 /**
  * Dashboard Shell (F11.2 & F11.3).
- * Wraps AppShell with authenticated customer context and wired logout flow.
+ * Wraps AppShell with authenticated customer context, live wallet context, and wired logout flow.
  */
 export function DashboardShell({
+  children,
+  user,
+  initialWallet,
+  ...props
+}: DashboardShellProps) {
+  return (
+    <AuthUserContext.Provider value={user}>
+      <WalletProvider initialWallet={initialWallet}>
+        <DashboardShellInner user={user} {...props}>
+          {children}
+        </DashboardShellInner>
+      </WalletProvider>
+    </AuthUserContext.Provider>
+  );
+}
+
+function DashboardShellInner({
   children,
   user,
   ...props
 }: DashboardShellProps) {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+  const { balanceFormatted } = useWallet();
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -64,16 +87,15 @@ export function DashboardShell({
   };
 
   return (
-    <AuthUserContext.Provider value={user}>
-      <AppShell
-        user={user}
-        onLogout={handleLogout}
-        isLoggingOut={isLoggingOut}
-        notificationsSlot={props.notificationsSlot ?? <NotificationBellDropdown />}
-        {...props}
-      >
-        {children}
-      </AppShell>
-    </AuthUserContext.Provider>
+    <AppShell
+      user={user}
+      onLogout={handleLogout}
+      isLoggingOut={isLoggingOut}
+      walletBalance={props.walletBalance ?? balanceFormatted}
+      notificationsSlot={props.notificationsSlot ?? <NotificationBellDropdown />}
+      {...props}
+    >
+      {children}
+    </AppShell>
   );
 }

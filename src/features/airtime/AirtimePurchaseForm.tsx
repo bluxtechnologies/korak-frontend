@@ -37,6 +37,7 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { NAV_ICON_STROKE_WIDTH, ROUTES } from "@/config/navigation";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
+import { notifyWalletUpdated } from "@/features/wallet";
 import {
   TELECOM_NETWORKS,
   QUICK_AIRTIME_AMOUNTS,
@@ -194,6 +195,7 @@ export function AirtimePurchaseForm({
           `₦${values.amount.toLocaleString()} airtime sent to ${values.phone}!`
         );
       }
+      notifyWalletUpdated();
       onOrderCompleted?.(order);
     } catch (err: unknown) {
       setIsConfirmOpen(false);

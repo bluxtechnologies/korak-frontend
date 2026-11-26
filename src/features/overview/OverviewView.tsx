@@ -12,6 +12,7 @@ import { QuickServiceShortcuts } from "./QuickServiceShortcuts";
 import { RecentTransactionsCard } from "./RecentTransactionsCard";
 import { OverviewSkeleton } from "./OverviewSkeleton";
 import { getOverviewData, type OverviewData, MOCK_OVERVIEW_DATA } from "./api";
+import { useOptionalWallet } from "@/features/wallet";
 
 export interface OverviewViewProps {
   /** Optional pre-fetched data from Server Component */
@@ -50,6 +51,7 @@ export function OverviewView({
   const [isLoading, setIsLoading] = React.useState<boolean>(!initialData);
   const [error, setError] = React.useState<unknown | null>(null);
   const [isRetrying, setIsRetrying] = React.useState<boolean>(false);
+  const walletContext = useOptionalWallet();
 
   // Safely extract authenticated customer name for greeting banner, strictly prioritizing real user name over username
   let initialCustomerName = "";
@@ -87,6 +89,16 @@ export function OverviewView({
         .then((response) => {
           if (!ignore && response) {
             setData(response);
+            if (response.wallet && walletContext?.setWallet) {
+              walletContext.setWallet({
+                id: "w_overview",
+                currency: (response.wallet.currency as "NGN") || "NGN",
+                balance: response.wallet.balance,
+                balance_formatted: (response.wallet.balance / 100).toFixed(2),
+                created_at: response.wallet.updated_at,
+                updated_at: response.wallet.updated_at,
+              });
+            }
             if (response.user) {
               const resolved = resolveRealName(response.user);
               if (resolved && (!response.user.username || resolved.toLowerCase() !== response.user.username.toLowerCase())) {
