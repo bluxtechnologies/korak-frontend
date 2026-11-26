@@ -11,4 +11,5 @@ export * from "./PageLoadingState";
 export * from "./BrandPageLoader";
 export * from "./AppPageLoader";
 export * from "./PageState";
+export * from "./EmailVerificationBanner";
 export * from "./theme-provider";

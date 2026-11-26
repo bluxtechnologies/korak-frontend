@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
+import { AuthUserProvider } from "@/components/layout/DashboardShell";
+import type { AuthUser } from "@/features/auth/api";
 import { WalletView } from "./WalletView";
 import { MOCK_WALLET_PAGE_DATA } from "./api";
 
@@ -106,5 +108,25 @@ describe("WalletView Component", () => {
     expect(balanceCard).toHaveClass("order-1", "lg:order-none");
     expect(accountDetailsWrapper).toHaveClass("order-2", "lg:order-none");
     expect(transactionsSection).toHaveClass("order-3", "lg:order-none");
+  });
+
+  it("renders email verification alert banner when user is unverified", () => {
+    const unverifiedUser: AuthUser = {
+      id: "u_unverified",
+      name: "Collins Okeke",
+      email: "collins@example.com",
+      username: "collins",
+      email_verified_at: null,
+      created_at: "2026-01-01T00:00:00Z",
+    };
+
+    render(
+      <AuthUserProvider user={unverifiedUser}>
+        <WalletView initialData={MOCK_WALLET_PAGE_DATA} />
+      </AuthUserProvider>
+    );
+
+    expect(screen.getByTestId("email-verification-banner")).toBeInTheDocument();
+    expect(screen.getByText("collins@example.com")).toBeInTheDocument();
   });
 });

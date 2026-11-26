@@ -16,7 +16,17 @@ export { useWallet } from "@/features/wallet/context";
 // ---------------------------------------------------------------------------
 // AuthUser Context
 // ---------------------------------------------------------------------------
-const AuthUserContext = React.createContext<AuthUser | null>(null);
+export const AuthUserContext = React.createContext<AuthUser | null>(null);
+
+export function AuthUserProvider({
+  user,
+  children,
+}: {
+  user: AuthUser | null;
+  children: React.ReactNode;
+}) {
+  return <AuthUserContext.Provider value={user}>{children}</AuthUserContext.Provider>;
+}
 
 /**
  * Hook to access the currently authenticated user in dashboard components.
@@ -27,6 +37,13 @@ export function useAuthUser(): AuthUser {
     throw new Error("useAuthUser must be used within a DashboardShell");
   }
   return user;
+}
+
+/**
+ * Hook to access the currently authenticated user in dashboard components if available.
+ */
+export function useOptionalAuthUser(): AuthUser | null {
+  return React.useContext(AuthUserContext);
 }
 
 export interface DashboardShellProps

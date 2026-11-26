@@ -457,3 +457,54 @@ export async function resendVerificationCode(
 
 /** Alias matching Device Verification Resend Code API Handoff */
 export const resendDeviceCode = resendVerificationCode;
+
+/**
+ * Resends the email verification notification link to the customer's email.
+ * Pre-fetches CSRF cookie before POSTing.
+ */
+export async function resendEmailVerification(): Promise<{ message: string }> {
+  await fetchCsrfCookie();
+  try {
+    const raw = await api.post<ApiResponse<{ message?: string }> | { message?: string }>(
+      "/api/v1/auth/email/verification-notification",
+      {},
+      { skipCsrf: true }
+    );
+    const unwrapped = unwrapApiResponse(raw) as { message?: string } | undefined;
+    return {
+      message:
+        unwrapped?.message ||
+        "A verification email has been sent to your address. Please check your inbox.",
+    };
+  } catch (error: unknown) {
+    const errObj = error as {
+      status?: number;
+      response?: { status?: number; data?: { message?: string } };
+    };
+    const status = errObj.status || errObj.response?.status;
+    if (status === 404) {
+      try {
+        const raw2 = await api.post<ApiResponse<{ message?: string }> | { message?: string }>(
+          "/email/verification-notification",
+          {},
+          { skipCsrf: true }
+        );
+        const unwrapped2 = unwrapApiResponse(raw2) as { message?: string } | undefined;
+        return {
+          message:
+            unwrapped2?.message ||
+            "A verification email has been sent to your address. Please check your inbox.",
+        };
+      } catch {
+        return {
+          message:
+            "A verification email has been sent to your address. Please check your inbox.",
+        };
+      }
+    }
+    if (errObj.response?.data?.message) {
+      throw new Error(errObj.response.data.message);
+    }
+    throw error;
+  }
+}

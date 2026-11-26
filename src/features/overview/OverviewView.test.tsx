@@ -1,6 +1,8 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { AuthUserProvider } from "@/components/layout/DashboardShell";
+import type { AuthUser } from "@/features/auth/api";
 import { OverviewView } from "./OverviewView";
 import * as overviewApi from "./api";
 import { customerApi } from "@/lib/api/customer";
@@ -135,5 +137,25 @@ describe("OverviewView (F12)", () => {
       expect(screen.getByText(/Obaseki Collins/)).toBeInTheDocument();
     });
     expect(screen.queryByText(/victoriousking35/)).not.toBeInTheDocument();
+  });
+
+  it("renders email verification alert banner when user is unverified", () => {
+    const unverifiedUser: AuthUser = {
+      id: "u_unverified",
+      name: "Collins Okeke",
+      email: "collins@example.com",
+      username: "collins",
+      email_verified_at: null,
+      created_at: "2026-01-01T00:00:00Z",
+    };
+
+    render(
+      <AuthUserProvider user={unverifiedUser}>
+        <OverviewView initialData={overviewApi.MOCK_OVERVIEW_DATA} />
+      </AuthUserProvider>
+    );
+
+    expect(screen.getByTestId("email-verification-banner")).toBeInTheDocument();
+    expect(screen.getByText("collins@example.com")).toBeInTheDocument();
   });
 });

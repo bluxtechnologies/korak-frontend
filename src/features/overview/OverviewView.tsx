@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ErrorState } from "@/components/shared/ErrorState";
+import { ErrorState, EmailVerificationBanner } from "@/components/shared";
 import { getSafeErrorMessage } from "@/lib/api/errors";
 import { useAuthUser } from "@/components/layout/DashboardShell";
 import { resolveRealName } from "@/features/auth/api";
@@ -222,6 +222,9 @@ export function OverviewView({
           Your digital services, all in one place.
         </p>
       </div>
+
+      {/* Persistent Email Verification Alert Banner */}
+      <EmailVerificationBanner />
 
       {/* 2. Wallet & Support Section (2-Column Grid on Desktop, Stacked on Mobile) */}
       <div className="grid grid-cols-1 items-stretch gap-4 sm:gap-5 lg:grid-cols-12">
