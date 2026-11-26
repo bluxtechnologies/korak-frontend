@@ -2,10 +2,7 @@
  * Account Overview API service and types (F12).
  * Follows Doc 06 response envelopes and Doc 09 §2 & §5 conventions.
  */
-import { api } from "@/lib/api";
-import { unwrapApiResponse } from "@/lib/api/errors";
 import { customerApi } from "@/lib/api/customer";
-import type { ApiResponse } from "@/lib/api/types";
 import { resolveRealName } from "@/features/auth/api";
 
 // ---------------------------------------------------------------------------
@@ -92,32 +89,12 @@ export interface OverviewData {
  * from live customer endpoints (/api/v1/wallet, /api/v1/wallet/transactions, /api/v1/bills/history).
  */
 export async function getOverviewData(): Promise<OverviewData> {
-  try {
-    const response = await api.get<ApiResponse<OverviewData>>("/api/v1/overview");
-    return unwrapApiResponse(response);
-  } catch (err: unknown) {
-    const fetchModular = async () => {
-      return Promise.allSettled([
-        customerApi.getWallet(),
-        customerApi.getTransactions({ per_page: 5 }),
-        customerApi.getBillHistory({ per_page: 5 }),
-        customerApi.getProfile(),
-      ]);
-    };
-
-    let [walletRes, txRes, billRes, profileRes] = await fetchModular();
-
-    // If both wallet and transactions failed (e.g. temporary mobile network hiccup), retry once after a short delay
-    if (walletRes.status === "rejected" && txRes.status === "rejected") {
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      const retried = await fetchModular();
-      if (retried[0].status === "fulfilled" || retried[1].status === "fulfilled") {
-        [walletRes, txRes, billRes, profileRes] = retried;
-      } else {
-        // If still rejected after retry, throw the primary rejection reason
-        throw (walletRes as PromiseRejectedResult).reason || err;
-      }
-    }
+  const [walletRes, txRes, billRes, profileRes] = await Promise.allSettled([
+    customerApi.getWallet(),
+    customerApi.getTransactions({ per_page: 5 }),
+    customerApi.getBillHistory({ per_page: 5 }),
+    customerApi.getProfile(),
+  ]);
 
   const walletData = walletRes.status === "fulfilled" ? walletRes.value : null;
   const txData = txRes.status === "fulfilled" ? txRes.value.data : [];
@@ -177,7 +154,6 @@ export async function getOverviewData(): Promise<OverviewData> {
     recent_transactions,
     user,
   };
-  }
 }
 
 // ---------------------------------------------------------------------------

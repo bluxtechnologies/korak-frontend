@@ -65,29 +65,6 @@ export function EmailVerificationBanner({
     }
   }, [effectiveUser, propEmail]);
 
-  // Fallback check: if no context user is present, attempt fetching profile once
-  React.useEffect(() => {
-    let ignore = false;
-    if (effectiveUser === undefined && !propEmail) {
-      customerApi
-        .getProfile()
-        .then((profile) => {
-          if (!ignore && profile) {
-            setIsVerified(Boolean(profile.email_verified_at));
-            if (profile.email) {
-              setUserEmail(profile.email);
-            }
-          }
-        })
-        .catch(() => {
-          // Fail silently if guest or unauthenticated
-        });
-    }
-    return () => {
-      ignore = true;
-    };
-  }, [effectiveUser, propEmail]);
-
   // Countdown timer for resend button cooldown
   React.useEffect(() => {
     if (cooldown <= 0) return;

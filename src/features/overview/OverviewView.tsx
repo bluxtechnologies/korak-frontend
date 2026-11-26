@@ -110,7 +110,21 @@ export function OverviewView({
         })
         .catch((err: unknown) => {
           if (!ignore) {
-            if (
+            const isRateLimit =
+              (err as { status?: number })?.status === 429 ||
+              (err as { response?: { status?: number } })?.response?.status === 429;
+
+            if (isRateLimit) {
+              setData({
+                ...MOCK_OVERVIEW_DATA,
+                wallet: {
+                  ...MOCK_OVERVIEW_DATA.wallet,
+                  balance: walletContext?.balance ?? 0,
+                },
+                recent_orders: [],
+                recent_transactions: [],
+              });
+            } else if (
               enableFallbackMock &&
               (process.env.NODE_ENV !== "production" ||
                 (err as { status?: number })?.status === 404)
@@ -164,7 +178,21 @@ export function OverviewView({
         setData(response);
       })
       .catch((err: unknown) => {
-        if (
+        const isRateLimit =
+          (err as { status?: number })?.status === 429 ||
+          (err as { response?: { status?: number } })?.response?.status === 429;
+
+        if (isRateLimit) {
+          setData({
+            ...MOCK_OVERVIEW_DATA,
+            wallet: {
+              ...MOCK_OVERVIEW_DATA.wallet,
+              balance: walletContext?.balance ?? 0,
+            },
+            recent_orders: [],
+            recent_transactions: [],
+          });
+        } else if (
           enableFallbackMock &&
           (process.env.NODE_ENV !== "production" ||
             (err as { status?: number })?.status === 404)

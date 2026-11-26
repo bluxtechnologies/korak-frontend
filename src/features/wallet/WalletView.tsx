@@ -18,7 +18,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { EmailVerificationBanner } from "@/components/shared";
 import { ROUTES, NAV_ICON_STROKE_WIDTH } from "@/config/navigation";
 import { formatCurrency, maskCurrency, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -242,9 +241,6 @@ export function WalletView({ initialData, className }: WalletViewProps) {
           </p>
         </div>
       </div>
-
-      {/* Persistent Email Verification Alert Banner */}
-      <EmailVerificationBanner />
 
       {/* 2. Main 2-Column Layout (Responsive ordering: on small/medium screens (< lg), Account Details card appears right after Balance card) */}
       <div className="flex flex-col gap-6 lg:grid lg:grid-cols-12 w-full items-stretch lg:items-start">
