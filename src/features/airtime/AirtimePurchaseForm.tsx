@@ -131,10 +131,8 @@ export function AirtimePurchaseForm({
     networks[0] ??
     TELECOM_NETWORKS[0];
 
-  const discountAmount = Math.round(
-    enteredAmount * activeNetworkInfo.discountRate
-  );
-  const finalChargeAmount = Math.max(0, enteredAmount - discountAmount);
+  const discountAmount = 0;
+  const finalChargeAmount = enteredAmount;
   const finalChargeMinor = finalChargeAmount * 100;
   const isBalanceSufficient = walletBalance >= finalChargeMinor;
   const isFormValid =
@@ -378,14 +376,6 @@ export function AirtimePurchaseForm({
               ₦{completedOrder.amount.toLocaleString()}.00
             </span>
           </div>
-          {completedOrder.discount > 0 && !isFailed && (
-            <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-              <span>Cashback Savings</span>
-              <span className="font-mono font-semibold">
-                -₦{completedOrder.discount.toLocaleString()}.00
-              </span>
-            </div>
-          )}
           <div className="border-t border-border/80 pt-2.5 flex justify-between text-sm font-bold">
             <span className="text-foreground">
               {isFailed ? "Wallet Refunded" : "Total Debited"}
@@ -780,7 +770,7 @@ export function AirtimePurchaseForm({
         <div className="space-y-3.5 pt-1">
           <div className="rounded-[10px] border border-border bg-card p-3.5 space-y-2.5 text-xs">
             <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Network Provider</span>
+              <span className="text-muted-foreground">Service</span>
               <div className="flex items-center gap-1.5 font-bold uppercase text-foreground">
                 <Image
                   src={activeNetworkInfo.logo}
@@ -794,30 +784,19 @@ export function AirtimePurchaseForm({
               </div>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Recipient Phone</span>
+              <span className="text-muted-foreground">Recipient</span>
               <span className="font-mono font-semibold text-foreground">
                 {enteredPhone}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Airtime Value</span>
+              <span className="text-muted-foreground">Amount</span>
               <span className="font-mono font-medium text-foreground">
                 ₦{enteredAmount.toLocaleString()}.00
               </span>
             </div>
-            {discountAmount > 0 && (
-              <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-                <span>
-                  Cashback Savings (
-                  {Math.round(activeNetworkInfo.discountRate * 100)}%):
-                </span>
-                <span className="font-mono font-semibold">
-                  -₦{discountAmount.toLocaleString()}.00
-                </span>
-              </div>
-            )}
             <div className="border-t border-border pt-2 flex justify-between font-bold">
-              <span className="text-foreground">Net Wallet Debit:</span>
+              <span className="text-foreground">Total to Pay:</span>
               <span className="text-primary font-mono text-sm">
                 ₦{finalChargeAmount.toLocaleString()}.00
               </span>

@@ -176,6 +176,7 @@ describe("Data API & Plans (F16.2 & F16.4)", () => {
           package_code: "mtn_sme_1gb",
           customer_identifier: "08031234567",
           amount: 32000,
+          face_amount: 32000,
         },
         "idem_data_test_key"
       );

@@ -90,8 +90,8 @@ describe("AirtimePurchaseForm (F16.1 & F16.4 & Integration Guide)", () => {
       network: "mtn",
       phone: "08031234567",
       amount: 500,
-      discount: 10,
-      final_amount: 490,
+      discount: 0,
+      final_amount: 500,
       status: "completed",
       message: "Airtime of ₦500 sent successfully to 08031234567.",
       created_at: new Date().toISOString(),
@@ -114,10 +114,10 @@ describe("AirtimePurchaseForm (F16.1 & F16.4 & Integration Guide)", () => {
 
     // Confirm dialog should be visible
     expect(screen.getByText("Confirm Airtime Purchase")).toBeInTheDocument();
-    expect(screen.getByText("Net Wallet Debit:")).toBeInTheDocument();
+    expect(screen.getByText("Total to Pay:")).toBeInTheDocument();
 
-    // Click pay in dialog (500 - 2% (10) = 490)
-    const payButton = screen.getByRole("button", { name: /Pay ₦490/i });
+    // Click pay in dialog (exact 100% nominal price: 500)
+    const payButton = screen.getByRole("button", { name: /Pay ₦500/i });
     await user.click(payButton);
 
     await waitFor(() => {
@@ -140,7 +140,7 @@ describe("AirtimePurchaseForm (F16.1 & F16.4 & Integration Guide)", () => {
       network: "airtel",
       phone: "08021234567",
       amount: 500,
-      discount: 10,
+      discount: 0,
       final_amount: 500,
       status: "failed",
       message: "Airtime recharge could not be delivered by the network. Your wallet has been automatically refunded.",
@@ -176,8 +176,8 @@ describe("AirtimePurchaseForm (F16.1 & F16.4 & Integration Guide)", () => {
       network: "glo",
       phone: "08051234567",
       amount: 500,
-      discount: 15,
-      final_amount: 485,
+      discount: 0,
+      final_amount: 500,
       status: "processing",
       message: "Airtime request is processing with the network provider. Your line will be credited shortly.",
       created_at: new Date().toISOString(),

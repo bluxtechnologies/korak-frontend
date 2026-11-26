@@ -376,6 +376,7 @@ export async function purchaseData(
         package_code: payload.plan_id,
         customer_identifier: payload.phone.trim(),
         amount: amountKobo,
+        face_amount: amountKobo,
       },
       idempotencyKey
     );

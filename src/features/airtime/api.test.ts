@@ -125,14 +125,15 @@ describe("Airtime API & Helpers (F16.1 & F16.4)", () => {
           category: "airtime",
           customer_identifier: "08060671945",
           amount: 100000, // in kobo
+          face_amount: 100000,
         },
         "idem_custom_key_123"
       );
       expect(result.reference).toBe("BIL-A1B2C3D4E5F6");
       expect(result.status).toBe("completed");
       expect(result.amount).toBe(1000);
-      expect(result.discount).toBe(20); // 2% of 1000
-      expect(result.final_amount).toBe(980);
+      expect(result.discount).toBe(0);
+      expect(result.final_amount).toBe(1000);
     });
 
     it("handles status: failed by flagging auto_refunded and message", async () => {
