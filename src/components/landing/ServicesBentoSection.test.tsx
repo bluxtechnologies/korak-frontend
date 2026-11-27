@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ServicesBentoSection, KORAK_SERVICES } from "./ServicesBentoSection";
 
@@ -83,5 +84,48 @@ describe("ServicesBentoSection (Section 02 Bento Grid)", () => {
     headings.slice(1).forEach((level) => {
       expect(level).toBe(3);
     });
+  });
+
+  it("filters service cards when clicking category tabs and restores all on clicking All Services", async () => {
+    const user = userEvent.setup();
+    render(<ServicesBentoSection />);
+
+    // Click "Bills & Utilities" tab
+    const billsTab = screen.getByRole("button", { name: "Bills & Utilities" });
+    await user.click(billsTab);
+
+    // Only "Digital Payments / Bills" card title should be shown
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Digital Payments / Bills" })
+    ).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("heading", { level: 3, name: "Airtime & Mobile Data" })
+      ).not.toBeInTheDocument();
+    });
+
+    // "Show All Services" button is now visible
+    const showAllBtn = screen.getByRole("button", { name: /show all services/i });
+    await user.click(showAllBtn);
+
+    // All 4 services should be visible again
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { level: 3, name: "Airtime & Mobile Data" })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { level: 3, name: "Digital Payments / Bills" })
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("renders the SaaS trust & metrics infrastructure strip", () => {
+    render(<ServicesBentoSection />);
+
+    expect(screen.getByText("Sub-Second Dispatch")).toBeInTheDocument();
+    expect(screen.getByText("Verified Non-VoIP")).toBeInTheDocument();
+    expect(screen.getByText("Global eSIM Roaming")).toBeInTheDocument();
+    expect(screen.getByText("Bank-Grade Ledger")).toBeInTheDocument();
   });
 });
