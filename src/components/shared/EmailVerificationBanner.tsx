@@ -154,14 +154,14 @@ export function EmailVerificationBanner({
           <p className="text-xs text-amber-900/90 dark:text-amber-200/90 leading-relaxed">
             {userEmail ? (
               <>
-                We sent a verification link to{" "}
+                Check your inbox at{" "}
                 <strong className="font-semibold text-foreground underline decoration-amber-500/40">
                   {userEmail}
-                </strong>
-                . Please verify your email to secure your account and maintain uninterrupted access to all wallet and payment services.
+                </strong>{" "}
+                to verify your account.
               </>
             ) : (
-              "Please verify your email address to secure your account and maintain uninterrupted access to all wallet and payment services."
+              "Check your inbox to verify your account."
             )}
           </p>
         </div>
